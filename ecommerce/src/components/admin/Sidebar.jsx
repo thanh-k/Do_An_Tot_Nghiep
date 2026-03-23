@@ -1,0 +1,78 @@
+import {
+  Boxes,
+  FolderTree,
+  LayoutDashboard,
+  PackageCheck,
+  Settings2,
+  ShieldUser,
+  UserCircle2,
+} from "lucide-react";
+import { NavLink } from "react-router-dom";
+import logo from "@/assets/logo.svg";
+import cn from "@/utils/cn";
+
+const items = [
+  { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
+  { to: "/admin/products", label: "Sản phẩm", icon: Boxes },
+  { to: "/admin/categories", label: "Category", icon: FolderTree },
+  { to: "/admin/orders", label: "Đơn hàng", icon: PackageCheck },
+  { to: "/admin/users", label: "Người dùng", icon: ShieldUser },
+  { to: "/admin/profile", label: "Hồ sơ admin", icon: UserCircle2 },
+];
+
+function Sidebar({ mobile = false, onNavigate }) {
+  return (
+    <aside
+      className={cn(
+        "flex h-full flex-col border-r border-slate-200 bg-slate-950 text-slate-300",
+        mobile ? "w-full" : "w-[280px]"
+      )}
+    >
+      <div className="border-b border-slate-800 p-6">
+        <img src={logo} alt="NovaShop" className="h-10 w-auto brightness-[1.7]" />
+        <p className="mt-4 text-sm leading-6 text-slate-400">
+          Bảng điều khiển quản trị frontend cho website thương mại điện tử.
+        </p>
+      </div>
+
+      <nav className="flex-1 space-y-1 p-4">
+        {items.map((item) => {
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={item.to}
+              end={item.end}
+              to={item.to}
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition",
+                  isActive
+                    ? "bg-brand-600 text-white"
+                    : "text-slate-300 hover:bg-slate-900 hover:text-white"
+                )
+              }
+            >
+              <Icon size={18} />
+              {item.label}
+            </NavLink>
+          );
+        })}
+      </nav>
+
+      <div className="border-t border-slate-800 p-4">
+        <div className="rounded-2xl bg-slate-900 p-4">
+          <div className="mb-2 flex items-center gap-3">
+            <Settings2 size={18} className="text-brand-400" />
+            <p className="text-sm font-semibold text-white">Mock Admin Panel</p>
+          </div>
+          <p className="text-xs leading-5 text-slate-400">
+            Toàn bộ dữ liệu đang chạy bằng localStorage và có thể thay bằng API thật sau này.
+          </p>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+export default Sidebar;
