@@ -13,7 +13,7 @@ const normalizeToArray = (value) => {
 const matchVariantAttribute = (product, attribute, values) => {
   if (!values.length) return true;
   return product.variants?.some((variant) =>
-    values.includes(variant.attributes?.[attribute])
+    values.includes(variant.attributes?.[attribute] ?? variant?.[attribute])
   );
 };
 
@@ -254,7 +254,7 @@ export const productService = {
         ...new Set(
           db.products.flatMap((product) =>
             product.variants
-              .map((variant) => variant.attributes?.[attribute])
+              .map((variant) => variant.attributes?.[attribute] ?? variant?.[attribute])
               .filter(Boolean)
           )
         ),

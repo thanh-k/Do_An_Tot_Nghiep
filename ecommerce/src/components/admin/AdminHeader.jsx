@@ -1,4 +1,5 @@
-import { Menu, Search, Bell } from "lucide-react";
+import { Menu, Bell, House } from "lucide-react";
+import { Link } from "react-router-dom";
 import useAuth from "@/hooks/useAuth";
 
 function AdminHeader({ title, onOpenSidebar }) {
@@ -19,10 +20,13 @@ function AdminHeader({ title, onOpenSidebar }) {
           <h1 className="truncate text-xl font-bold text-slate-900">{title}</h1>
         </div>
 
-        <div className="hidden items-center gap-3 rounded-full border border-slate-200 bg-slate-50 px-4 py-3 lg:flex">
-          <Search size={18} className="text-slate-400" />
-          <span className="text-sm text-slate-400">Tìm kiếm nhanh...</span>
-        </div>
+        <Link
+          to="/"
+          className="hidden items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-brand-300 hover:text-brand-700 md:flex"
+        >
+          <House size={16} />
+          Về trang client
+        </Link>
 
         <button className="rounded-full bg-slate-100 p-3 text-slate-700">
           <Bell size={18} />
@@ -35,9 +39,7 @@ function AdminHeader({ title, onOpenSidebar }) {
             className="h-10 w-10 rounded-full object-cover"
           />
           <div className="hidden text-left md:block">
-            <p className="text-sm font-semibold text-slate-900">
-              {currentUser?.name}
-            </p>
+            <p className="text-sm font-semibold text-slate-900">{currentUser?.name}</p>
             <p className="text-xs text-slate-500">Quản trị viên</p>
           </div>
         </div>

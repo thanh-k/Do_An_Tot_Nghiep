@@ -9,6 +9,16 @@ import {
   simulateDelay,
 } from "@/services/storageService";
 
+const defaultAvatar =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+      <rect width="400" height="400" rx="80" fill="#e2e8f0"/>
+      <circle cx="200" cy="150" r="72" fill="#94a3b8"/>
+      <path d="M90 330c16-54 58-84 110-84s94 30 110 84" fill="#94a3b8"/>
+    </svg>
+  `);
+
 const sanitizeUser = (user) => {
   const { password, ...safeUser } = user;
   return safeUser;
@@ -23,9 +33,7 @@ export const authService = {
     await simulateDelay(400);
     const db = getDb();
     const user = db.users.find(
-      (item) =>
-        item.email.toLowerCase() === email.toLowerCase() &&
-        item.password === password
+      (item) => item.email.toLowerCase() === email.toLowerCase() && item.password === password
     );
 
     if (!user) {
@@ -40,9 +48,7 @@ export const authService = {
   async register(payload) {
     await simulateDelay(450);
     const db = getDb();
-    const existed = db.users.some(
-      (item) => item.email.toLowerCase() === payload.email.toLowerCase()
-    );
+    const existed = db.users.some((item) => item.email.toLowerCase() === payload.email.toLowerCase());
 
     if (existed) {
       throw new Error("Email này đã tồn tại trong hệ thống.");
@@ -51,8 +57,7 @@ export const authService = {
     const createdUser = {
       id: createId("user"),
       role: "user",
-      avatar:
-        "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=400&q=80",
+      avatar: payload.avatar || defaultAvatar,
       createdAt: new Date().toISOString(),
       ...payload,
     };
@@ -70,9 +75,7 @@ export const authService = {
   async forgotPassword(email) {
     await simulateDelay(600);
     const db = getDb();
-    const exists = db.users.some(
-      (item) => item.email.toLowerCase() === email.toLowerCase()
-    );
+    const exists = db.users.some((item) => item.email.toLowerCase() === email.toLowerCase());
 
     if (!exists) {
       throw new Error("Không tìm thấy tài khoản với email này.");
@@ -80,8 +83,7 @@ export const authService = {
 
     return {
       success: true,
-      message:
-        "Yêu cầu đặt lại mật khẩu đã được ghi nhận (mock). Vui lòng kiểm tra email demo.",
+      message: "Yêu cầu đặt lại mật khẩu đã được ghi nhận (mock). Vui lòng kiểm tra email demo.",
     };
   },
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import DataTable from "@/components/admin/DataTable";
 import PageHeader from "@/components/common/PageHeader";
+import Input from "@/components/common/Input";
 import orderService from "@/services/orderService";
 import { ORDER_STATUS_OPTIONS } from "@/constants";
 import {
@@ -15,6 +16,7 @@ function OrderManagementPage() {
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState([]);
   const [statusFilter, setStatusFilter] = useState("");
+  const [keyword, setKeyword] = useState("");
 
   const loadData = () => {
     setLoading(true);
@@ -28,11 +30,26 @@ function OrderManagementPage() {
     loadData();
   }, []);
 
-  const filteredOrders = useMemo(
-    () =>
-      statusFilter ? orders.filter((order) => order.status === statusFilter) : orders,
-    [orders, statusFilter]
-  );
+  const filteredOrders = useMemo(() => {
+    const search = keyword.trim().toLowerCase();
+
+    return orders.filter((order) => {
+      const matchesStatus = statusFilter ? order.status === statusFilter : true;
+      const matchesSearch =
+        !search ||
+        [
+          order.id,
+          order.shippingAddress?.fullName,
+          order.shippingAddress?.phone,
+          ...(order.items || []).map((item) => item.name),
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(search);
+
+      return matchesStatus && matchesSearch;
+    });
+  }, [orders, statusFilter, keyword]);
 
   const columns = [
     {
@@ -50,9 +67,7 @@ function OrderManagementPage() {
       title: "Khách hàng",
       render: (row) => (
         <div>
-          <p className="font-semibold text-slate-900">
-            {row.shippingAddress?.fullName || row.user?.name}
-          </p>
+          <p className="font-semibold text-slate-900">{row.shippingAddress?.fullName || row.user?.name}</p>
           <p className="text-xs text-slate-500">{row.shippingAddress?.phone}</p>
         </div>
       ),
@@ -78,9 +93,7 @@ function OrderManagementPage() {
       title: "Trạng thái",
       render: (row) => (
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            {formatOrderStatus(row.status)}
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{formatOrderStatus(row.status)}</p>
           <select
             value={row.status}
             onChange={async (event) => {
@@ -138,7 +151,19 @@ function OrderManagementPage() {
         }
       />
 
-      {loading ? <div className="card p-8 text-center text-sm text-slate-500">Đang tải đơn hàng...</div> : <DataTable columns={columns} data={filteredOrders} />}
+      <div className="card p-4">
+        <Input
+          placeholder="Tìm theo mã đơn, tên khách, số điện thoại hoặc tên sản phẩm..."
+          value={keyword}
+          onChange={(event) => setKeyword(event.target.value)}
+        />
+      </div>
+
+      {loading ? (
+        <div className="card p-8 text-center text-sm text-slate-500">Đang tải đơn hàng...</div>
+      ) : (
+        <DataTable columns={columns} data={filteredOrders} />
+      )}
     </div>
   );
 }

@@ -8,28 +8,29 @@ const attributeLabels = {
   ssd: "SSD",
 };
 
-function ProductVariantSelector({
-  variants = [],
-  selectedAttributes = {},
-  onChange,
-}) {
+const normalizeValue = (value) => {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  return String(value).trim();
+};
+
+function ProductVariantSelector({ variants = [], selectedAttributes = {}, onChange }) {
   const attributeKeys = getVariantAttributeKeys(variants);
   const options = getVariantOptions(variants);
 
-  const isOptionAvailable = (attribute, value) => {
-    return variants.some((variant) => {
-      if (variant.attributes?.[attribute] !== value) return false;
+  const visibleAttributeKeys = attributeKeys.filter(
+    (attribute) => (options[attribute] || []).length > 1
+  );
 
-      return Object.entries(selectedAttributes).every(([key, selected]) => {
-        if (!selected || key === attribute) return true;
-        return variant.attributes?.[key] === selected;
-      });
-    });
-  };
+  if (!visibleAttributeKeys.length) {
+    return null;
+  }
 
   return (
     <div className="space-y-5">
-      {attributeKeys.map((attribute) => (
+      {visibleAttributeKeys.map((attribute) => (
         <div key={attribute} className="space-y-3">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-slate-900">
@@ -42,24 +43,23 @@ function ProductVariantSelector({
 
           <div className="flex flex-wrap gap-2">
             {(options[attribute] || []).map((value) => {
-              const isSelected = selectedAttributes[attribute] === value;
-              const available = isOptionAvailable(attribute, value);
+              const normalizedValue = normalizeValue(value);
+              const isSelected =
+                normalizeValue(selectedAttributes[attribute]) === normalizedValue;
 
               return (
                 <button
-                  key={value}
+                  key={`${attribute}-${normalizedValue}`}
                   type="button"
-                  disabled={!available}
-                  onClick={() => onChange(attribute, value)}
+                  onClick={() => onChange(attribute, normalizedValue)}
                   className={cn(
                     "rounded-xl border px-4 py-2 text-sm font-medium transition",
                     isSelected
                       ? "border-brand-600 bg-brand-600 text-white"
-                      : "border-slate-300 bg-white text-slate-700 hover:border-brand-400 hover:text-brand-600",
-                    !available && "cursor-not-allowed opacity-40"
+                      : "border-slate-300 bg-white text-slate-700 hover:border-brand-400 hover:text-brand-600"
                   )}
                 >
-                  {value}
+                  {normalizedValue}
                 </button>
               );
             })}

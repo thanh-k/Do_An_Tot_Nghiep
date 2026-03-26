@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  ChevronDown,
   Heart,
   LayoutDashboard,
   Menu,
@@ -15,7 +16,6 @@ import { categoryService } from "@/services/categoryService";
 import useAuth from "@/hooks/useAuth";
 import useCart from "@/hooks/useCart";
 import useWishlist from "@/hooks/useWishlist";
-import Button from "@/components/common/Button";
 import cn from "@/utils/cn";
 
 function Header() {
@@ -54,9 +54,7 @@ function Header() {
             className={({ isActive }) =>
               cn(
                 "rounded-full px-4 py-2 text-sm font-medium transition",
-                isActive
-                  ? "bg-brand-50 text-brand-700"
-                  : "text-slate-600 hover:bg-slate-100"
+                isActive ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-100"
               )
             }
           >
@@ -67,9 +65,7 @@ function Header() {
             className={({ isActive }) =>
               cn(
                 "rounded-full px-4 py-2 text-sm font-medium transition",
-                isActive
-                  ? "bg-brand-50 text-brand-700"
-                  : "text-slate-600 hover:bg-slate-100"
+                isActive ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-100"
               )
             }
           >
@@ -112,30 +108,44 @@ function Header() {
             ) : null}
           </Link>
 
-          <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2">
-            <div className="grid h-9 w-9 place-items-center rounded-full bg-brand-50 text-brand-700">
-              <User size={18} />
+          <div className="group relative">
+            <div className="flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 transition hover:border-brand-200 hover:bg-white">
+              {currentUser?.avatar ? (
+                <img src={currentUser.avatar} alt={currentUser.name || "Tài khoản"} className="h-9 w-9 rounded-full object-cover" />
+              ) : (
+                <div className="grid h-9 w-9 place-items-center rounded-full bg-brand-50 text-brand-700">
+                  <User size={18} />
+                </div>
+              )}
+              <div className="hidden text-left xl:block">
+                <p className="text-xs text-slate-500">Tài khoản</p>
+                <p className="text-sm font-semibold text-slate-800">{currentUser?.name || "Khách"}</p>
+              </div>
+              <ChevronDown size={16} className="text-slate-400" />
             </div>
-            <div className="hidden text-left xl:block">
-              <p className="text-xs text-slate-500">Tài khoản</p>
-              <p className="text-sm font-semibold text-slate-800">
-                {currentUser?.name || "Khách"}
-              </p>
-            </div>
-            <div className="hidden items-center gap-2 xl:flex">
+
+            <div className="invisible absolute right-0 top-full z-20 mt-3 w-56 translate-y-2 rounded-2xl border border-slate-200 bg-white p-2 opacity-0 shadow-xl transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
               {accountLinks.map((item) => (
                 <Link
                   key={item.to}
                   to={item.to}
-                  className="text-xs font-medium text-slate-600 transition hover:text-brand-600"
+                  className="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-brand-700"
                 >
                   {item.label}
                 </Link>
               ))}
+              {isAdmin ? (
+                <Link
+                  to="/admin"
+                  className="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-brand-700"
+                >
+                  Khu vực quản trị
+                </Link>
+              ) : null}
               {currentUser ? (
                 <button
                   onClick={logout}
-                  className="text-xs font-medium text-rose-600 transition hover:text-rose-700"
+                  className="block w-full rounded-xl px-4 py-3 text-left text-sm font-medium text-rose-600 transition hover:bg-rose-50"
                 >
                   Đăng xuất
                 </button>
@@ -162,42 +172,12 @@ function Header() {
         <div className="border-t border-slate-200 bg-white lg:hidden">
           <div className="container-padded space-y-5 py-5">
             <div className="grid gap-2">
-              <Link
-                to="/products"
-                onClick={() => setMobileOpen(false)}
-                className="rounded-xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700"
-              >
-                Tất cả sản phẩm
-              </Link>
-              <Link
-                to="/image-search"
-                onClick={() => setMobileOpen(false)}
-                className="rounded-xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700"
-              >
-                Tìm kiếm bằng hình ảnh
-              </Link>
-              <Link
-                to="/wishlist"
-                onClick={() => setMobileOpen(false)}
-                className="rounded-xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700"
-              >
-                Wishlist ({wishlistCount})
-              </Link>
-              <Link
-                to="/cart"
-                onClick={() => setMobileOpen(false)}
-                className="rounded-xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700"
-              >
-                Giỏ hàng ({itemsCount})
-              </Link>
+              <Link to="/products" onClick={() => setMobileOpen(false)} className="rounded-xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">Tất cả sản phẩm</Link>
+              <Link to="/image-search" onClick={() => setMobileOpen(false)} className="rounded-xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">Tìm kiếm bằng hình ảnh</Link>
+              <Link to="/wishlist" onClick={() => setMobileOpen(false)} className="rounded-xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">Wishlist ({wishlistCount})</Link>
+              <Link to="/cart" onClick={() => setMobileOpen(false)} className="rounded-xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">Giỏ hàng ({itemsCount})</Link>
               {isAdmin ? (
-                <Link
-                  to="/admin"
-                  onClick={() => setMobileOpen(false)}
-                  className="rounded-xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700"
-                >
-                  Khu vực quản trị
-                </Link>
+                <Link to="/admin" onClick={() => setMobileOpen(false)} className="rounded-xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">Khu vực quản trị</Link>
               ) : null}
             </div>
 
@@ -224,21 +204,21 @@ function Header() {
                     key={item.to}
                     to={item.to}
                     onClick={() => setMobileOpen(false)}
-                    className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700"
+                    className="rounded-xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700"
                   >
                     {item.label}
                   </Link>
                 ))}
                 {currentUser ? (
-                  <Button
-                    variant="outline"
+                  <button
                     onClick={() => {
                       logout();
                       setMobileOpen(false);
                     }}
+                    className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-600"
                   >
                     Đăng xuất
-                  </Button>
+                  </button>
                 ) : null}
               </div>
             </div>

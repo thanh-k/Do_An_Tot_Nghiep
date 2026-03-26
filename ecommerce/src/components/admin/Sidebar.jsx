@@ -1,20 +1,21 @@
 import {
   Boxes,
   FolderTree,
+  House,
   LayoutDashboard,
   PackageCheck,
   Settings2,
   ShieldUser,
   UserCircle2,
 } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import logo from "@/assets/logo.svg";
 import cn from "@/utils/cn";
 
 const items = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/admin/products", label: "Sản phẩm", icon: Boxes },
-  { to: "/admin/categories", label: "Category", icon: FolderTree },
+  { to: "/admin/categories", label: "Danh mục", icon: FolderTree },
   { to: "/admin/orders", label: "Đơn hàng", icon: PackageCheck },
   { to: "/admin/users", label: "Người dùng", icon: ShieldUser },
   { to: "/admin/profile", label: "Hồ sơ admin", icon: UserCircle2 },
@@ -33,6 +34,17 @@ function Sidebar({ mobile = false, onNavigate }) {
         <p className="mt-4 text-sm leading-6 text-slate-400">
           Bảng điều khiển quản trị frontend cho website thương mại điện tử.
         </p>
+      </div>
+
+      <div className="border-b border-slate-800 p-4">
+        <Link
+          to="/"
+          onClick={onNavigate}
+          className="flex items-center gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-brand-600"
+        >
+          <House size={18} />
+          Về trang client
+        </Link>
       </div>
 
       <nav className="flex-1 space-y-1 p-4">
