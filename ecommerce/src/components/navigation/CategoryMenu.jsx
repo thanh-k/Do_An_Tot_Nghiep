@@ -16,7 +16,7 @@ function CategoryMenu({ categories = [], onClick }) {
         ))}
       </div>
     </div>
-  );
+  );  
 }
 
 export default CategoryMenu;
