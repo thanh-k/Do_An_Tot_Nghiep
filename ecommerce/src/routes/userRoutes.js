@@ -8,6 +8,10 @@ import WishlistPage from "@/pages/user/WishlistPage";
 import CheckoutPage from "@/pages/user/CheckoutPage";
 import ProfilePage from "@/pages/user/ProfilePage";
 import OrderHistoryPage from "@/pages/user/OrderHistoryPage";
+import AboutPage from "@/pages/user/AboutPage";
+import ContactPage from "@/pages/user/ContactPage";
+import NewsPage from "@/pages/user/NewsPage";
+
 
 export const userRoutes = [
   { index: true, component: HomePage },
@@ -20,4 +24,7 @@ export const userRoutes = [
   { path: "checkout", component: CheckoutPage, roles: ["user", "admin"] },
   { path: "profile", component: ProfilePage, roles: ["user", "admin"] },
   { path: "orders", component: OrderHistoryPage, roles: ["user", "admin"] },
+  { path: "about", component: AboutPage },
+  { path: "contact", component: ContactPage },
+  { path: "news", component: NewsPage },
 ];

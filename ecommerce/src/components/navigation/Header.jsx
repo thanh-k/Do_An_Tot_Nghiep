@@ -45,6 +45,7 @@ function Header() {
     { label: "Sản phẩm", to: "/products", hasDropdown: true },
     { label: "Tin tức", to: "/news" },
     { label: "Liên hệ", to: "/contact" },
+    { label: "giới thiệu", to: "/about" },
   ];
 
   return (
