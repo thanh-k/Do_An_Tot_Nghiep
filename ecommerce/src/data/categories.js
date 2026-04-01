@@ -41,14 +41,17 @@ export const categories = [
     slug: "dong-ho-thong-minh",
     description: "Theo dõi sức khoẻ, thể thao và kết nối mọi lúc mọi nơi.",
     icon: "Watch",
-    image: "https://images.unsplash.com/photo-1579586337278-3befd40fd17a?auto=format&fit=crop&w=1200&q=80",
+    image:
+      "https://images.unsplash.com/photo-1579586337278-3befd40fd17a?auto=format&fit=crop&w=1200&q=80",
   },
   {
     id: "cat-camera",
     name: "Máy ảnh",
     slug: "may-anh",
-    description: "Máy ảnh không gương lật, DSLR và phụ kiện nhiếp ảnh chuyên nghiệp.",
+    description:
+      "Máy ảnh không gương lật, DSLR và phụ kiện nhiếp ảnh chuyên nghiệp.",
     icon: "Camera",
-    image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1200&q=80",
+    image:
+      "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1200&q=80",
   },
 ];

@@ -16,6 +16,7 @@ import useAuth from "@/hooks/useAuth";
 import useCart from "@/hooks/useCart";
 import useWishlist from "@/hooks/useWishlist";
 import cn from "@/utils/cn";
+import { Camera } from "lucide-react"; // 1. Import icon Camera
 
 function Header() {
   const [categories, setCategories] = useState([]);
@@ -32,8 +33,10 @@ function Header() {
 
   const accountLinks = currentUser
     ? [
-        { label: "Hồ sơ", to: "/profile" },
+        { label: "Hồ sơ", to: "/dashboard" },
         { label: "Đơn hàng", to: "/orders" },
+        { label: "Kho Vouchers", to: "/vouchers" },
+        { label: "Hỗ trợ", to: "/faq" },
       ]
     : [
         { label: "Đăng nhập", to: "/login" },
@@ -46,6 +49,7 @@ function Header() {
     { label: "Tin tức", to: "/news" },
     { label: "Liên hệ", to: "/contact" },
     { label: "giới thiệu", to: "/about" },
+    { label: "so sánh sản phẩm ", to: "/compare" },
   ];
 
   return (
@@ -65,19 +69,24 @@ function Header() {
 
         <SearchBar className="hidden flex-1 lg:block" />
 
+        {/* --- ĐOẠN CODE CẦN THAY ĐỔI --- */}
         <nav className="hidden items-center gap-2 lg:flex">
           <NavLink
             to="/image-search"
+            // Tooltip hiện ra khi hover
+            title="Tìm kiếm sản phẩm bằng hình ảnh"
             className={({ isActive }) =>
               cn(
-                "rounded-full px-4 py-2 text-sm font-bold transition-all",
+                // Điều chỉnh padding (p-3) để icon nằm giữa nút tròn
+                "rounded-full p-3 text-sm font-bold transition-all shadow-sm",
                 isActive
-                  ? "bg-white text-rose-600 shadow-md"
-                  : "text-white hover:bg-rose-400",
+                  ? "bg-white text-rose-600 shadow-lg scale-105"
+                  : "bg-rose-600/10 text-white hover:bg-rose-500 border border-rose-500/30",
               )
             }
           >
-            Tìm bằng ảnh
+            {/* 2. Thay text bằng Icon Camera */}
+            <Camera size={20} strokeWidth={2.5} />
           </NavLink>
         </nav>
 

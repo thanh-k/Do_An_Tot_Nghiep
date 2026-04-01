@@ -20,6 +20,8 @@ import {
   getDefaultVariant,
 } from "@/utils/product";
 
+import ProductReviews from "@/components/product/ProductReviews";
+
 const normalizeValue = (value) => {
   if (value === null || value === undefined) {
     return "";
@@ -60,7 +62,9 @@ function ProductDetailPage() {
       .then((product) => {
         setProductData(product);
         const defaultVariant = getDefaultVariant(product);
-        setSelectedAttributes(buildSelectedAttributesFromVariant(defaultVariant));
+        setSelectedAttributes(
+          buildSelectedAttributesFromVariant(defaultVariant),
+        );
         setQuantity(1);
       })
       .finally(() => setLoading(false));
@@ -98,7 +102,11 @@ function ProductDetailPage() {
 
     const matchedVariant =
       findVariantByAttributes(productData.variants, nextSelection) ||
-      findBestVariantForSelection(productData.variants, nextSelection, attribute) ||
+      findBestVariantForSelection(
+        productData.variants,
+        nextSelection,
+        attribute,
+      ) ||
       getDefaultVariant(productData);
 
     if (matchedVariant) {
@@ -118,7 +126,9 @@ function ProductDetailPage() {
     return (
       <div className="container-padded py-10">
         <div className="card p-10 text-center">
-          <h2 className="text-2xl font-bold text-slate-900">Không tìm thấy sản phẩm</h2>
+          <h2 className="text-2xl font-bold text-slate-900">
+            Không tìm thấy sản phẩm
+          </h2>
         </div>
       </div>
     );
@@ -169,13 +179,18 @@ function ProductDetailPage() {
             </div>
 
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 sm:text-4xl">{productData.name}</h1>
+              <h1 className="text-3xl font-bold text-slate-900 sm:text-4xl">
+                {productData.name}
+              </h1>
               <p className="mt-3 text-sm leading-7 text-slate-500 sm:text-base">
                 {productData.shortDescription}
               </p>
             </div>
 
-            <Rating value={productData.rating} reviewCount={productData.reviewCount} />
+            <Rating
+              value={productData.rating}
+              reviewCount={productData.reviewCount}
+            />
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-white p-6">
@@ -199,10 +214,14 @@ function ProductDetailPage() {
               Tồn kho:{" "}
               <span
                 className={`font-semibold ${
-                  selectedVariant.stock > 0 ? "text-emerald-600" : "text-rose-600"
+                  selectedVariant.stock > 0
+                    ? "text-emerald-600"
+                    : "text-rose-600"
                 }`}
               >
-                {selectedVariant.stock > 0 ? `${selectedVariant.stock} sản phẩm` : "Hết hàng"}
+                {selectedVariant.stock > 0
+                  ? `${selectedVariant.stock} sản phẩm`
+                  : "Hết hàng"}
               </span>
             </p>
           </div>
@@ -215,25 +234,50 @@ function ProductDetailPage() {
 
           <div className="space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-6">
             <div className="flex flex-wrap items-center gap-4">
-              <span className="text-sm font-semibold text-slate-900">Số lượng</span>
-              <QuantitySelector value={quantity} onChange={setQuantity} max={selectedVariant.stock || 1} />
+              <span className="text-sm font-semibold text-slate-900">
+                Số lượng
+              </span>
+              <QuantitySelector
+                value={quantity}
+                onChange={setQuantity}
+                max={selectedVariant.stock || 1}
+              />
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <Button fullWidth onClick={handleAddToCart} disabled={!selectedVariant.stock}>
+              <Button
+                fullWidth
+                onClick={handleAddToCart}
+                disabled={!selectedVariant.stock}
+              >
                 <ShoppingCart size={18} />
                 Thêm vào giỏ
               </Button>
-              <Button fullWidth variant="outline" onClick={() => toggleWishlist(productData)}>
+              <Button
+                fullWidth
+                variant="outline"
+                onClick={() => toggleWishlist(productData)}
+              >
                 <Heart
                   size={18}
-                  className={isInWishlist(productData.id) ? "fill-rose-500 text-rose-500" : ""}
+                  className={
+                    isInWishlist(productData.id)
+                      ? "fill-rose-500 text-rose-500"
+                      : ""
+                  }
                 />
-                {isInWishlist(productData.id) ? "Đã yêu thích" : "Thêm vào wishlist"}
+                {isInWishlist(productData.id)
+                  ? "Đã yêu thích"
+                  : "Thêm vào wishlist"}
               </Button>
             </div>
 
-            <Button fullWidth variant="secondary" onClick={handleBuyNow} disabled={!selectedVariant.stock}>
+            <Button
+              fullWidth
+              variant="secondary"
+              onClick={handleBuyNow}
+              disabled={!selectedVariant.stock}
+            >
               Mua ngay
             </Button>
           </div>
@@ -244,10 +288,13 @@ function ProductDetailPage() {
                 <Truck size={22} />
               </div>
               <div>
-                <h3 className="text-base font-semibold text-slate-900">Vận chuyển & hỗ trợ</h3>
+                <h3 className="text-base font-semibold text-slate-900">
+                  Vận chuyển & hỗ trợ
+                </h3>
                 <p className="mt-2 text-sm leading-6 text-slate-500">
-                  Giao nhanh nội thành, đổi trả 15 ngày và bảo hành chính hãng. Phần logic hiện
-                  được mô phỏng ở frontend để thuận tiện demo UX.
+                  Giao nhanh nội thành, đổi trả 15 ngày và bảo hành chính hãng.
+                  Phần logic hiện được mô phỏng ở frontend để thuận tiện demo
+                  UX.
                 </p>
               </div>
             </div>
@@ -258,27 +305,45 @@ function ProductDetailPage() {
       <section className="grid gap-8 xl:grid-cols-[1fr_340px]">
         <div className="card p-6">
           <h2 className="text-2xl font-bold text-slate-900">Mô tả sản phẩm</h2>
-          <p className="mt-4 text-sm leading-7 text-slate-600 sm:text-base">{productData.description}</p>
+          <p className="mt-4 text-sm leading-7 text-slate-600 sm:text-base">
+            {productData.description}
+          </p>
         </div>
 
         <div className="card p-6">
-          <h2 className="text-xl font-bold text-slate-900">Thông số kỹ thuật</h2>
+          <h2 className="text-xl font-bold text-slate-900">
+            Thông số kỹ thuật
+          </h2>
           <div className="mt-5 space-y-3">
-            {Object.entries(productData.specifications || {}).map(([key, value]) => (
-              <div
-                key={key}
-                className="flex items-start justify-between gap-4 rounded-2xl bg-slate-50 px-4 py-3"
-              >
-                <span className="text-sm text-slate-500">{key}</span>
-                <span className="text-right text-sm font-semibold text-slate-800">{value}</span>
-              </div>
-            ))}
+            {Object.entries(productData.specifications || {}).map(
+              ([key, value]) => (
+                <div
+                  key={key}
+                  className="flex items-start justify-between gap-4 rounded-2xl bg-slate-50 px-4 py-3"
+                >
+                  <span className="text-sm text-slate-500">{key}</span>
+                  <span className="text-right text-sm font-semibold text-slate-800">
+                    {value}
+                  </span>
+                </div>
+              ),
+            )}
           </div>
         </div>
       </section>
 
+      {/* THÊM PHẦN ĐÁNH GIÁ VÀO ĐÂY */}
+      <section id="reviews">
+        <h2 className="text-3xl font-black italic uppercase text-slate-900 border-l-8 border-rose-600 pl-6 mb-12">
+          Khách hàng nói về siêu phẩm này
+        </h2>
+        <ProductReviews />
+      </section>
+
       <section>
-        <h2 className="mb-6 text-2xl font-bold text-slate-900">Sản phẩm liên quan</h2>
+        <h2 className="mb-6 text-2xl font-bold text-slate-900">
+          Sản phẩm liên quan
+        </h2>
         <ProductGrid products={productData.relatedProducts} />
       </section>
     </div>
