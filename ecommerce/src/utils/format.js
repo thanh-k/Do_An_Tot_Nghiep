@@ -45,3 +45,14 @@ export const formatPaymentStatus = (status) => {
 
   return map[status] || status;
 };
+
+export const getPaymentStatusColor = (status) => {
+  const map = {
+    paid: "#22c55e",      // Màu xanh lá
+    pending: "#ef4444",   // Màu đỏ
+    refunded: "#eab308",  // Màu vàng
+  };
+
+  // Trả về màu mặc định (xám) nếu không khớp trạng thái nào
+  return map[status] || "#6b7280"; 
+};

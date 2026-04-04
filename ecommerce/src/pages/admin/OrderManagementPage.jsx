@@ -10,6 +10,7 @@ import {
   formatDate,
   formatOrderStatus,
   formatPaymentStatus,
+  getPaymentStatusColor,
 } from "@/utils/format";
 
 function OrderManagementPage() {
@@ -118,7 +119,12 @@ function OrderManagementPage() {
       render: (row) => (
         <div>
           <p className="font-medium text-slate-900">{row.paymentMethod.toUpperCase()}</p>
-          <p className="text-xs text-emerald-700">{formatPaymentStatus(row.paymentStatus)}</p>
+          <p 
+            className="text-xs font-semibold"
+            style={{ color: getPaymentStatusColor(row.paymentStatus) }}
+          >
+            {formatPaymentStatus(row.paymentStatus)}
+          </p>
         </div>
       ),
     },
