@@ -1,24 +1,27 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
-export function usePagination(items = [], pageSize = 8) {
-  const [currentPage, setCurrentPage] = useState(1);
+export function usePagination({ data = [], pageSize = 8, currentPage = 1 }) {
+  const totalPages = Math.max(1, Math.ceil(data.length / pageSize));
 
-  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
-
-  const paginatedItems = useMemo(() => {
+  const currentData = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return items.slice(start, start + pageSize);
-  }, [currentPage, items, pageSize]);
+    return data.slice(start, start + pageSize);
+  }, [currentPage, data, pageSize]);
 
   const goToPage = (page) => {
-    setCurrentPage(Math.min(Math.max(page, 1), totalPages));
+    return Math.min(Math.max(page, 1), totalPages);
   };
+
+  const hasNextPage = currentPage < totalPages;
+  const hasPrevPage = currentPage > 1;
 
   return {
     currentPage,
     totalPages,
-    paginatedItems,
-    setCurrentPage: goToPage,
+    currentData,
+    goToPage,
+    hasNextPage,
+    hasPrevPage,
   };
 }
 
