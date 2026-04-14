@@ -9,6 +9,7 @@ import com.ecommerce.modules.brand.dto.response.BrandResponse;
 import com.ecommerce.modules.brand.mapper.BrandMapper;
 import com.ecommerce.modules.brand.repository.BrandRepository;
 import com.ecommerce.modules.brand.service.BrandService;
+import com.ecommerce.modules.upload.service.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BrandServiceImpl implements BrandService {
 
+    private final CloudinaryService cloudinaryService;
     private final BrandRepository brandRepository;
     private final BrandMapper brandMapper;
 
@@ -68,33 +70,49 @@ public class BrandServiceImpl implements BrandService {
     @Override
     @Transactional
     public void delete(Long id) {
-        if (!brandRepository.existsById(id)) {
-            throw new AppException(ErrorCode.BRAND_NOT_FOUND);
-        }
-        brandRepository.deleteById(id);
-    }
-
-    // Thêm mã này vào trong class BrandServiceImpl
-    @Override
-    @Transactional
-    public BrandResponse updateWithImage(Long id, BrandRequest request, MultipartFile file) throws IOException {
-        // 1. Tìm Brand cũ, không thấy thì báo lỗi
         Brand brand = brandRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.BRAND_NOT_FOUND));
 
-        // 2. Cập nhật các thông tin cơ bản
+        // 1. Kiểm tra tham chiếu sản phẩm(khi làm sản phẩm xong mới mở khóa)
+        // Giả sử ní đã có ProductRepository
+        // boolean hasProducts = productRepository.existsByBrandId(id);
+        // if (hasProducts) {
+        //     throw new AppException(ErrorCode.BRAND_HAS_PRODUCTS);
+        // }
+        // 1. Xóa ảnh trên Cloudinary trước
+        try {
+            cloudinaryService.deleteFile(brand.getLogo());
+        } catch (IOException e) {
+            System.err.println("Lỗi xóa logo thương hiệu: " + e.getMessage());
+        }
+
+        // 2. Xóa trong DB
+        brandRepository.delete(brand);
+    }
+
+    @Override
+    @Transactional
+    public BrandResponse updateWithImage(Long id, BrandRequest request, MultipartFile file) throws IOException {
+        // 1. Tìm Brand cũ
+        Brand brand = brandRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.BRAND_NOT_FOUND));
+
+        // 2. Cập nhật thông tin text và tạo lại Slug (nếu ní muốn slug nhảy theo tên
+        // mới)
         brand.setName(request.getName());
         brand.setSlug(SlugUtil.makeSlug(request.getName()));
         brand.setDescription(request.getDescription());
 
-        // 3. Nếu có file ảnh mới thì mới upload
+        // 3. Xử lý ảnh logo
         if (file != null && !file.isEmpty()) {
-            // Gọi CloudinaryService đã tiêm vào thông qua Constructor (hoặc bạn tự tiêm
-            // thêm vào)
-            // Lưu ý: Đảm bảo bạn đã khai báo private final CloudinaryService
-            // cloudinaryService; ở đầu class này
-            // String imageUrl = cloudinaryService.uploadFile(file, "brands");
-            // brand.setLogo(imageUrl);
+            // Xóa logo cũ trên Cloudinary để đỡ rác
+            if (brand.getLogo() != null) {
+                cloudinaryService.deleteFile(brand.getLogo());
+            }
+
+            // Upload logo mới vào folder 'brands'
+            String newLogoUrl = cloudinaryService.uploadFile(file, "brands");
+            brand.setLogo(newLogoUrl);
         }
 
         return brandMapper.toResponse(brandRepository.save(brand));

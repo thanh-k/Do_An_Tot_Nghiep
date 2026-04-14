@@ -32,8 +32,8 @@ spring:
       client:
         registration:
           google:
-            client-id: 785478977086-t4l0730im445aa51h63cmek0ssqqe0f2.apps.googleusercontent.com
-            client-secret: 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
+            client-id: 785478977086-ipc9qkf0cvgn2eaitsa681aafj5dqq7r.apps.googleusercontent.com
+            client-secret: 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
             scope:
               - openid
               - profile
@@ -43,8 +43,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: thanhlaoca0704484255@gmail.com
-    password: alfproczhupcbbcu
+    username: kieuxuanthanh999@gmail.com
+    password: xpicierhaxudjvhw
     properties:
       mail:
         smtp:
@@ -64,7 +64,7 @@ app:
     authorized-redirect-uri: http://localhost:5173/auth/oauth2/callback
 
   mail:
-    from: thanhlaoca0704484255@gmail.com
+    from: kieuxuanthanh999@gmail.com
 
   otp:
     expiration-minutes: 10

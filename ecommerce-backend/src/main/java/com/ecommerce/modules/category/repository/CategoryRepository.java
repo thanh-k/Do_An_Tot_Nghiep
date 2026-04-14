@@ -20,4 +20,7 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     // Tìm danh mục theo ID và trạng thái Active
     Optional<Category> findByIdAndActiveTrue(Long id);
+
+    // NÍ THÊM DÒNG NÀY VÀO NÈ
+    Optional<Category> findByName(String name);
 }

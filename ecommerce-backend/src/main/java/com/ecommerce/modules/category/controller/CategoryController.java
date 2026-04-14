@@ -4,6 +4,7 @@ import com.ecommerce.common.response.ApiResponse;
 import com.ecommerce.modules.category.dto.request.CategoryRequest;
 import com.ecommerce.modules.category.dto.response.CategoryResponse;
 import com.ecommerce.modules.category.service.CategoryService;
+import com.ecommerce.modules.category.service.CategoryValidatorService;
 import com.ecommerce.modules.upload.service.CloudinaryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,8 +18,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CategoryController {
 
+    private final CategoryValidatorService categoryValidatorService;
     private final CategoryService categoryService;
     private final CloudinaryService cloudinaryService;
+
+    
 
     @PostMapping
     public ApiResponse<CategoryResponse> create(@RequestBody @Valid CategoryRequest request) {
@@ -49,6 +53,7 @@ public class CategoryController {
             @RequestPart("data") @Valid CategoryRequest request,
             @RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
 
+        categoryValidatorService.validate(request, file, id);
         // Phải gọi hàm updateWithImage của Service thì nó mới xóa ảnh cũ
         return ApiResponse.<CategoryResponse>builder()
                 .result(categoryService.updateWithImage(id, request, file))
@@ -69,6 +74,7 @@ public class CategoryController {
             @RequestPart("data") @Valid CategoryRequest request,
             @RequestPart("file") MultipartFile file) throws IOException {
 
+        categoryValidatorService.validate(request, file, null);
         // 1. Gọi CloudinaryService để đẩy ảnh lên mây và lấy link về
         String imageUrl = cloudinaryService.uploadFile(file, "categories");
 
