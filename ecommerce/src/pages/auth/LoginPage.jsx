@@ -1,19 +1,19 @@
 import { useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Lock, Mail } from "lucide-react";
+import { Lock, UserCircle2 } from "lucide-react";
 import Button from "@/components/common/Button";
 import Input from "@/components/common/Input";
 import useAuth from "@/hooks/useAuth";
-import { validateEmail, validatePassword } from "@/utils/validators";
+import { validatePassword, validateRequired } from "@/utils/validators";
 
 function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser, login } = useAuth();
   const [form, setForm] = useState({
-    email: "linh@novashop.vn",
-    password: "User@123",
+    identifier: "admin@novashop.vn",
+    password: "Admin@123",
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -31,9 +31,8 @@ function LoginPage() {
     event.preventDefault();
 
     const nextErrors = {};
-    if (!validateEmail(form.email)) nextErrors.email = "Email không hợp lệ.";
-    if (!validatePassword(form.password))
-      nextErrors.password = "Mật khẩu tối thiểu 6 ký tự.";
+    if (!validateRequired(form.identifier)) nextErrors.identifier = "Vui lòng nhập email hoặc số điện thoại.";
+    if (!validatePassword(form.password)) nextErrors.password = "Mật khẩu tối thiểu 6 ký tự.";
 
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors);
@@ -59,20 +58,17 @@ function LoginPage() {
           Đăng nhập
         </span>
         <h1 className="text-3xl font-bold text-slate-900">Chào mừng trở lại</h1>
-        <p className="text-sm leading-6 text-slate-500">
-          Đăng nhập để quản lý đơn hàng, wishlist và thông tin tài khoản của bạn.
-        </p>
+        <p className="text-sm leading-6 text-slate-500">Đăng nhập bằng email hoặc số điện thoại.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
-          label="Email"
-          type="email"
-          value={form.email}
-          error={errors.email}
-          onChange={(event) => handleChange("email", event.target.value)}
-          leftIcon={<Mail size={18} />}
-          placeholder="nhap-email@novashop.vn"
+          label="Email hoặc số điện thoại"
+          value={form.identifier}
+          error={errors.identifier}
+          onChange={(event) => handleChange("identifier", event.target.value)}
+          leftIcon={<UserCircle2 size={18} />}
+          placeholder="Nhập email hoặc số điện thoại"
         />
         <Input
           label="Mật khẩu"
@@ -101,8 +97,8 @@ function LoginPage() {
 
       <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
         <p className="font-semibold text-slate-900">Tài khoản demo</p>
-        <p>User: linh@novashop.vn / User@123</p>
         <p>Admin: admin@novashop.vn / Admin@123</p>
+        <p>Hoặc số điện thoại: 0909123456 / Admin@123</p>
       </div>
 
       <p className="mt-6 text-center text-sm text-slate-500">

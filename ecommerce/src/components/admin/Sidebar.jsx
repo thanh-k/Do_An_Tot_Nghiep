@@ -4,6 +4,7 @@ import {
   House,
   LayoutDashboard,
   PackageCheck,
+  Phone,
   Settings2,
   ShieldUser,
   UserCircle2,
@@ -18,6 +19,7 @@ const items = [
   { to: "/admin/categories", label: "Danh mục", icon: FolderTree },
   { to: "/admin/orders", label: "Đơn hàng", icon: PackageCheck },
   { to: "/admin/users", label: "Người dùng", icon: ShieldUser },
+  { to: "/admin/phone-prefixes", label: "Đầu số điện thoại", icon: Phone },
   { to: "/admin/profile", label: "Hồ sơ admin", icon: UserCircle2 },
 ];
 

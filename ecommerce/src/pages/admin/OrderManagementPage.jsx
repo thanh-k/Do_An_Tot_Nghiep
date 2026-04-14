@@ -168,7 +168,7 @@ function OrderManagementPage() {
       {loading ? (
         <div className="card p-8 text-center text-sm text-slate-500">Đang tải đơn hàng...</div>
       ) : (
-        <DataTable columns={columns} data={filteredOrders} />
+        <DataTable columns={columns} data={filteredOrders} pagination={{ enabled: true, pageSize: 8, itemLabel: "đơn hàng" }} />
       )}
     </div>
   );

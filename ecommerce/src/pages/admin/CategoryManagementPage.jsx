@@ -140,7 +140,7 @@ function CategoryManagementPage() {
         />
       </div>
 
-      {loading ? <div className="card p-8 text-center text-sm text-slate-500">Đang tải dữ liệu...</div> : <DataTable columns={columns} data={filteredCategories} />}
+      {loading ? <div className="card p-8 text-center text-sm text-slate-500">Đang tải dữ liệu...</div> : <DataTable columns={columns} data={filteredCategories} pagination={{ enabled: true, pageSize: 8, itemLabel: "category" }} />}
 
       <CategoryFormModal
         isOpen={modalState.open}

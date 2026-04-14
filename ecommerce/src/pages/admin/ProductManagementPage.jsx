@@ -6,20 +6,17 @@ import ProductFormModal from "@/components/admin/ProductFormModal";
 import Button from "@/components/common/Button";
 import Input from "@/components/common/Input";
 import PageHeader from "@/components/common/PageHeader";
-import Pagination from "@/components/common/Pagination";
 import { categoryService } from "@/services/categoryService";
 import productService from "@/services/productService";
 import { formatCurrency } from "@/utils/format";
 import { getProductStock, getStartingPrice } from "@/utils/product";
 import { useDebounce } from "@/hooks/useDebounce";
-import { usePagination } from "@/hooks/usePagination";
 
 function ProductManagementPage() {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [keyword, setKeyword] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
   const debouncedKeyword = useDebounce(keyword, 300);
   const [modalState, setModalState] = useState({
     open: false,
@@ -40,10 +37,6 @@ function ProductManagementPage() {
     loadData();
   }, []);
 
-  // Reset về trang 1 khi từ khóa thay đổi
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedKeyword]);
 
   const filteredProducts = useMemo(() => {
     const search = debouncedKeyword.trim().toLowerCase();
@@ -52,12 +45,6 @@ function ProductManagementPage() {
       [product.name, product.brand, product.slug].join(" ").toLowerCase().includes(search)
     );
   }, [debouncedKeyword, products]);
-
-  const { currentData, totalPages, goToPage, hasNextPage, hasPrevPage } = usePagination({
-    data: filteredProducts,
-    pageSize: 10,
-    currentPage,
-  });
 
   const columns = [
     {
@@ -162,22 +149,7 @@ function ProductManagementPage() {
         />
       </div>
 
-      {loading ? <div className="card p-8 text-center text-sm text-slate-500">Đang tải dữ liệu...</div> : <DataTable columns={columns} data={currentData} />}
-
-      {!loading && filteredProducts.length > 0 && (
-        <div className="flex justify-center">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={(page) => {
-              setCurrentPage(page);
-              window.scrollTo({ top: 0, behavior: "smooth" });
-            }}
-            hasPrevPage={hasPrevPage}
-            hasNextPage={hasNextPage}
-          />
-        </div>
-      )}
+      {loading ? <div className="card p-8 text-center text-sm text-slate-500">Đang tải dữ liệu...</div> : <DataTable columns={columns} data={filteredProducts} pagination={{ enabled: true, pageSize: 10, itemLabel: "sản phẩm" }} />}
 
       <ProductFormModal
         isOpen={modalState.open}

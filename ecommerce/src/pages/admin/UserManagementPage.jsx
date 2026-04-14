@@ -15,23 +15,26 @@ function UserManagementPage() {
   const [keyword, setKeyword] = useState("");
   const debouncedKeyword = useDebounce(keyword, 300);
 
-  const loadData = () => {
+  const loadUsers = async () => {
     setLoading(true);
-    userService
-      .getUsers()
-      .then(setUsers)
-      .finally(() => setLoading(false));
+    try {
+      const userData = await userService.getUsers();
+      setUsers(userData);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    loadData();
+    loadUsers();
   }, []);
 
   const filteredUsers = useMemo(() => {
     const search = debouncedKeyword.trim().toLowerCase();
     if (!search) return users;
+
     return users.filter((user) =>
-      [user.name, user.email, user.phone].join(" ").toLowerCase().includes(search)
+      [user.name, user.email, user.phone].filter(Boolean).join(" ").toLowerCase().includes(search)
     );
   }, [debouncedKeyword, users]);
 
@@ -44,7 +47,7 @@ function UserManagementPage() {
           <img src={row.avatar} alt={row.name} className="h-14 w-14 rounded-full object-cover" />
           <div>
             <p className="font-semibold text-slate-900">{row.name}</p>
-            <p className="text-xs text-slate-500">{row.email}</p>
+            <p className="text-xs text-slate-500">{row.email || "Chưa có email"}</p>
           </div>
         </div>
       ),
@@ -55,7 +58,7 @@ function UserManagementPage() {
       render: (row) => (
         <div>
           <p>{row.phone}</p>
-          <p className="text-xs text-slate-500">{row.city}</p>
+          <p className="text-xs text-slate-500">{row.address || "Chưa có địa chỉ"}</p>
         </div>
       ),
     },
@@ -66,14 +69,46 @@ function UserManagementPage() {
         <select
           value={row.role}
           onChange={async (event) => {
-            await userService.updateUser(row.id, { role: event.target.value });
+            await userService.updateUser(row.id, {
+              fullName: row.fullName,
+              phone: row.phone,
+              email: row.email,
+              address: row.address,
+              role: event.target.value,
+              active: row.active,
+            });
             toast.success("Đã cập nhật vai trò người dùng");
-            loadData();
+            loadUsers();
           }}
           className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
         >
           <option value="user">User</option>
           <option value="admin">Admin</option>
+        </select>
+      ),
+    },
+    {
+      key: "status",
+      title: "Trạng thái",
+      render: (row) => (
+        <select
+          value={String(row.active)}
+          onChange={async (event) => {
+            await userService.updateUser(row.id, {
+              fullName: row.fullName,
+              phone: row.phone,
+              email: row.email,
+              address: row.address,
+              role: row.role,
+              active: event.target.value === "true",
+            });
+            toast.success("Đã cập nhật trạng thái tài khoản");
+            loadUsers();
+          }}
+          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
+        >
+          <option value="true">Hoạt động</option>
+          <option value="false">Khóa</option>
         </select>
       ),
     },
@@ -88,7 +123,7 @@ function UserManagementPage() {
       align: "right",
       render: (row) =>
         row.role === "admin" ? (
-          <span className="text-xs font-medium text-slate-400">Khoá xoá</span>
+          <span className="text-xs font-medium text-slate-400">Không xóa admin</span>
         ) : (
           <Button
             size="sm"
@@ -98,7 +133,7 @@ function UserManagementPage() {
               if (!confirmed) return;
               await userService.deleteUser(row.id);
               toast.success("Đã xoá người dùng");
-              loadData();
+              loadUsers();
             }}
           >
             <Trash2 size={14} />
@@ -112,7 +147,7 @@ function UserManagementPage() {
     <div className="space-y-6">
       <PageHeader
         title="Quản lý người dùng"
-        description="Theo dõi danh sách người dùng, phân quyền admin/user và xoá dữ liệu thử nghiệm."
+        description="Trang riêng cho tài khoản người dùng: tìm kiếm, phân quyền, khóa tài khoản và xoá người dùng."
       />
 
       <div className="card p-4">
@@ -123,7 +158,11 @@ function UserManagementPage() {
         />
       </div>
 
-      {loading ? <div className="card p-8 text-center text-sm text-slate-500">Đang tải người dùng...</div> : <DataTable columns={columns} data={filteredUsers} />}
+      {loading ? (
+        <div className="card p-8 text-center text-sm text-slate-500">Đang tải người dùng...</div>
+      ) : (
+        <DataTable columns={columns} data={filteredUsers} pagination={{ enabled: true, pageSize: 8, itemLabel: "người dùng" }} />
+      )}
     </div>
   );
 }
