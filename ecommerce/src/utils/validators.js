@@ -1,6 +1,6 @@
 export const validateEmail = (email = "") => {
   const value = `${email}`.trim();
-  if (!value) return true;
+  if (!value) return false;
   if (value.length < 3 || value.length > 320) return false;
   const atIndex = value.indexOf("@");
   if (atIndex <= 0) return false;
@@ -9,7 +9,8 @@ export const validateEmail = (email = "") => {
   return true;
 };
 
-export const validatePassword = (password = "") => password.trim().length >= 6;
+export const validatePassword = (password = "") =>
+  /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{6,}$/.test(`${password}`);
 
 export const validateRequired = (value) =>
   value !== undefined && value !== null && `${value}`.trim().length > 0;

@@ -16,8 +16,11 @@ const mapUser = (user) => {
   return {
     ...user,
     name: user.fullName,
+    phone: user.primaryPhone || user.phone || "",
+    address: user.primaryAddress || user.address || "",
     role: user.role?.toLowerCase(),
     avatar: user.avatar || defaultAvatar,
+    addresses: user.addresses || [],
   };
 };
 
@@ -48,6 +51,13 @@ export const authService = {
     return user;
   },
 
+  async sendRegistrationOtp(email) {
+    return apiClient.request("/auth/register/send-otp", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  },
+
   async register(payload) {
     const result = await apiClient.request("/auth/register", {
       method: "POST",
@@ -56,6 +66,28 @@ export const authService = {
     apiClient.setToken(result.accessToken);
     const user = mapUser(result.user);
     persistUser(user);
+    return user;
+  },
+
+  async completeGoogleRegistration(payload) {
+    const result = await apiClient.request("/auth/google/complete-registration", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    apiClient.setToken(result.accessToken);
+    const user = mapUser(result.user);
+    persistUser(user);
+    return user;
+  },
+
+  getGoogleAuthUrl(mode = "login") {
+    const apiBase = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1").replace(/\/api\/v1$/, "");
+    return `${apiBase}/api/v1/auth/oauth2/authorize/google?mode=${mode}`;
+  },
+
+  async handleOAuthCallback(token) {
+    apiClient.setToken(token);
+    const user = await this.fetchCurrentUser();
     return user;
   },
 
@@ -90,8 +122,18 @@ export const authService = {
     });
   },
 
-  async forgotPassword(email) {
-    return { message: `Yêu cầu khôi phục mật khẩu đã được ghi nhận cho ${email}.` };
+  async sendForgotPasswordOtp(email) {
+    return apiClient.request("/auth/forgot-password/send-otp", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  async resetPassword(payload) {
+    return apiClient.request("/auth/forgot-password/reset", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   },
 
   logout() {

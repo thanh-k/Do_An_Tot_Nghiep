@@ -15,6 +15,7 @@ spring:
 
   flyway:
     enabled: false
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -32,19 +33,18 @@ spring:
       client:
         registration:
           google:
-            client-id: 785478977086-t4l0730im445aa51h63cmek0ssqqe0f2.apps.googleusercontent.com
-            client-secret: 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
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
             scope:
               - openid
               - profile
               - email
 
-  spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: thanhlaoca0704484255@gmail.com
-    password: alfproczhupcbbcu
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_APP_PASSWORD}
     properties:
       mail:
         smtp:
@@ -54,7 +54,7 @@ spring:
 
 app:
   jwt:
-    secret: VGhpc0lzQVN1cGVyU2VjcmV0S2V5Rm9ySmF2YVNwcmluZ0Jvb3RGYW5wYWdlQmFja2VuZA==
+    secret: ${JWT_SECRET}
     expiration: 86400000
 
   upload-dir: uploads
@@ -64,13 +64,12 @@ app:
     authorized-redirect-uri: http://localhost:5173/auth/oauth2/callback
 
   mail:
-    from: thanhlaoca0704484255@gmail.com
+    from: ${MAIL_USERNAME}
 
   otp:
     expiration-minutes: 10
 
   cloudinary:
-    cloud-name: daz76ckfi
-    api-key: 539561267477747
-    api-secret: bC3fPgCaWAu6nlsk5Si699o4peM
-
+    cloud-name: ${CLOUDINARY_CLOUD_NAME}
+    api-key: ${CLOUDINARY_API_KEY}
+    api-secret: ${CLOUDINARY_API_SECRET}

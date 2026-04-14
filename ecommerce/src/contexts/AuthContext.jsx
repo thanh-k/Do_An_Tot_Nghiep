@@ -45,6 +45,16 @@ export function AuthProvider({ children }) {
         setCurrentUser(user);
         return user;
       },
+      completeGoogleRegistration: async (payload) => {
+        const user = await authService.completeGoogleRegistration(payload);
+        setCurrentUser(user);
+        return user;
+      },
+      finishOAuthLogin: async (token) => {
+        const user = await authService.handleOAuthCallback(token);
+        setCurrentUser(user);
+        return user;
+      },
       updateProfile: async (payload) => {
         const user = await authService.updateProfile(payload);
         setCurrentUser(user);
@@ -56,7 +66,9 @@ export function AuthProvider({ children }) {
         return user;
       },
       changePassword: authService.changePassword,
-      forgotPassword: authService.forgotPassword,
+      sendRegistrationOtp: authService.sendRegistrationOtp,
+      sendForgotPasswordOtp: authService.sendForgotPasswordOtp,
+      resetPassword: authService.resetPassword,
       logout: () => {
         authService.logout();
         setCurrentUser(null);

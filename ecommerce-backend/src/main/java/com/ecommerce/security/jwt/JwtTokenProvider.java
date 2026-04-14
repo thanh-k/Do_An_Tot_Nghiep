@@ -8,7 +8,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.time.Duration;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 public class JwtTokenProvider {
@@ -23,12 +26,25 @@ public class JwtTokenProvider {
     }
 
     public String generateToken(String subject, String role) {
-        Date now = new Date();
-        Date expiry = new Date(now.getTime() + expirationMs);
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("role", role);
+        return generateToken(subject, claims, expirationMs);
+    }
 
+    public String generateTemporaryGoogleToken(String email, String fullName, String avatar) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("purpose", "GOOGLE_REGISTER_TEMP");
+        claims.put("fullName", fullName);
+        claims.put("avatar", avatar);
+        return generateToken(email, claims, Duration.ofMinutes(10).toMillis());
+    }
+
+    public String generateToken(String subject, Map<String, Object> claims, long customExpirationMs) {
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + customExpirationMs);
         return Jwts.builder()
                 .subject(subject)
-                .claim("role", role)
+                .claims(claims)
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(secretKey)
@@ -37,6 +53,10 @@ public class JwtTokenProvider {
 
     public String getUsernameFromToken(String token) {
         return parseClaims(token).getSubject();
+    }
+
+    public Claims getClaims(String token) {
+        return parseClaims(token);
     }
 
     public boolean isValidToken(String token) {

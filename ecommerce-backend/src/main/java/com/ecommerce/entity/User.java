@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -22,20 +24,14 @@ public class User {
     @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;
 
-    @Column(nullable = false, unique = true, length = 10)
-    private String phone;
-
     @Column(unique = true, length = 320)
     private String email;
 
-    @Column(name = "password_hash", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "password_hash", columnDefinition = "TEXT")
     private String passwordHash;
 
     @Column(columnDefinition = "TEXT")
     private String avatar;
-
-    @Column(length = 255)
-    private String address;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -46,11 +42,22 @@ public class User {
     @Builder.Default
     private Boolean active = true;
 
+    @Column(name = "auth_provider", nullable = false, length = 20)
+    @Builder.Default
+    private String authProvider = "LOCAL";
+
+    @Column(name = "provider_id", length = 100)
+    private String providerId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<UserAddress> addresses = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {

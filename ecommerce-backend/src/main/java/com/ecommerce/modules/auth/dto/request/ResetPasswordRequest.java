@@ -3,9 +3,8 @@ package com.ecommerce.modules.auth.dto.request;
 import lombok.Data;
 
 @Data
-public class RegisterRequest {
-    private String fullName;
+public class ResetPasswordRequest {
     private String email;
-    private String password;
     private String otpCode;
+    private String newPassword;
 }
