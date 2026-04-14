@@ -7,7 +7,7 @@ import Button from "@/components/common/Button";
 import Input from "@/components/common/Input";
 import PageHeader from "@/components/common/PageHeader";
 import Pagination from "@/components/common/Pagination";
-import { categoryService } from "@/services/categoryService";
+import { categoryService } from "@/services/admin/categoryService";
 import productService from "@/services/productService";
 import { formatCurrency } from "@/utils/format";
 import { getProductStock, getStartingPrice } from "@/utils/product";
@@ -28,7 +28,10 @@ function ProductManagementPage() {
 
   const loadData = () => {
     setLoading(true);
-    Promise.all([productService.getAllProducts(), categoryService.getCategories()])
+    Promise.all([
+      productService.getAllProducts(),
+      categoryService.getCategories(),
+    ])
       .then(([productsData, categoriesData]) => {
         setProducts(productsData);
         setCategories(categoriesData);
@@ -49,15 +52,19 @@ function ProductManagementPage() {
     const search = debouncedKeyword.trim().toLowerCase();
     if (!search) return products;
     return products.filter((product) =>
-      [product.name, product.brand, product.slug].join(" ").toLowerCase().includes(search)
+      [product.name, product.brand, product.slug]
+        .join(" ")
+        .toLowerCase()
+        .includes(search),
     );
   }, [debouncedKeyword, products]);
 
-  const { currentData, totalPages, goToPage, hasNextPage, hasPrevPage } = usePagination({
-    data: filteredProducts,
-    pageSize: 10,
-    currentPage,
-  });
+  const { currentData, totalPages, goToPage, hasNextPage, hasPrevPage } =
+    usePagination({
+      data: filteredProducts,
+      pageSize: 10,
+      currentPage,
+    });
 
   const columns = [
     {
@@ -65,7 +72,11 @@ function ProductManagementPage() {
       title: "Sản phẩm",
       render: (row) => (
         <div className="flex gap-3">
-          <img src={row.thumbnail} alt={row.name} className="h-14 w-14 rounded-xl object-cover" />
+          <img
+            src={row.thumbnail}
+            alt={row.name}
+            className="h-14 w-14 rounded-xl object-cover"
+          />
           <div>
             <p className="font-semibold text-slate-900">{row.name}</p>
             <p className="text-xs text-slate-500">{row.slug}</p>
@@ -86,13 +97,23 @@ function ProductManagementPage() {
     {
       key: "price",
       title: "Giá từ",
-      render: (row) => <span className="font-semibold">{formatCurrency(getStartingPrice(row))}</span>,
+      render: (row) => (
+        <span className="font-semibold">
+          {formatCurrency(getStartingPrice(row))}
+        </span>
+      ),
     },
     {
       key: "stock",
       title: "Tồn kho",
       render: (row) => (
-        <span className={getProductStock(row) <= 10 ? "font-semibold text-rose-600" : "font-semibold text-emerald-600"}>
+        <span
+          className={
+            getProductStock(row) <= 10
+              ? "font-semibold text-rose-600"
+              : "font-semibold text-emerald-600"
+          }
+        >
           {getProductStock(row)}
         </span>
       ),
@@ -133,7 +154,11 @@ function ProductManagementPage() {
   const handleSaveProduct = async (payload) => {
     try {
       await productService.saveProduct(payload);
-      toast.success(payload.id ? "Cập nhật sản phẩm thành công" : "Thêm sản phẩm thành công");
+      toast.success(
+        payload.id
+          ? "Cập nhật sản phẩm thành công"
+          : "Thêm sản phẩm thành công",
+      );
       setModalState({ open: false, product: null });
       loadData();
     } catch (error) {
@@ -162,7 +187,13 @@ function ProductManagementPage() {
         />
       </div>
 
-      {loading ? <div className="card p-8 text-center text-sm text-slate-500">Đang tải dữ liệu...</div> : <DataTable columns={columns} data={currentData} />}
+      {loading ? (
+        <div className="card p-8 text-center text-sm text-slate-500">
+          Đang tải dữ liệu...
+        </div>
+      ) : (
+        <DataTable columns={columns} data={currentData} />
+      )}
 
       {!loading && filteredProducts.length > 0 && (
         <div className="flex justify-center">

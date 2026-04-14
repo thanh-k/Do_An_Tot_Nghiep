@@ -7,10 +7,11 @@ import Pagination from "@/components/common/Pagination";
 import Button from "@/components/common/Button";
 import FilterSidebar from "@/components/product/FilterSidebar";
 import ProductGrid from "@/components/product/ProductGrid";
-import { categoryService } from "@/services/categoryService";
+import { categoryService } from "@/services/admin/categoryService";
 import productService from "@/services/productService";
 
-const getArrayFromParam = (value) => (value ? value.split(",").filter(Boolean) : []);
+const getArrayFromParam = (value) =>
+  value ? value.split(",").filter(Boolean) : [];
 
 const getFiltersFromParams = (searchParams) => ({
   category: searchParams.get("category") || "",
@@ -28,7 +29,10 @@ const getFiltersFromParams = (searchParams) => ({
 
 function ProductListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const filters = useMemo(() => getFiltersFromParams(searchParams), [searchParams]);
+  const filters = useMemo(
+    () => getFiltersFromParams(searchParams),
+    [searchParams],
+  );
 
   const [loading, setLoading] = useState(true);
   const [filterOptions, setFilterOptions] = useState({
@@ -49,7 +53,10 @@ function ProductListPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
-    Promise.all([productService.getAvailableFilters(), categoryService.getCategories()])
+    Promise.all([
+      productService.getAvailableFilters(),
+      categoryService.getCategories(),
+    ])
       .then(([availableFilters, categoriesData]) => {
         setFilterOptions(availableFilters);
         setCategories(categoriesData);
@@ -102,17 +109,24 @@ function ProductListPage() {
   };
 
   const selectedCategoryName = categories.find(
-    (item) => item.id === filters.category
+    (item) => item.id === filters.category,
   )?.name;
 
   return (
     <div className="container-padded py-8">
       <PageHeader
-        title={selectedCategoryName ? `Danh sách ${selectedCategoryName}` : "Tất cả sản phẩm"}
+        title={
+          selectedCategoryName
+            ? `Danh sách ${selectedCategoryName}`
+            : "Tất cả sản phẩm"
+        }
         description="Lọc theo category, giá, màu sắc, dung lượng, thương hiệu và trạng thái còn hàng để tìm ra sản phẩm phù hợp nhanh hơn."
         actions={
           <>
-            <Button variant="outline" onClick={() => setFiltersOpen((prev) => !prev)}>
+            <Button
+              variant="outline"
+              onClick={() => setFiltersOpen((prev) => !prev)}
+            >
               <Filter size={16} />
               Bộ lọc
             </Button>

@@ -24,7 +24,7 @@ import { motion } from "framer-motion"; // Import Framer Motion
 import SectionHeader from "@/components/common/SectionHeader";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ProductGrid from "@/components/product/ProductGrid";
-import { categoryService } from "@/services/categoryService";
+import { categoryService } from "@/services/admin/categoryService";
 import productService from "@/services/productService";
 
 // Cấu hình hiệu ứng xuất hiện chung cho các section

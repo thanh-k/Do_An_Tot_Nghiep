@@ -11,7 +11,7 @@ import {
 import { Link, NavLink, useLocation } from "react-router-dom";
 import logo from "@/assets/logo.svg";
 import SearchBar from "@/components/navigation/SearchBar";
-import { categoryService } from "@/services/categoryService";
+import { categoryService } from "@/services/admin/categoryService";
 import useAuth from "@/hooks/useAuth";
 import useCart from "@/hooks/useCart";
 import useWishlist from "@/hooks/useWishlist";

@@ -14,8 +14,9 @@ import cn from "@/utils/cn";
 
 const items = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/admin/products", label: "Sản phẩm", icon: Boxes },
   { to: "/admin/categories", label: "Danh mục", icon: FolderTree },
+  { to: "/admin/brands", label: "Thương hiệu", icon: FolderTree },
+  { to: "/admin/products", label: "Sản phẩm", icon: Boxes },
   { to: "/admin/orders", label: "Đơn hàng", icon: PackageCheck },
   { to: "/admin/users", label: "Người dùng", icon: ShieldUser },
   { to: "/admin/profile", label: "Hồ sơ admin", icon: UserCircle2 },
