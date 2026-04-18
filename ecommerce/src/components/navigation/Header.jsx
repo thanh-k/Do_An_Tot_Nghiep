@@ -16,7 +16,7 @@ import useAuth from "@/hooks/useAuth";
 import useCart from "@/hooks/useCart";
 import useWishlist from "@/hooks/useWishlist";
 import cn from "@/utils/cn";
-import { Camera } from "lucide-react"; // 1. Import icon Camera
+import { Camera } from "lucide-react"; 
 
 function Header() {
   const [categories, setCategories] = useState([]);
@@ -62,7 +62,7 @@ function Header() {
         <Link to="/" className="shrink-0">
           <img
             src={logo}
-            alt="NovaShop"
+            alt="InsightShop"
             className="h-10 w-auto invert brightness-200"
           />
         </Link>

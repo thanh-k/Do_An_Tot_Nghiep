@@ -43,6 +43,12 @@ public enum ErrorCode {
 
     BRAND_EXISTED(1008, "Thương hiệu đã tồn tại", HttpStatus.BAD_REQUEST),
     BRAND_NOT_FOUND(1009, "Không tìm thấy thương hiệu", HttpStatus.NOT_FOUND),
+
+    ROLE_NOT_FOUND(1301, "Không tìm thấy vai trò", HttpStatus.NOT_FOUND),
+    ROLE_ALREADY_EXISTS(1302, "Mã vai trò đã tồn tại", HttpStatus.BAD_REQUEST),
+    ROLE_REQUIRED(1303, "Vui lòng chọn ít nhất một vai trò", HttpStatus.BAD_REQUEST),
+    ROLE_CODE_REQUIRED(1304, "Mã vai trò là bắt buộc", HttpStatus.BAD_REQUEST),
+    SYSTEM_ROLE_LOCKED(1305, "Không thể chỉnh sửa vai trò hệ thống", HttpStatus.BAD_REQUEST),
     ;
 
     private final int code;

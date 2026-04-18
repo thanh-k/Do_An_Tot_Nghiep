@@ -1,5 +1,7 @@
 package com.ecommerce.modules.user.service;
 
+import com.ecommerce.entity.AccessPermission;
+import com.ecommerce.entity.AccessRole;
 import com.ecommerce.entity.User;
 import com.ecommerce.entity.UserAddress;
 import com.ecommerce.modules.user.dto.response.UserAddressResponse;
@@ -20,6 +22,15 @@ public class UserMapper {
         UserAddressResponse primary = addresses.stream().filter(UserAddressResponse::getIsDefault).findFirst()
                 .orElse(addresses.isEmpty() ? null : addresses.get(0));
 
+        List<String> roles = user.getAccessRoles() == null ? List.of() : user.getAccessRoles().stream().map(AccessRole::getCode).sorted().toList();
+        List<String> permissions = user.getAccessRoles() == null ? List.of() : user.getAccessRoles().stream()
+                .flatMap(role -> role.getPermissions().stream())
+                .map(AccessPermission::getCode)
+                .distinct()
+                .sorted()
+                .toList();
+        String primaryRole = !roles.isEmpty() ? roles.get(0) : user.getRole().name();
+
         return UserResponse.builder()
                 .id(user.getId())
                 .fullName(user.getFullName())
@@ -27,7 +38,9 @@ public class UserMapper {
                 .primaryAddress(primary != null ? primary.getAddressLine() : null)
                 .email(user.getEmail())
                 .avatar(user.getAvatar())
-                .role(user.getRole().name())
+                .role(primaryRole)
+                .roles(roles)
+                .permissions(permissions)
                 .active(user.getActive())
                 .authProvider(user.getAuthProvider())
                 .createdAt(user.getCreatedAt())

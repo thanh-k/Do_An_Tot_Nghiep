@@ -6,7 +6,9 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "users")
@@ -37,6 +39,15 @@ public class User {
     @Column(nullable = false, length = 20)
     @Builder.Default
     private RoleName role = RoleName.USER;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "user_roles",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    @Builder.Default
+    private Set<AccessRole> accessRoles = new HashSet<>();
 
     @Column(nullable = false)
     @Builder.Default

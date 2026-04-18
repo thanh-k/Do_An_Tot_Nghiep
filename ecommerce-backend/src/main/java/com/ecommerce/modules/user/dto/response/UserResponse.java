@@ -16,6 +16,8 @@ public class UserResponse {
     private String email;
     private String avatar;
     private String role;
+    private List<String> roles;
+    private List<String> permissions;
     private Boolean active;
     private String authProvider;
     private LocalDateTime createdAt;

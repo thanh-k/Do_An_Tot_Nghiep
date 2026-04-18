@@ -7,8 +7,14 @@ import java.util.List;
 import java.util.Optional;
 
 public interface UserAddressRepository extends JpaRepository<UserAddress, Long> {
-    List<UserAddress> findByUserIdOrderByIsDefaultDescCreatedAtDesc(Long userId);
-    Optional<UserAddress> findByIdAndUserId(Long id, Long userId);
-    boolean existsByPhoneAndUserIdNot(String phone, Long userId);
-    Optional<UserAddress> findFirstByUserIdAndIsDefaultTrue(Long userId);
+
+    List<UserAddress> findByUser_IdOrderByIsDefaultDescCreatedAtDesc(Long userId);
+
+    Optional<UserAddress> findByIdAndUser_Id(Long id, Long userId);
+
+    boolean existsByPhoneAndUser_IdNot(String phone, Long userId);
+
+    Optional<UserAddress> findFirstByUser_IdAndIsDefaultTrue(Long userId);
+
+    boolean existsByUser_Id(Long userId);
 }

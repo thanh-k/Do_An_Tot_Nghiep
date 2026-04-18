@@ -34,7 +34,7 @@ export function AuthProvider({ children }) {
       currentUser,
       isInitializing,
       isAuthenticated: Boolean(currentUser),
-      isAdmin: currentUser?.role === "admin",
+      isAdmin: ["ADMIN", "SUPER_ADMIN", "admin", "super_admin"].includes(currentUser?.role),
       login: async (payload) => {
         const user = await authService.login(payload);
         setCurrentUser(user);

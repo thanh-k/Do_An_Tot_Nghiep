@@ -13,7 +13,7 @@ function ProtectedRoute({ children, roles = [] }) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  if (roles.length && !roles.includes(currentUser.role)) {
+  if (roles.length && !roles.map((item) => item.toLowerCase()).includes(String(currentUser.role).toLowerCase())) {
     return <Navigate to="/" replace />;
   }
 

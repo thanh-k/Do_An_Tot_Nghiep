@@ -15,6 +15,8 @@ public interface UserService {
     UserResponse updateCurrentUser(UserUpdateRequest request);
     UserResponse updateAvatar(MultipartFile file) throws IOException;
     List<UserResponse> getAllUsers();
+    List<UserResponse> getCustomers();
+    List<UserResponse> getStaff();
     UserResponse getUserById(Long id);
     UserResponse adminUpdateUser(Long id, AdminUserUpdateRequest request);
     void deleteUser(Long id);

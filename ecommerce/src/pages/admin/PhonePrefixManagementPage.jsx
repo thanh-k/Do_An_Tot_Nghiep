@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { Plus, Save, Trash2 } from "lucide-react";
 import DataTable from "@/components/admin/DataTable";
 import Button from "@/components/common/Button";
 import Input from "@/components/common/Input";
 import PageHeader from "@/components/common/PageHeader";
+import { useDebounce } from "@/hooks/useDebounce";
 import userService from "@/services/userService";
 
 const initialForm = { prefix: "", providerName: "", active: true };
@@ -13,6 +14,8 @@ function PhonePrefixManagementPage() {
   const [loading, setLoading] = useState(true);
   const [prefixes, setPrefixes] = useState([]);
   const [prefixForm, setPrefixForm] = useState(initialForm);
+  const [keyword, setKeyword] = useState("");
+  const debouncedKeyword = useDebounce(keyword, 250);
 
   const loadPrefixes = async () => {
     setLoading(true);
@@ -27,6 +30,18 @@ function PhonePrefixManagementPage() {
   useEffect(() => {
     loadPrefixes();
   }, []);
+
+  const filteredPrefixes = useMemo(() => {
+    const q = debouncedKeyword.trim().toLowerCase();
+    if (!q) return prefixes;
+    return prefixes.filter((item) =>
+      [item.prefix, item.providerName, item.active ? "hoạt động" : "tắt"]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(q)
+    );
+  }, [prefixes, debouncedKeyword]);
 
   const resetForm = () => setPrefixForm(initialForm);
 
@@ -55,6 +70,7 @@ function PhonePrefixManagementPage() {
   };
 
   const columns = [
+    { key: "stt", title: "STT", render: (_row, index) => index + 1 },
     { key: "prefix", title: "Đầu số", render: (row) => row.prefix },
     { key: "providerName", title: "Nhà mạng", render: (row) => row.providerName },
     { key: "active", title: "Trạng thái", render: (row) => (row.active ? "Hoạt động" : "Tắt") },
@@ -139,12 +155,19 @@ function PhonePrefixManagementPage() {
             ) : null}
           </div>
         </div>
+
+        <Input
+          label="Tìm kiếm đầu số"
+          placeholder="Nhập đầu số hoặc tên nhà mạng"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+        />
       </div>
 
       {loading ? (
         <div className="card p-8 text-center text-sm text-slate-500">Đang tải danh sách đầu số...</div>
       ) : (
-        <DataTable columns={columns} data={prefixes} pagination={{ enabled: true, pageSize: 10, itemLabel: "đầu số" }} />
+        <DataTable columns={columns} data={filteredPrefixes} pagination={{ enabled: true, pageSize: 10, itemLabel: "đầu số" }} />
       )}
     </div>
   );

@@ -67,6 +67,16 @@ public class UserController {
         return ApiResponse.<List<UserResponse>>builder().result(userService.getAllUsers()).build();
     }
 
+    @GetMapping("/admin/customers")
+    public ApiResponse<List<UserResponse>> getCustomers() {
+        return ApiResponse.<List<UserResponse>>builder().result(userService.getCustomers()).build();
+    }
+
+    @GetMapping("/admin/staff")
+    public ApiResponse<List<UserResponse>> getStaff() {
+        return ApiResponse.<List<UserResponse>>builder().result(userService.getStaff()).build();
+    }
+
     @GetMapping("/admin/users/{id}")
     public ApiResponse<UserResponse> getUserById(@PathVariable Long id) {
         return ApiResponse.<UserResponse>builder().result(userService.getUserById(id)).build();

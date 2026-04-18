@@ -61,7 +61,7 @@ function DataTable({
           </thead>
 
           <tbody className="divide-y divide-slate-200 bg-white">
-            {paginatedData.map((row) => (
+            {paginatedData.map((row, index) => (
               <tr key={row[rowKey]} className="hover:bg-slate-50">
                 {columns.map((column) => (
                   <td
@@ -71,7 +71,7 @@ function DataTable({
                       column.align === "right" && "text-right"
                     )}
                   >
-                    {column.render ? column.render(row) : row[column.key]}
+                    {column.render ? column.render(row, (safePage - 1) * pageSize + index) : row[column.key]}
                   </td>
                 ))}
               </tr>

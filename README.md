@@ -44,4 +44,19 @@ Nội dung thực hiện:
 -	Cho phép password_hash null (user Google) 
 -	Seed dữ liệu admin + đầu số điện thoại 
 ✍️ Người thực hiện: Thanh
+🗓️ 18/04/2026
+Nội dung thực hiện:
+1 FE:
+- Tách trang quản lý user thành:
+    + Quản lý khách hàng
+    + Quản lý nhân sự
+- Thêm modal chi tiết user
+- Fix lỗi tìm kiếm đầu số điện thoại
+- Sửa hiển thị STT và quyền trên giao diện
+2 BE:
+- Xây dựng phân quyền động
+- Hỗ trợ Super Admin tự phân quyền cho user
+- Thêm role, permission, gán role cho user, gán quyền cho role
+- Đồng bộ API cho quản lý khách hàng, nhân sự và vai trò
+✍️ Người thực hiện: Thanh
 
