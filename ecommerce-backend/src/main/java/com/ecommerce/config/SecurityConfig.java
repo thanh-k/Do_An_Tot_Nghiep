@@ -49,13 +49,22 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
-                        .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+
+                        // admin area: chỉ cần đã đăng nhập,
+                        // quyền chi tiết sẽ xử lý bằng @PreAuthorize ở từng endpoint
+                        .requestMatchers("/api/v1/admin/**").authenticated()
+
                         .requestMatchers("/api/v1/users/**", "/api/v1/auth/change-password").authenticated()
-                        .anyRequest().permitAll())
-                .oauth2Login(oauth -> oauth.successHandler(oAuth2AuthenticationSuccessHandler).failureHandler(oAuth2AuthenticationFailureHandler))
+                        .anyRequest().permitAll()
+                )
+                .oauth2Login(oauth -> oauth
+                        .successHandler(oAuth2AuthenticationSuccessHandler)
+                        .failureHandler(oAuth2AuthenticationFailureHandler)
+                )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .formLogin(form -> form.disable());
+
         return http.build();
     }
 

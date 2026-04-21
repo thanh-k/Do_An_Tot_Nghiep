@@ -104,6 +104,7 @@ public class DataInitializer implements CommandLineRunner {
                 permission("USER_CREATE", "Tạo người dùng", "USER"),
                 permission("USER_UPDATE", "Cập nhật người dùng", "USER"),
                 permission("USER_DELETE", "Xóa người dùng", "USER"),
+                permission("USER_LOCK", "Khóa / mở khóa người dùng", "USER"),
                 permission("CUSTOMER_VIEW", "Xem khách hàng", "CUSTOMER"),
                 permission("STAFF_VIEW", "Xem nhân sự", "STAFF"),
 
@@ -260,6 +261,7 @@ public class DataInitializer implements CommandLineRunner {
                         "USER_VIEW",
                         "USER_CREATE",
                         "USER_UPDATE",
+                        "USER_LOCK",
                         "USER_DELETE",
                         "CUSTOMER_VIEW",
                         "STAFF_VIEW",
@@ -348,6 +350,7 @@ public class DataInitializer implements CommandLineRunner {
                         "USER_CREATE",
                         "USER_UPDATE",
                         "USER_DELETE",
+                        "USER_LOCK",
                         "CUSTOMER_VIEW",
                         "STAFF_VIEW",
 
