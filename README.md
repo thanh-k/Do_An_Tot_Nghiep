@@ -59,4 +59,69 @@ Nội dung thực hiện:
 - Thêm role, permission, gán role cho user, gán quyền cho role
 - Đồng bộ API cho quản lý khách hàng, nhân sự và vai trò
 ✍️ Người thực hiện: Thanh
+🗓️ 20/04/2026
+Nội dung thực hiện:
+1. FE:
+- Chuyển hệ thống phân quyền từ role-based → permission-based 
+- Cập nhật ProtectedRoute kiểm tra theo permission thay vì role 
+- Cập nhật AppRoutes và adminRoutes để gán permission cho từng trang 
+- Ẩn/hiện menu Sidebar theo permission (không còn phụ thuộc role cứng) 
+- Chặn truy cập trang nếu không đủ quyền, hiển thị thông báo rõ ràng 
+- Thêm chức năng hiển thị/ẩn mật khẩu (icon mắt) cho: 
+    + Trang đăng nhập 
+    + Trang đăng ký 
+    + Trang quên mật khẩu 
+- Tối ưu UX: chỉ hiển thị các chức năng (nút, menu) đúng quyền được cấp 
+2. BE:
+- Sửa cấu hình SecurityConfig: 
+    + Bỏ chặn cứng /api/v1/admin/** theo role ADMIN, SUPER_ADMIN 
+    + Cho phép truy cập nếu đã xác thực, kiểm soát bằng permission 
+- Áp dụng @PreAuthorize cho các API admin: 
+    + USER_VIEW, CUSTOMER_VIEW, STAFF_VIEW 
+    + USER_UPDATE, USER_DELETE, USER_LOCK 
+- Fix lỗi 403 Forbidden khi user có permission nhưng không có role ADMIN 
+- Hoàn thiện API khóa/mở khóa tài khoản (toggle status user)
+✍️ Người thực hiện: Thanh
 
+📅 Ngày: 21/04/2026
+🧩 Nội dung công việc:
+1. Hoàn thiện module Tin tức (News)
+- Xây dựng backend cho: 
+    + Quản lý chủ đề tin tức (News Topic) 
+    + Quản lý bài viết tin tức (News Post) 
+- Thiết kế đầy đủ: 
+    + Entity, Repository, Service, Controller theo kiến trúc Spring Boot 
+- Tạo API: 
+    + Lấy danh sách chủ đề, bài viết 
+    + Tạo / sửa / xóa chủ đề và bài viết 
+    + Lọc bài viết theo chủ đề 
+2. Xử lý upload ảnh cho bài viết
+- Áp dụng lại luồng upload giống: 
+    + User avatar 
+    + Category image 
+- Sử dụng: 
+    + multipart/form-data 
+    + Cloudinary 
+3. Cải thiện chức năng quản trị (Admin)
+- Thêm: 
+    + Hiển thị số lượng bài viết theo topic 
+    + Lọc bài viết theo chủ đề 
+- Xây dựng: 
+    + Chức năng chọn nhiều (checkbox) 
+        User 
+        Topic 
+        Bài viết 
+- Thêm thao tác hàng loạt: 
+    + User: khóa / xóa 
+    + Topic: ẩn / xóa 
+    + Bài viết: ẩn / xuất bản / xóa 
+4. Hoàn thiện giao diện frontend
+- Kết nối API tin tức vào: 
+    + Trang quản lý admin 
+    + Trang client (hiển thị tin tức) 
+- Cập nhật UI: 
+    + Form thêm/sửa bài viết (có upload ảnh) 
+    + Danh sách bài viết và chủ đề 
+- Xử lý: 
+    + Confirm khi thao tác nguy hiểm (ẩn/xóa)
+✍️ Người thực hiện: Thanh

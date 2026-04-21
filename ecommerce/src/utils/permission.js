@@ -10,6 +10,8 @@ export const ADMIN_ENTRY_PERMISSIONS = [
   "PHONE_PREFIX_VIEW",
   "PHONE_PREFIX_MANAGE",
   "ANALYTICS_VIEW",
+  "NEWS_TOPIC_VIEW",
+  "NEWS_POST_VIEW",
 ];
 
 export function normalizeRole(role) {

@@ -7,6 +7,8 @@ import StaffManagementPage from "@/pages/admin/StaffManagementPage";
 import RoleManagementPage from "@/pages/admin/RoleManagementPage";
 import PhonePrefixManagementPage from "@/pages/admin/PhonePrefixManagementPage";
 import AdminProfilePage from "@/pages/admin/AdminProfilePage";
+import NewsTopicManagementPage from "@/pages/admin/NewsTopicManagementPage";
+import NewsPostManagementPage from "@/pages/admin/NewsPostManagementPage";
 
 export const adminRoutes = [
   {
@@ -53,6 +55,16 @@ export const adminRoutes = [
     path: "phone-prefixes",
     component: PhonePrefixManagementPage,
     permissions: ["PHONE_PREFIX_VIEW", "PHONE_PREFIX_MANAGE"],
+  },
+  {
+    path: "news/topics",
+    component: NewsTopicManagementPage,
+    permissions: ["NEWS_TOPIC_VIEW"],
+  },
+  {
+    path: "news/posts",
+    component: NewsPostManagementPage,
+    permissions: ["NEWS_POST_VIEW"],
   },
   {
     path: "profile",

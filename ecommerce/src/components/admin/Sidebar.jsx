@@ -10,6 +10,8 @@ import {
   UserCircle2,
   Users,
   BadgeCheck,
+  Newspaper,
+  BookOpenText,
 } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import logo from "@/assets/logo.svg";
@@ -66,6 +68,18 @@ const items = [
     label: "Đầu số điện thoại",
     icon: Phone,
     permissions: ["PHONE_PREFIX_VIEW", "PHONE_PREFIX_MANAGE"],
+  },
+  {
+    to: "/admin/news/topics",
+    label: "Chủ đề tin tức",
+    icon: BookOpenText,
+    permissions: ["NEWS_TOPIC_VIEW"],
+  },
+  {
+    to: "/admin/news/posts",
+    label: "Bài viết tin tức",
+    icon: Newspaper,
+    permissions: ["NEWS_POST_VIEW"],
   },
   {
     to: "/admin/profile",
