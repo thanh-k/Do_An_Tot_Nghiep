@@ -125,3 +125,66 @@ Nội dung thực hiện:
 - Xử lý: 
     + Confirm khi thao tác nguy hiểm (ẩn/xóa)
 ✍️ Người thực hiện: Thanh
+
+📅 Ngày: 22/04/2026
+🧩 Nội dung công việc:
+1. Hoàn thiện module Liên hệ (Contact) – Backend
+- Xây dựng đầy đủ: 
+    + Entity: ContactMessage, ContactMessageStatus 
+    + DTO: request/response cho liên hệ, cập nhật trạng thái, phản hồi 
+- Phát triển API: 
+    + POST /contacts (khách gửi liên hệ) 
+    + GET /admin/contacts (admin xem danh sách) 
+    + PATCH /admin/contacts/{id}/status 
+    + POST /admin/contacts/{id}/reply 
+- Tích hợp gửi email phản hồi bằng MailService 
+- Áp dụng phân quyền đúng chuẩn: 
+    + CONTACT_VIEW 
+    + CONTACT_UPDATE 
+    + CONTACT_REPLY 
+2. Chuẩn hóa validate dữ liệu đầu vào
+- Áp dụng lại InputValidator: 
+    + normalizeFullName, validateFullName 
+    + normalizePhone, validatePhone 
+    + normalizeEmail, validateEmail 
+- Tích hợp PhonePrefixService để kiểm tra đầu số hợp lệ 
+- Loại bỏ validate thủ công (regex cứng) 
+- Đồng bộ validate với module User/Address 
+3. Cải thiện thông báo lỗi cho người dùng
+- Backend: 
+    + Bổ sung ErrorCode rõ ràng cho từng field: tên, số điện thoại, email, nội dung 
+- Frontend: 
+    + Hiển thị lỗi theo từng input 
+    + Highlight input sai (border đỏ) 
+    + Không còn hiển thị lỗi chung chung 
+4. Hoàn thiện giao diện Trang liên hệ (Client)
+- Kết nối API thật với backend 
+- Tự động điền: 
+    + họ tên 
+    + email 
+    + số điện thoại (nếu đã đăng nhập) 
+- Thêm trạng thái: 
+    + loading khi gửi 
+    + reset form sau khi gửi thành công 
+- Hiển thị thông báo: 
+    + gửi thành công 
+    + lỗi chi tiết 
+5. Hoàn thiện trang quản lý liên hệ (Admin)
+- Hiển thị danh sách liên hệ 
+- Tìm kiếm theo: 
+    + tên 
+    + email 
+    + số điện thoại 
+- Lọc theo trạng thái: 
+    + NEW 
+    + IN_PROGRESS 
+    + REPLIED 
+- Chức năng: 
+    + cập nhật trạng thái 
+    + gửi phản hồi email cho khách 
+6. Fix lỗi phát sinh
+- Fix lỗi icon lucide-react (MailReply không tồn tại) 
+- Fix lỗi validate chưa đồng bộ 
+- Fix lỗi hiển thị message không rõ ràng 
+- Kiểm tra và đảm bảo API hoạt động đúng với frontend 
+✍️ Người thực hiện: Thanh

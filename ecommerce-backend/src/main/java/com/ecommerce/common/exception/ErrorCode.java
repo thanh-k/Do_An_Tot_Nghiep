@@ -58,6 +58,14 @@ public enum ErrorCode {
     NEWS_POST_REQUIRED(1412, "Tiêu đề bài viết là bắt buộc", HttpStatus.BAD_REQUEST),
     NEWS_POST_CONTENT_REQUIRED(1413, "Nội dung bài viết là bắt buộc", HttpStatus.BAD_REQUEST),
     NEWS_POST_STATUS_REQUIRED(1414, "Trạng thái bài viết là bắt buộc", HttpStatus.BAD_REQUEST),
+    CONTACT_NOT_FOUND(1501, "Không tìm thấy liên hệ", HttpStatus.NOT_FOUND),
+    CONTACT_NAME_INVALID(1502, "Họ và tên liên hệ không hợp lệ", HttpStatus.BAD_REQUEST),
+    CONTACT_PHONE_INVALID(1503, "Số điện thoại liên hệ phải gồm đúng 10 chữ số", HttpStatus.BAD_REQUEST),
+    CONTACT_EMAIL_INVALID(1504, "Email liên hệ không hợp lệ", HttpStatus.BAD_REQUEST),
+    CONTACT_MESSAGE_INVALID(1505, "Nội dung liên hệ phải có ít nhất 10 ký tự", HttpStatus.BAD_REQUEST),
+    CONTACT_STATUS_REQUIRED(1506, "Trạng thái liên hệ là bắt buộc", HttpStatus.BAD_REQUEST),
+    CONTACT_REPLY_REQUIRED(1507, "Nội dung phản hồi là bắt buộc", HttpStatus.BAD_REQUEST),
+    CONTACT_MESSAGE_REQUIRED(400, "Vui lòng nhập nội dung liên hệ", HttpStatus.BAD_REQUEST),
     ;
 
     private final int code;

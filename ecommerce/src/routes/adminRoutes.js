@@ -9,6 +9,7 @@ import PhonePrefixManagementPage from "@/pages/admin/PhonePrefixManagementPage";
 import AdminProfilePage from "@/pages/admin/AdminProfilePage";
 import NewsTopicManagementPage from "@/pages/admin/NewsTopicManagementPage";
 import NewsPostManagementPage from "@/pages/admin/NewsPostManagementPage";
+import ContactManagementPage from "@/pages/admin/ContactManagementPage";
 
 export const adminRoutes = [
   {
@@ -65,6 +66,11 @@ export const adminRoutes = [
     path: "news/posts",
     component: NewsPostManagementPage,
     permissions: ["NEWS_POST_VIEW"],
+  },
+  {
+    path: "contacts",
+    component: ContactManagementPage,
+    permissions: ["CONTACT_VIEW"],
   },
   {
     path: "profile",

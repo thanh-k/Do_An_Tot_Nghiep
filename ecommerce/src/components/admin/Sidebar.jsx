@@ -12,6 +12,7 @@ import {
   BadgeCheck,
   Newspaper,
   BookOpenText,
+  MessageSquareMore,
 } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import logo from "@/assets/logo.svg";
@@ -80,6 +81,12 @@ const items = [
     label: "Bài viết tin tức",
     icon: Newspaper,
     permissions: ["NEWS_POST_VIEW"],
+  },
+  {
+    to: "/admin/contacts",
+    label: "Liên hệ",
+    icon: MessageSquareMore,
+    permissions: ["CONTACT_VIEW"],
   },
   {
     to: "/admin/profile",
