@@ -8,7 +8,7 @@ import Input from "@/components/common/Input";
 import PageHeader from "@/components/common/PageHeader";
 import { brandService } from "@/services/admin/brandService";
 // Ní nhớ import thêm productService nếu muốn đếm số sản phẩm tham chiếu
-import productService from "@/services/productService";
+import productService from "@/services/admin/productService";
 import Pagination from "@/components/common/Pagination";
 
 function BrandManagementPage() {
@@ -108,11 +108,9 @@ function BrandManagementPage() {
             onClick={() => setModalState({ open: true, brand: row })}
           >
             <Pencil size={14} />
-            
           </Button>
           <Button size="sm" variant="danger" onClick={() => handleDelete(row)}>
             <Trash2 size={14} />
-            
           </Button>
         </div>
       ),

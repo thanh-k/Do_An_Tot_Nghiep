@@ -2,6 +2,7 @@ package com.ecommerce.common.exception;
 
 import com.ecommerce.common.response.ApiResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
@@ -11,10 +12,10 @@ public class GlobalExceptionHandler {
     // 1. Bắt lỗi AppException do mình tự định nghĩa (Lỗi trùng tên, không tìm
     // thấy...)
     @ExceptionHandler(value = AppException.class)
-    ResponseEntity<ApiResponse> handlingAppException(AppException exception) {
+    ResponseEntity<ApiResponse<Object>> handlingAppException(AppException exception) {
         ErrorCode errorCode = exception.getErrorCode();
 
-        ApiResponse apiResponse = new ApiResponse();
+        ApiResponse<Object> apiResponse = new ApiResponse<>();
         apiResponse.setCode(errorCode.getCode());
         apiResponse.setMessage(errorCode.getMessage());
 
@@ -25,8 +26,8 @@ public class GlobalExceptionHandler {
 
     // 2. Bắt các lỗi hệ thống chưa xác định (Lỗi 500) để không làm trắng trang
     @ExceptionHandler(value = Exception.class)
-    ResponseEntity<ApiResponse> handlingRuntimeException(Exception exception) {
-        ApiResponse apiResponse = new ApiResponse();
+    ResponseEntity<ApiResponse<Object>> handlingRuntimeException(Exception exception) {
+        ApiResponse<Object> apiResponse = new ApiResponse<>();
 
         apiResponse.setCode(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode());
         apiResponse.setMessage(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage());
@@ -34,6 +35,7 @@ public class GlobalExceptionHandler {
         // In lỗi ra console để ní còn biết đường mà fix
         exception.printStackTrace();
 
-        return ResponseEntity.badRequest().body(apiResponse);
+        // SỬA: Lỗi chưa bắt được phải trả về 500 (Internal Server Error) thay vì 400 (Bad Request)
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(apiResponse);
     }
 }

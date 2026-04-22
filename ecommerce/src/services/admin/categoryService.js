@@ -5,8 +5,14 @@ const API_URL = "http://localhost:8080/api/v1/categories";
 export const categoryService = {
   // Lấy danh sách danh mục thật từ DB
   async getCategories() {
-    const response = await axios.get(API_URL);
-    return response.data.result; // Trả về list categories
+    try {
+      const response = await axios.get(API_URL);
+      // Ní lưu ý: Nếu API của ní bọc kết quả trong .result thì dùng response.data.result
+      return response.data.result || response.data;
+    } catch (error) {
+      console.error("Lỗi lấy danh mục:", error);
+      return [];
+    }
   },
 
   // Lưu danh mục (Hỗ trợ cả tạo mới và cập nhật kèm ảnh)

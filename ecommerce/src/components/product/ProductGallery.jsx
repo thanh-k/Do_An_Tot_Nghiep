@@ -1,36 +1,49 @@
 import { useEffect, useState } from "react";
 import cn from "@/utils/cn";
 
-function ProductGallery({ images = [] }) {
+function ProductGallery({ images = [], selectedImage, onImageClick }) {
   const [activeImage, setActiveImage] = useState(images[0]);
 
   useEffect(() => {
-    setActiveImage(images[0]);
-  }, [images]);
+    if (selectedImage && images.includes(selectedImage)) {
+      setActiveImage(selectedImage);
+    } else if (images.length > 0) {
+      setActiveImage(images[0]);
+    }
+  }, [images, selectedImage]);
 
   if (!images.length) return null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-w-0 w-full">
       <div className="overflow-hidden rounded-3xl bg-slate-100">
         <img
           src={activeImage}
           alt="Product"
-          className="h-[440px] w-full object-cover sm:h-[520px]"
+          className="h-[440px] w-full object-contain sm:h-[520px] p-4"
         />
       </div>
 
-      <div className="grid grid-cols-4 gap-3">
+      <div className="flex gap-3 overflow-x-auto pb-2 snap-x no-scrollbar w-full">
         {images.map((image) => (
           <button
             key={image}
-            onClick={() => setActiveImage(image)}
+            onClick={() => {
+              setActiveImage(image);
+              if (onImageClick) onImageClick(image);
+            }}
             className={cn(
-              "overflow-hidden rounded-2xl border-2 bg-slate-100",
-              activeImage === image ? "border-brand-600" : "border-transparent"
+              "shrink-0 w-24 overflow-hidden rounded-2xl border-2 bg-slate-100 snap-center transition-all",
+              activeImage === image
+                ? "border-brand-600 shadow-md"
+                : "border-transparent opacity-70 hover:opacity-100",
             )}
           >
-            <img src={image} alt="Thumbnail" className="h-24 w-full object-cover" />
+            <img
+              src={image}
+              alt="Thumbnail"
+              className="h-24 w-full object-cover"
+            />
           </button>
         ))}
       </div>

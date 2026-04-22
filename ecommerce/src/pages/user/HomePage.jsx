@@ -25,7 +25,7 @@ import SectionHeader from "@/components/common/SectionHeader";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ProductGrid from "@/components/product/ProductGrid";
 import { categoryService } from "@/services/admin/categoryService";
-import productService from "@/services/productService";
+import userProductService from "@/services/user/productService";
 
 // Cấu hình hiệu ứng xuất hiện chung cho các section
 const fadeInUp = {
@@ -40,14 +40,14 @@ function HomePage() {
   const [collections, setCollections] = useState({
     banners: [],
     featured: [],
-    latest: [],
-    deals: [],
+    newest: [],
+    sale: [],
   });
   const [categories, setCategories] = useState([]);
 
   useEffect(() => {
     Promise.all([
-      productService.getHomeCollections(),
+      userProductService.getHomeCollections(),
       categoryService.getCategories(),
     ])
       .then(([homeCollections, categoriesData]) => {
@@ -201,7 +201,8 @@ function HomePage() {
               Xem thêm
             </Link>
           </div>
-          <ProductGrid products={collections.featured.slice(0, 5)} />
+          {/* FIX: Thêm dấu ?. an toàn để không sập web nếu API chưa kịp trả data */}
+          <ProductGrid products={collections.featured?.slice(0, 5) || []} />
         </div>
       </motion.section>
 
@@ -261,7 +262,8 @@ function HomePage() {
             actionLabel="Xem thêm"
           />
           <div className="mt-6">
-            <ProductGrid products={collections.latest.slice(0, 6)} />
+            {/* FIX: Đổi latest thành newest cho khớp với Backend API */}
+            <ProductGrid products={collections.newest?.slice(0, 6) || []} />
           </div>
         </div>
       </motion.section>
@@ -275,7 +277,8 @@ function HomePage() {
             actionLabel="Xem thêm"
           />
           <div className="mt-6">
-            <ProductGrid products={collections.featured.slice(2, 8)} />
+            {/* FIX: Thêm dấu ?. an toàn */}
+            <ProductGrid products={collections.featured?.slice(2, 8) || []} />
           </div>
         </div>
       </motion.section>

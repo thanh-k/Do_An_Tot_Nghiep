@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import Button from "@/components/common/Button";
 import Input from "@/components/common/Input";
@@ -12,6 +12,7 @@ import { formatCurrency } from "@/utils/format";
 
 function CheckoutPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentUser } = useAuth();
   const { cartItems, subtotal, clearCart } = useCart();
   const [loading, setLoading] = useState(false);
@@ -24,6 +25,24 @@ function CheckoutPage() {
     note: "",
   });
   const [paymentMethod, setPaymentMethod] = useState("cod");
+
+  // Lấy ID các sản phẩm được chọn từ Giỏ hàng truyền sang
+  const selectedIds = location.state?.selectedIds || [];
+
+  // Chỉ lọc ra các sản phẩm được chọn. Nếu không có id nào (truy cập trực tiếp), fallback về toàn bộ giỏ
+  const checkoutItems = useMemo(() => {
+    if (selectedIds.length > 0)
+      return cartItems.filter((item) => selectedIds.includes(item.id));
+    return cartItems;
+  }, [cartItems, selectedIds]);
+
+  // Tính lại tổng tiền chỉ cho những sản phẩm được chọn
+  const checkoutSubtotal = useMemo(() => {
+    return checkoutItems.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0,
+    );
+  }, [checkoutItems]);
 
   useEffect(() => {
     if (currentUser) {
@@ -45,15 +64,15 @@ function CheckoutPage() {
       shipping.phone &&
       shipping.city &&
       shipping.address &&
-      cartItems.length,
-    [cartItems.length, shipping]
+      checkoutItems.length > 0,
+    [checkoutItems.length, shipping],
   );
 
   if (!currentUser) {
     return <Navigate to="/login" replace />;
   }
 
-  if (!cartItems.length) {
+  if (!checkoutItems.length) {
     return <Navigate to="/cart" replace />;
   }
 
@@ -72,11 +91,11 @@ function CheckoutPage() {
       setLoading(true);
       await orderService.placeOrder(
         {
-          items: cartItems,
+          items: checkoutItems, // Gửi đúng danh sách đã chọn đi
           shippingAddress: shipping,
           paymentMethod,
         },
-        currentUser
+        currentUser,
       );
       clearCart();
       toast.success("Đặt hàng thành công!");
@@ -95,15 +114,22 @@ function CheckoutPage() {
         description="Mock checkout flow với thông tin giao hàng, phương thức thanh toán và tạo đơn hàng giả lập."
       />
 
-      <form onSubmit={handlePlaceOrder} className="grid gap-6 xl:grid-cols-[1fr_380px]">
+      <form
+        onSubmit={handlePlaceOrder}
+        className="grid gap-6 xl:grid-cols-[1fr_380px]"
+      >
         <div className="space-y-6">
           <div className="card p-6">
-            <h2 className="mb-5 text-xl font-bold text-slate-900">Thông tin giao hàng</h2>
+            <h2 className="mb-5 text-xl font-bold text-slate-900">
+              Thông tin giao hàng
+            </h2>
             <div className="grid gap-4 md:grid-cols-2">
               <Input
                 label="Họ và tên"
                 value={shipping.fullName}
-                onChange={(event) => handleChange("fullName", event.target.value)}
+                onChange={(event) =>
+                  handleChange("fullName", event.target.value)
+                }
               />
               <Input
                 label="Email"
@@ -125,7 +151,9 @@ function CheckoutPage() {
                 <Input
                   label="Địa chỉ chi tiết"
                   value={shipping.address}
-                  onChange={(event) => handleChange("address", event.target.value)}
+                  onChange={(event) =>
+                    handleChange("address", event.target.value)
+                  }
                 />
               </div>
               <div className="md:col-span-2">
@@ -141,7 +169,9 @@ function CheckoutPage() {
           </div>
 
           <div className="card p-6">
-            <h2 className="mb-5 text-xl font-bold text-slate-900">Phương thức thanh toán</h2>
+            <h2 className="mb-5 text-xl font-bold text-slate-900">
+              Phương thức thanh toán
+            </h2>
             <div className="grid gap-3">
               {PAYMENT_METHOD_OPTIONS.map((method) => (
                 <label
@@ -169,8 +199,11 @@ function CheckoutPage() {
         <aside className="card h-fit p-6">
           <h2 className="text-xl font-bold text-slate-900">Đơn hàng của bạn</h2>
           <div className="mt-5 space-y-4">
-            {cartItems.map((item) => (
-              <div key={item.id} className="flex gap-4 rounded-2xl bg-slate-50 p-3">
+            {checkoutItems.map((item) => (
+              <div
+                key={item.id}
+                className="flex gap-4 rounded-2xl bg-slate-50 p-3"
+              >
                 <img
                   src={item.image}
                   alt={item.name}
@@ -178,7 +211,9 @@ function CheckoutPage() {
                 />
                 <div className="flex-1">
                   <p className="font-semibold text-slate-900">{item.name}</p>
-                  <p className="mt-1 text-sm text-slate-500">{item.variantLabel}</p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {item.variantLabel}
+                  </p>
                   <div className="mt-2 flex items-center justify-between text-sm">
                     <span className="text-slate-500">x{item.quantity}</span>
                     <span className="font-semibold text-slate-900">
@@ -193,7 +228,9 @@ function CheckoutPage() {
           <div className="mt-6 space-y-3 border-t border-dashed border-slate-200 pt-4 text-sm">
             <div className="flex items-center justify-between">
               <span className="text-slate-500">Tạm tính</span>
-              <span className="font-semibold text-slate-900">{formatCurrency(subtotal)}</span>
+              <span className="font-semibold text-slate-900">
+                {formatCurrency(checkoutSubtotal)}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-slate-500">Phí vận chuyển</span>
@@ -202,7 +239,7 @@ function CheckoutPage() {
             <div className="flex items-center justify-between text-base">
               <span className="font-semibold text-slate-900">Tổng cộng</span>
               <span className="text-2xl font-bold text-brand-700">
-                {formatCurrency(subtotal)}
+                {formatCurrency(checkoutSubtotal)}
               </span>
             </div>
           </div>

@@ -19,7 +19,7 @@ public class CloudinaryService {
     // public String uploadFile(MultipartFile file) throws IOException
     // Thành:
     public String uploadFile(MultipartFile file, String folderName) throws IOException {
-        Map uploadResult = cloudinary.uploader().upload(file.getBytes(),
+        Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(),
                 ObjectUtils.asMap("folder", "ecommerce/" + folderName)); // Sử dụng folderName ở đây
 
         return uploadResult.get("url").toString();

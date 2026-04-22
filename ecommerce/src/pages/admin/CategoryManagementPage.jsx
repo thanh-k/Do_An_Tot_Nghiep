@@ -7,7 +7,7 @@ import Button from "@/components/common/Button";
 import Input from "@/components/common/Input";
 import PageHeader from "@/components/common/PageHeader";
 import { categoryService } from "@/services/admin/categoryService";
-import productService from "@/services/productService";
+import productService from "@/services/admin/productService";
 import { useDebounce } from "@/hooks/useDebounce";
 
 import Pagination from "@/components/common/Pagination";

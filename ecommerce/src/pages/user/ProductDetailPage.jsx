@@ -11,10 +11,9 @@ import ProductGrid from "@/components/product/ProductGrid";
 import ProductVariantSelector from "@/components/product/ProductVariantSelector";
 import useCart from "@/hooks/useCart";
 import useWishlist from "@/hooks/useWishlist";
-import productService from "@/services/productService";
+import userProductService from "@/services/user/productService";
 import { formatCurrency } from "@/utils/format";
 import {
-  buildVariantLabel,
   findBestVariantForSelection,
   findVariantByAttributes,
   getDefaultVariant,
@@ -45,6 +44,16 @@ const buildSelectedAttributesFromVariant = (variant) => ({
   ssd: getAttributeValue(variant, "ssd"),
 });
 
+const formatVariantLabel = (attributes) => {
+  if (!attributes) return "Mặc định";
+  const parts = [];
+  if (attributes.color) parts.push(`Màu: ${attributes.color}`);
+  if (attributes.storage) parts.push(`Dung lượng: ${attributes.storage}`);
+  if (attributes.ram) parts.push(`RAM: ${attributes.ram}`);
+  if (attributes.ssd) parts.push(`SSD: ${attributes.ssd}`);
+  return parts.join(" / ") || "Mặc định";
+};
+
 function ProductDetailPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -57,7 +66,7 @@ function ProductDetailPage() {
 
   useEffect(() => {
     setLoading(true);
-    productService
+    userProductService
       .getProductBySlug(slug)
       .then((product) => {
         setProductData(product);
@@ -88,10 +97,6 @@ function ProductDetailPage() {
     setSelectedAttributes(buildSelectedAttributesFromVariant(selectedVariant));
   }, [selectedVariant?.id]);
 
-  const displayImages = selectedVariant?.images?.length
-    ? selectedVariant.images
-    : productData?.images || [];
-
   const handleAttributeChange = (attribute, value) => {
     if (!productData) return;
 
@@ -116,6 +121,24 @@ function ProductDetailPage() {
     }
 
     setSelectedAttributes(nextSelection);
+  };
+
+  // Hàm xử lý đồng bộ ngược: Khi user bấm vào ảnh -> Cập nhật lại Option (Màu, RAM...)
+  const handleImageClick = (imageUrl) => {
+    if (!productData || !productData.variants) return;
+
+    // Tìm biến thể đầu tiên khớp với ảnh được bấm
+    const variantWithImage = productData.variants.find(
+      (v) => v.image === imageUrl,
+    );
+
+    // Nếu tìm thấy, lập tức set lại trạng thái lựa chọn và reset số lượng
+    if (variantWithImage) {
+      setSelectedAttributes(
+        buildSelectedAttributesFromVariant(variantWithImage),
+      );
+      setQuantity(1);
+    }
   };
 
   if (loading) {
@@ -158,7 +181,11 @@ function ProductDetailPage() {
       />
 
       <section className="grid gap-8 xl:grid-cols-[1.05fr_0.95fr]">
-        <ProductGallery images={displayImages} />
+        <ProductGallery
+          images={productData.images || []}
+          selectedImage={selectedVariant?.image}
+          onImageClick={handleImageClick}
+        />
 
         <div className="space-y-6">
           <div className="space-y-4">
@@ -174,7 +201,7 @@ function ProductDetailPage() {
                 </span>
               ) : null}
               <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-600">
-                {productData.brand}
+                {productData.brand?.name || "Khác"}
               </span>
             </div>
 
@@ -207,7 +234,7 @@ function ProductDetailPage() {
             <p className="mt-2 text-sm text-slate-500">
               Biến thể hiện tại:{" "}
               <span className="font-semibold text-slate-700">
-                {buildVariantLabel(selectedVariant)}
+                {formatVariantLabel(selectedAttributes)}
               </span>
             </p>
             <p className="mt-1 text-sm text-slate-500">
@@ -340,12 +367,15 @@ function ProductDetailPage() {
         <ProductReviews />
       </section>
 
-      <section>
-        <h2 className="mb-6 text-2xl font-bold text-slate-900">
-          Sản phẩm liên quan
-        </h2>
-        <ProductGrid products={productData.relatedProducts} />
-      </section>
+      {productData.relatedProducts &&
+        productData.relatedProducts.length > 0 && (
+          <section>
+            <h2 className="mb-6 text-2xl font-bold text-slate-900">
+              Sản phẩm liên quan
+            </h2>
+            <ProductGrid products={productData.relatedProducts} />
+          </section>
+        )}
     </div>
   );
 }

@@ -6,6 +6,9 @@ import org.springframework.http.HttpStatusCode;
 
 @Getter
 public enum ErrorCode {
+
+    PRODUCT_NOT_FOUND(1018, "Không tìm thấy sản phẩm", HttpStatus.NOT_FOUND),
+
     UNCATEGORIZED_EXCEPTION(9999, "Lỗi hệ thống chưa xác định", HttpStatus.INTERNAL_SERVER_ERROR),
     INVALID_KEY(1001, "Mã lỗi không hợp lệ", HttpStatus.BAD_REQUEST),
     // Lỗi về Category
@@ -23,9 +26,18 @@ public enum ErrorCode {
     BRAND_NOT_FOUND(1009, "Không tìm thấy thương hiệu", HttpStatus.NOT_FOUND),
 
     // Trong file common/exception/ErrorCode.java
-    INVALID_BRAND_NAME(1008, "Tên thương hiệu không được để trống và phải từ 2-50 ký tự", HttpStatus.BAD_REQUEST),
-    INVALID_FILE_FORMAT(1009, "Chỉ chấp nhận ảnh định dạng .jpg, .jpeg, .png, .webp", HttpStatus.BAD_REQUEST),
-    FILE_TOO_LARGE(1010, "Dung lượng ảnh tối đa là 2MB", HttpStatus.BAD_REQUEST),
+    INVALID_BRAND_NAME(1019, "Tên thương hiệu không được để trống và phải từ 2-50 ký tự", HttpStatus.BAD_REQUEST),
+    INVALID_FILE_FORMAT(1020, "Chỉ chấp nhận ảnh định dạng .jpg, .jpeg, .png, .webp", HttpStatus.BAD_REQUEST),
+    FILE_TOO_LARGE(1021, "Dung lượng ảnh tối đa là 2MB", HttpStatus.BAD_REQUEST),
+
+    // Lỗi về Product & Variant
+    PRODUCT_EXISTED(1012, "Tên sản phẩm này đã tồn tại trên hệ thống!", HttpStatus.BAD_REQUEST),
+    INVALID_PRODUCT_DATA(1013, "Vui lòng nhập đầy đủ các thông tin bắt buộc của sản phẩm", HttpStatus.BAD_REQUEST),
+    SKU_EXISTED(1014, "Mã SKU của biến thể đã bị trùng lặp, vui lòng kiểm tra lại", HttpStatus.BAD_REQUEST),
+    INVALID_VARIANT_NUMBER(1015, "Giá bán của biến thể phải từ 1 trở lên và Tồn kho không được là số âm",
+            HttpStatus.BAD_REQUEST),
+    INVALID_SPECIFICATION_FORMAT(1016, "Định dạng thông số kỹ thuật không hợp lệ", HttpStatus.BAD_REQUEST),
+    INVALID_VARIANT_PRICE(1017, "Giá bán không được phép lớn hơn giá gốc", HttpStatus.BAD_REQUEST),
     ;
 
     private final int code;

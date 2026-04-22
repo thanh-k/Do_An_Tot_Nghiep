@@ -28,6 +28,7 @@ public class Category {
 
     private String icon; // Lưu URL ảnh icon từ Cloudinary
 
+    @Builder.Default
     private Boolean active = true; // Để ẩn/hiện danh mục trên trang chủ
 
     @Column(name = "created_at")

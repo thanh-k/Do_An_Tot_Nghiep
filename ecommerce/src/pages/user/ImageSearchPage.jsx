@@ -5,14 +5,17 @@ import LoadingSpinner from "@/components/common/LoadingSpinner";
 import PageHeader from "@/components/common/PageHeader";
 import ProductGrid from "@/components/product/ProductGrid";
 import ImageUploader from "@/components/search/ImageUploader";
-import productService from "@/services/productService";
+import productService from "@/services/admin/productService";
 
 function ImageSearchPage() {
   const [file, setFile] = useState(null);
   const [result, setResult] = useState({ label: "", items: [] });
   const [loading, setLoading] = useState(false);
 
-  const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : ""), [file]);
+  const previewUrl = useMemo(
+    () => (file ? URL.createObjectURL(file) : ""),
+    [file],
+  );
 
   const handleChange = (nextFile) => {
     if (!nextFile) return;
