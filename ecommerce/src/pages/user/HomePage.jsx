@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Zap,
   ChevronRight,
@@ -37,6 +37,7 @@ function HomePage() {
   const [categories, setCategories] = useState([]);
   const [news, setNews] = useState([]);
   const [trendingNews, setTrendingNews] = useState([]);
+  const [highlightIndex, setHighlightIndex] = useState(0);
 
   useEffect(() => {
     Promise.all([
@@ -64,6 +65,65 @@ function HomePage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const discountedProducts = useMemo(() => {
+    return (collections.featured || [])
+      .map((product) => {
+        const bestVariant = (product.variants || [])
+          .filter((variant) => {
+            const original = Number(variant.compareAtPrice || 0);
+            const sale = Number(variant.price || 0);
+            return original > sale;
+          })
+          .sort((a, b) => {
+            const discountA =
+              Number(a.compareAtPrice || 0) - Number(a.price || 0);
+            const discountB =
+              Number(b.compareAtPrice || 0) - Number(b.price || 0);
+            return discountB - discountA;
+          })[0];
+
+        if (!bestVariant) return null;
+
+        const original = Number(bestVariant.compareAtPrice || 0);
+        const sale = Number(bestVariant.price || 0);
+
+        if (!original || original <= sale) return null;
+
+        const discountPercent = Math.round(
+          ((original - sale) / original) * 100
+        );
+
+        return {
+          ...product,
+          original,
+          sale,
+          discountPercent,
+          image: bestVariant.images?.[0] || product.thumbnail,
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.discountPercent - a.discountPercent)
+      .slice(0, 5);
+  }, [collections.featured]);
+
+  const highlightProduct =
+    discountedProducts.length > 0
+      ? discountedProducts[highlightIndex % discountedProducts.length]
+      : null;
+
+  useEffect(() => {
+    if (discountedProducts.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setHighlightIndex((prev) => (prev + 1) % discountedProducts.length);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [discountedProducts.length]);
+
+  const formatCurrency = (value) =>
+    Number(value || 0).toLocaleString("vi-VN") + " ₫";
+
   if (loading) {
     return <LoadingSpinner label="Đang tải trang chủ NovaShop..." />;
   }
@@ -71,104 +131,192 @@ function HomePage() {
   return (
     <div className="bg-[#f4f4f4] min-h-screen overflow-x-hidden">
       <motion.section
-        className="container-padded py-6"
+        className="container-padded py-6 overflow-hidden"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
-        <div className="flex flex-col lg:flex-row gap-4">
-          <aside className="hidden lg:block w-72 shrink-0 bg-white rounded-xl shadow-md overflow-hidden border border-slate-200">
-            <div className="bg-rose-600 px-4 py-3">
-              <h2 className="text-white font-bold text-sm uppercase tracking-wider">
+        <div className="grid grid-cols-1 xl:grid-cols-[220px_minmax(0,1fr)_320px] gap-4 items-stretch overflow-hidden">
+          <aside className="bg-white rounded-[20px] shadow-md overflow-hidden border border-slate-200 min-w-0">
+            <div className="bg-rose-600 px-4 py-4">
+              <h2 className="text-white font-black text-sm uppercase tracking-wider">
                 Danh mục sản phẩm
               </h2>
             </div>
 
             <div className="divide-y divide-slate-100">
-              {categories.map((cat) => (
+              {categories.slice(0, 6).map((cat) => (
                 <Link
                   key={cat.id}
                   to={`/products?category=${cat.id}`}
-                  className="flex items-center justify-between px-4 py-3 hover:bg-rose-50 transition-all group"
+                  className="flex items-center justify-between px-4 py-4 hover:bg-rose-50 transition-all group"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="text-slate-400 group-hover:text-rose-600 transition-colors">
-                      {cat.name?.includes("Điện thoại") && <Smartphone size={18} />}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="text-slate-400 group-hover:text-rose-600 transition-colors shrink-0">
+                      {cat.name?.includes("Điện thoại") && (
+                        <Smartphone size={18} />
+                      )}
                       {cat.name?.includes("Laptop") && <Laptop size={18} />}
-                      {cat.name?.includes("Tablet") && <TabletSmartphone size={18} />}
-                      {cat.name?.includes("Phụ kiện") && <Headphones size={18} />}
+                      {cat.name?.includes("Tablet") && (
+                        <TabletSmartphone size={18} />
+                      )}
+                      {cat.name?.includes("Phụ kiện") && (
+                        <Headphones size={18} />
+                      )}
                       {cat.name?.includes("Đồng hồ") && <Watch size={18} />}
                       {cat.name?.includes("Máy ảnh") && <Camera size={18} />}
                     </div>
-                    <span className="text-sm font-medium text-slate-700 group-hover:text-rose-600 transition-colors">
+                    <span className="text-sm font-semibold text-slate-700 group-hover:text-rose-600 transition-colors truncate">
                       {cat.name}
                     </span>
                   </div>
                   <ChevronRight
                     size={14}
-                    className="text-slate-300 group-hover:text-rose-600 group-hover:translate-x-1 transition-all"
+                    className="text-slate-300 group-hover:text-rose-600 group-hover:translate-x-1 transition-all shrink-0"
                   />
                 </Link>
               ))}
             </div>
           </aside>
 
-          <div className="flex-1 space-y-4">
-            <div className="relative h-[400px] rounded-2xl overflow-hidden shadow-lg group">
+          <div className="grid grid-rows-[1fr_auto] gap-4 min-w-0">
+            <div className="relative min-h-[360px] rounded-[28px] overflow-hidden shadow-lg group min-w-0">
               <img
-                src="https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=1500&q=80"
+                src="https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=1400&q=80"
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                alt="Main Banner"
+                alt="banner-hoi-vien"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex flex-col justify-center px-12 text-white">
-                <motion.h2
-                  initial={{ x: -50, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                  className="text-4xl font-black mb-4 leading-tight uppercase italic tracking-tighter"
-                >
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-900/55 to-transparent" />
+
+              <div className="relative z-10 h-full flex flex-col justify-center px-10 py-10 text-white">
+                <p className="mb-4 inline-flex w-fit rounded-full bg-white/10 px-4 py-1 text-xs font-bold uppercase tracking-[0.2em] text-rose-200 ring-1 ring-white/20">
+                  Gói thành viên ưu đãi
+                </p>
+
+                <h2 className="text-4xl xl:text-5xl font-black italic uppercase leading-tight tracking-tight max-w-[420px]">
                   Đổi gói hội viên VIP
-                </motion.h2>
-                <motion.p
-                  initial={{ x: -50, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: 0.5 }}
-                  className="text-xl mb-6 font-bold text-yellow-300 uppercase"
-                >
+                </h2>
+
+                <p className="mt-4 text-yellow-300 text-2xl font-black uppercase">
                   Mua sắm lời hơn X15 lần
-                </motion.p>
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.7 }}
+                </p>
+
+                <Link
+                  to="/membership"
+                  className="mt-8 w-fit rounded-full bg-rose-600 px-8 py-4 text-sm font-black uppercase tracking-wider text-white transition-all duration-300 hover:bg-yellow-400 hover:text-slate-950 hover:shadow-[0_12px_30px_rgba(250,204,21,0.35)]"
                 >
-                  <Link
-                    to="/products"
-                    className="w-fit bg-rose-600 hover:bg-rose-700 px-8 py-3 rounded-full font-bold transition-all shadow-xl inline-block"
-                  >
-                    Tham gia ngay
-                  </Link>
-                </motion.div>
+                  Tham gia ngay
+                </Link>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="h-40 rounded-xl overflow-hidden relative shadow-md group">
-                <img
-                  src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=60"
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  alt="banner-phu-1"
-                />
-                <div className="absolute inset-0 bg-rose-600/20" />
-              </div>
-              <div className="h-40 rounded-xl overflow-hidden relative shadow-md group">
-                <img
-                  src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=60"
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  alt="banner-phu-2"
-                />
-                <div className="absolute inset-0 bg-rose-600/20" />
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-4 min-w-0">
+              <Link
+                to="/vouchers"
+                className="group relative min-h-[132px] rounded-[22px] overflow-hidden shadow-md min-w-0"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-blue-500 transition-all duration-300 group-hover:from-rose-500 group-hover:to-orange-400" />
+                <div className="relative z-10 h-full flex flex-col justify-center px-8 py-6 text-white">
+                  <p className="text-xs uppercase tracking-[0.2em] font-bold text-white/80">
+                    Nova exclusive
+                  </p>
+                  <h3 className="mt-2 text-2xl font-black uppercase">
+                    Freeship toàn quốc
+                  </h3>
+                  <p className="mt-2 text-sm text-white/85">
+                    Áp dụng cho mọi hình thức thanh toán
+                  </p>
+                </div>
+              </Link>
+
+              <Link
+                to="/vouchers"
+                className="group relative min-h-[132px] rounded-[22px] overflow-hidden shadow-md min-w-0"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-slate-900 to-indigo-950 transition-all duration-300 group-hover:from-rose-600 group-hover:to-pink-500" />
+                <div className="relative z-10 h-full flex flex-col justify-center px-8 py-6 text-white">
+                  <p className="text-xs uppercase tracking-[0.2em] font-bold text-white/80">
+                    Ưu đãi nhanh
+                  </p>
+                  <h3 className="mt-2 text-xl font-black uppercase">
+                    Nhận mã hoạt động tốt
+                  </h3>
+                  <p className="mt-2 text-sm text-white/80">
+                    Số lượng có hạn mỗi ngày
+                  </p>
+                </div>
+              </Link>
+            </div>
+          </div>
+
+          <div className="min-w-0">
+            <div className="bg-white rounded-[30px] border-2 border-slate-800/80 shadow-md p-4 h-[520px] flex flex-col overflow-hidden">
+              {highlightProduct ? (
+                <Link
+                  to={`/products/${highlightProduct.slug || highlightProduct.id}`}
+                  className="group flex h-full flex-col"
+                >
+                  <div className="rounded-[24px] border-2 border-slate-800/80 bg-gradient-to-br from-rose-500 to-pink-600 h-[230px] overflow-hidden">
+                    <img
+                      src={highlightProduct.image || highlightProduct.thumbnail}
+                      alt={highlightProduct.name}
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
+
+                  <div className="px-2 pt-4 flex-1 flex flex-col justify-between min-h-0">
+                    <div>
+                      <h3 className="text-[28px] leading-tight font-black text-slate-900 mb-3 line-clamp-2 min-h-[68px]">
+                        {highlightProduct.name}
+                      </h3>
+
+                      <p className="text-xl italic line-through text-slate-500 font-medium min-h-[32px]">
+                        {formatCurrency(highlightProduct.original)}
+                      </p>
+
+                      <div className="mt-1 flex items-end gap-3 flex-wrap min-h-[64px]">
+                        <p className="text-[34px] leading-none font-black text-slate-900">
+                          {formatCurrency(highlightProduct.sale)}
+                        </p>
+
+                        <span className="rounded-full bg-rose-600 px-3 py-1 text-sm font-black text-white shadow-sm">
+                          -{highlightProduct.discountPercent}%
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="mt-4 flex items-center gap-2 text-amber-400 min-h-[28px]">
+                        <span className="text-lg">★ ★ ★ ★ ★</span>
+                        <span className="text-slate-500 text-sm font-semibold">
+                          4.9 (438 đánh giá)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ) : (
+                <div className="h-full flex items-center justify-center text-slate-400 font-semibold">
+                  Chưa có sản phẩm giảm giá
+                </div>
+              )}
+
+              {discountedProducts.length > 1 && (
+                <div className="mt-3 flex items-center justify-center gap-2">
+                  {discountedProducts.map((_, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setHighlightIndex(idx)}
+                      className={`h-2.5 rounded-full transition-all ${
+                        idx === highlightIndex
+                          ? "w-8 bg-rose-600"
+                          : "w-2.5 bg-rose-200"
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -207,11 +355,31 @@ function HomePage() {
       <motion.section className="container-padded py-4" {...fadeInUp}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {[
-            { color: "bg-indigo-500", label: "Giảm 50%", desc: "Đơn tối thiểu 100k" },
-            { color: "bg-blue-500", label: "Giảm 10k", desc: "Đơn tối thiểu 100k" },
-            { color: "bg-green-500", label: "Freeship", desc: "Đơn tối thiểu 100k" },
-            { color: "bg-rose-500", label: "Giảm 2k", desc: "Đơn tối thiểu 100k" },
-            { color: "bg-amber-500", label: "Giảm 200k", desc: "Đơn tối thiểu 100k" },
+            {
+              color: "bg-indigo-500",
+              label: "Giảm 50%",
+              desc: "Đơn tối thiểu 100k",
+            },
+            {
+              color: "bg-blue-500",
+              label: "Giảm 10k",
+              desc: "Đơn tối thiểu 100k",
+            },
+            {
+              color: "bg-green-500",
+              label: "Freeship",
+              desc: "Đơn tối thiểu 100k",
+            },
+            {
+              color: "bg-rose-500",
+              label: "Giảm 2k",
+              desc: "Đơn tối thiểu 100k",
+            },
+            {
+              color: "bg-amber-500",
+              label: "Giảm 200k",
+              desc: "Đơn tối thiểu 100k",
+            },
           ].map((v, i) => (
             <motion.div
               key={i}

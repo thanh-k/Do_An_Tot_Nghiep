@@ -18,7 +18,7 @@ const variant = ({
 
 export const products = [
   {
-    id: "prod-iphone-15-pro-max",
+    id: "iphone-15-pro-max",
     name: "iPhone 15 Pro Max",
     slug: "iphone-15-pro-max",
     shortDescription:
@@ -87,7 +87,7 @@ export const products = [
     ],
   },
   {
-    id: "prod-galaxy-s24-ultra",
+    id: "galaxy-s24-ultra",
     name: "Samsung Galaxy S24 Ultra",
     slug: "samsung-galaxy-s24-ultra",
     shortDescription:
@@ -153,7 +153,7 @@ export const products = [
     ],
   },
   {
-    id: "prod-xiaomi-14",
+    id: "xiaomi-14",
     name: "Xiaomi 14",
     slug: "xiaomi-14",
     shortDescription:
@@ -207,7 +207,7 @@ export const products = [
     ],
   },
   {
-    id: "prod-macbook-air-m3",
+    id: "macbook-air-m3",
     name: "MacBook Air M3 13 inch",
     slug: "macbook-air-m3-13-inch",
     shortDescription:
@@ -273,7 +273,7 @@ export const products = [
     ],
   },
   {
-    id: "prod-dell-xps-13-plus",
+    id: "dell-xps-13-plus",
     name: "Dell XPS 13 Plus",
     slug: "dell-xps-13-plus",
     shortDescription:
@@ -327,7 +327,7 @@ export const products = [
     ],
   },
   {
-    id: "prod-rog-zephyrus-g14",
+    id: "rog-zephyrus-g14",
     name: "ASUS ROG Zephyrus G14",
     slug: "asus-rog-zephyrus-g14",
     shortDescription:
@@ -381,7 +381,7 @@ export const products = [
     ],
   },
   {
-    id: "prod-ipad-air-m2",
+    id: "ipad-air-m2",
     name: "iPad Air M2",
     slug: "ipad-air-m2",
     shortDescription:
@@ -435,7 +435,7 @@ export const products = [
     ],
   },
   {
-    id: "prod-galaxy-tab-s9",
+    id: "galaxy-tab-s9",
     name: "Samsung Galaxy Tab S9",
     slug: "samsung-galaxy-tab-s9",
     shortDescription:
@@ -489,7 +489,7 @@ export const products = [
     ],
   },
   {
-    id: "prod-airpods-pro-2",
+    id: "airpods-pro-2",
     name: "AirPods Pro 2 USB-C",
     slug: "airpods-pro-2-usb-c",
     shortDescription:
@@ -532,7 +532,7 @@ export const products = [
     ],
   },
   {
-    id: "prod-sony-wh1000xm5",
+    id: "sony-wh1000xm5",
     name: "Sony WH-1000XM5",
     slug: "sony-wh-1000xm5",
     shortDescription:
@@ -586,7 +586,7 @@ export const products = [
     ],
   },
   {
-    id: "prod-logitech-mx-master-3s",
+    id: "logitech-mx-master-3s",
     name: "Logitech MX Master 3S",
     slug: "logitech-mx-master-3s",
     shortDescription:
@@ -640,7 +640,7 @@ export const products = [
     ],
   },
   {
-    id: "prod-anker-737",
+    id: "anker-737",
     name: "Anker 737 Power Bank",
     slug: "anker-737-power-bank",
     shortDescription:
@@ -683,7 +683,7 @@ export const products = [
     ],
   },
   {
-    id: "prod-ipad-mini-7",
+    id: "ipad-mini-7",
     name: "iPad mini 7",
     slug: "ipad-mini-7",
     shortDescription:
