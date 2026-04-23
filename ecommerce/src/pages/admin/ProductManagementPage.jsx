@@ -7,24 +7,25 @@ import Button from "@/components/common/Button";
 import Input from "@/components/common/Input";
 import PageHeader from "@/components/common/PageHeader";
 import Pagination from "@/components/common/Pagination";
-import { categoryService } from "@/services/admin/categoryService"; // Ní nhớ check service này đã gọi API chưa
+import { categoryService } from "@/services/admin/categoryService";
 import productService from "@/services/admin/productService";
 import { formatCurrency } from "@/utils/format";
 import { getProductStock, getStartingPrice } from "@/utils/product";
 import { useDebounce } from "@/hooks/useDebounce";
-import { usePagination } from "@/hooks/usePagination";
 
 function ProductManagementPage() {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [keyword, setKeyword] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
   const debouncedKeyword = useDebounce(keyword, 300);
   const [modalState, setModalState] = useState({
     open: false,
     product: null,
   });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 4;
 
   const loadData = () => {
     setLoading(true);
@@ -64,11 +65,12 @@ function ProductManagementPage() {
     );
   }, [debouncedKeyword, products]);
 
-  const { currentData, totalPages, hasNextPage, hasPrevPage } = usePagination({
-    data: filteredProducts,
-    pageSize: 10,
-    currentPage,
-  });
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredProducts, currentPage]);
+
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
 
   const columns = [
     {
@@ -215,21 +217,21 @@ function ProductManagementPage() {
           Đang tải dữ liệu...
         </div>
       ) : (
-        <DataTable columns={columns} data={currentData} />
-      )}
-      {!loading && filteredProducts.length > 0 && (
-        <div className="flex justify-center">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={(page) => {
-              setCurrentPage(page);
-              window.scrollTo({ top: 0, behavior: "smooth" });
-            }}
-            hasPrevPage={hasPrevPage}
-            hasNextPage={hasNextPage}
-          />
-        </div>
+        <>
+          <DataTable columns={columns} data={paginatedProducts} />
+          {filteredProducts.length > 0 && (
+            <div className="mt-6 flex justify-center">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={(page) => {
+                  setCurrentPage(page);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              />
+            </div>
+          )}
+        </>
       )}
       <ProductFormModal
         isOpen={modalState.open}

@@ -20,7 +20,7 @@ function BrandManagementPage() {
 
   // --- LOGIC PHÂN TRANG ---
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 7;
+  const itemsPerPage = 4;
 
   const loadData = async () => {
     setLoading(true);

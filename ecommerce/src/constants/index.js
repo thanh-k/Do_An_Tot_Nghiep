@@ -1,6 +1,7 @@
 export const STORAGE_KEYS = {
   DB: "novashop_db_v1",
   CURRENT_USER: "novashop_current_user",
+  AUTH_TOKEN: "novashop_auth_token",
   CART: "novashop_cart",
   WISHLIST: "novashop_wishlist",
 };

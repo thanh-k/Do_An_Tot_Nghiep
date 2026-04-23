@@ -1,41 +1,54 @@
 package com.ecommerce.common.exception;
 
 import com.ecommerce.common.response.ApiResponse;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@ControllerAdvice // Đánh dấu đây là lớp xử lý lỗi toàn cục
+@RestControllerAdvice // Đánh dấu đây là lớp xử lý lỗi toàn cục và tự động parse JSON
 public class GlobalExceptionHandler {
 
-    // 1. Bắt lỗi AppException do mình tự định nghĩa (Lỗi trùng tên, không tìm
-    // thấy...)
-    @ExceptionHandler(value = AppException.class)
-    ResponseEntity<ApiResponse<Object>> handlingAppException(AppException exception) {
-        ErrorCode errorCode = exception.getErrorCode();
+        // 1. Bắt lỗi AppException do mình tự định nghĩa (Ví dụ: Sản phẩm không tồn tại)
+        @ExceptionHandler(AppException.class)
+        public ResponseEntity<ApiResponse<Object>> handleAppException(AppException ex) {
+                ErrorCode errorCode = ex.getErrorCode();
+                return ResponseEntity.status(errorCode.getStatusCode().value())
+                                .body(ApiResponse.builder()
+                                                .code(errorCode.getCode())
+                                                .message(errorCode.getMessage())
+                                                .build());
+        }
 
-        ApiResponse<Object> apiResponse = new ApiResponse<>();
-        apiResponse.setCode(errorCode.getCode());
-        apiResponse.setMessage(errorCode.getMessage());
+        // 2. Bắt lỗi Validation (Khi form gửi lên không hợp lệ)
+        @ExceptionHandler(MethodArgumentNotValidException.class)
+        public ResponseEntity<ApiResponse<Object>> handleValidationException(MethodArgumentNotValidException ex) {
+                String message = ex.getBindingResult().getFieldError() != null
+                                ? ex.getBindingResult().getFieldError().getDefaultMessage()
+                                : "Dữ liệu không hợp lệ";
+                return ResponseEntity.badRequest()
+                                .body(ApiResponse.builder().code(HttpStatus.BAD_REQUEST.value()).message(message)
+                                                .build());
+        }
 
-        return ResponseEntity
-                .status(errorCode.getStatusCode()) // Trả về 400, 404, 409 tùy mình định nghĩa ở ErrorCode
-                .body(apiResponse);
-    }
+        // 3. Bắt lỗi phân quyền Spring Security (Chưa đăng nhập, không có quyền)
+        @ExceptionHandler(AccessDeniedException.class)
+        public ResponseEntity<ApiResponse<Object>> handleAccessDenied(AccessDeniedException ex) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                .body(ApiResponse.builder().code(HttpStatus.FORBIDDEN.value())
+                                                .message("Bạn không có quyền truy cập chức năng này").build());
+        }
 
-    // 2. Bắt các lỗi hệ thống chưa xác định (Lỗi 500) để không làm trắng trang
-    @ExceptionHandler(value = Exception.class)
-    ResponseEntity<ApiResponse<Object>> handlingRuntimeException(Exception exception) {
-        ApiResponse<Object> apiResponse = new ApiResponse<>();
+        // 4. Bắt các lỗi hệ thống chưa xác định (Lỗi 500) để không làm trắng trang
+        @ExceptionHandler(Exception.class)
+        public ResponseEntity<ApiResponse<Object>> handleGeneric(Exception ex) {
+                // In lỗi ra console để dev còn biết đường mà fix
+                ex.printStackTrace();
 
-        apiResponse.setCode(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode());
-        apiResponse.setMessage(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage());
-
-        // In lỗi ra console để ní còn biết đường mà fix
-        exception.printStackTrace();
-
-        // SỬA: Lỗi chưa bắt được phải trả về 500 (Internal Server Error) thay vì 400 (Bad Request)
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(apiResponse);
-    }
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(ApiResponse.builder().code(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode())
+                                                .message(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage()).build());
+        }
 }

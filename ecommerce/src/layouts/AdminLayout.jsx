@@ -9,7 +9,10 @@ const titleMap = {
   "/admin/brands": "Quản lý thương hiệu",
   "/admin/products": "Quản lý sản phẩm",
   "/admin/orders": "Quản lý đơn hàng",
-  "/admin/users": "Quản lý người dùng",
+  "/admin/users": "Quản lý khách hàng",
+  "/admin/customers": "Quản lý khách hàng",
+  "/admin/staff": "Quản lý nhân sự",
+  "/admin/roles": "Vai trò & quyền",
   "/admin/profile": "Hồ sơ quản trị viên",
 };
 

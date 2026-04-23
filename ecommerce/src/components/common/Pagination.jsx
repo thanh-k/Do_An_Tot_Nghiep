@@ -1,71 +1,97 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import Button from "@/components/common/Button";
+import cn from "@/utils/cn";
 
-function Pagination({ currentPage, totalPages, onPageChange }) {
+function buildPageNumbers(currentPage, totalPages) {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const pages = [1];
+  const start = Math.max(2, currentPage - 1);
+  const end = Math.min(totalPages - 1, currentPage + 1);
+
+  if (start > 2) pages.push("...");
+  for (let page = start; page <= end; page += 1) pages.push(page);
+  if (end < totalPages - 1) pages.push("...");
+  pages.push(totalPages);
+
+  return pages;
+}
+
+function Pagination({
+  currentPage = 1,
+  totalPages = 1,
+  onPageChange,
+  hasPrevPage,
+  hasNextPage,
+  className,
+  showSummary = true,
+  totalItems = 0,
+  pageSize = 0,
+  itemLabel = "mục",
+}) {
   if (totalPages <= 1) return null;
 
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+  const safeHasPrevPage = typeof hasPrevPage === "boolean" ? hasPrevPage : currentPage > 1;
+  const safeHasNextPage = typeof hasNextPage === "boolean" ? hasNextPage : currentPage < totalPages;
+  const pages = buildPageNumbers(currentPage, totalPages);
+
+  const startItem = totalItems > 0 && pageSize > 0 ? (currentPage - 1) * pageSize + 1 : 0;
+  const endItem = totalItems > 0 && pageSize > 0 ? Math.min(currentPage * pageSize, totalItems) : 0;
 
   return (
-    <div className="flex items-center justify-between border-t border-slate-200 bg-white px-4 py-3 sm:px-6 mt-4 rounded-xl">
-      <div className="flex flex-1 justify-between sm:hidden">
-        <button
-          onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-          disabled={currentPage === 1}
-          className="relative inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+    <div className={cn("flex flex-col gap-3 md:flex-row md:items-center md:justify-between", className)}>
+      {showSummary ? (
+        <p className="text-sm text-slate-500">
+          {totalItems > 0 && pageSize > 0
+            ? `tổng  ${totalItems} ${itemLabel}`
+            : `Trang ${currentPage} / ${totalPages}`}
+        </p>
+      ) : (
+        <span />
+      )}
+
+      <div className="flex flex-wrap items-center justify-center gap-2 md:justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={!safeHasPrevPage}
+          onClick={() => onPageChange(currentPage - 1)}
         >
           Trước
-        </button>
-        <button
-          onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-          disabled={currentPage === totalPages}
-          className="relative ml-3 inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+        </Button>
+
+        {pages.map((page, index) =>
+          page === "..." ? (
+            <span key={`ellipsis-${index}`} className="px-2 text-sm font-medium text-slate-400">
+              ...
+            </span>
+          ) : (
+            <button
+              key={page}
+              type="button"
+              className={cn(
+                "flex h-10 min-w-10 items-center justify-center rounded-xl border px-3 text-sm font-medium transition",
+                currentPage === page
+                  ? "border-brand-600 bg-brand-600 text-white"
+                  : "border-slate-200 bg-white text-slate-700 hover:border-brand-300 hover:text-brand-600"
+              )}
+              onClick={() => onPageChange(page)}
+            >
+              {page}
+            </button>
+          )
+        )}
+
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={!safeHasNextPage}
+          onClick={() => onPageChange(currentPage + 1)}
         >
           Sau
-        </button>
-      </div>
-      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm text-slate-700">
-            Trang <span className="font-medium">{currentPage}</span> /{" "}
-            <span className="font-medium">{totalPages}</span>
-          </p>
-        </div>
-        <div>
-          <nav
-            className="isolate inline-flex -space-x-px rounded-md shadow-sm"
-            aria-label="Pagination"
-          >
-            <button
-              onClick={() => onPageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="relative inline-flex items-center rounded-l-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
-            >
-              <ChevronLeft size={20} />
-            </button>
-
-            {pages.map((page) => (
-              <button
-                key={page}
-                onClick={() => onPageChange(page)}
-                className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold focus:z-20 ${
-                  currentPage === page
-                    ? "z-10 bg-brand-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
-                    : "text-slate-900 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:outline-offset-0"
-                }`}
-              >
-                {page}
-              </button>
-            ))}
-
-            <button
-              onClick={() => onPageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="relative inline-flex items-center rounded-r-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
-            >
-              <ChevronRight size={20} />
-            </button>
-          </nav>
-        </div>
+        </Button>
       </div>
     </div>
   );

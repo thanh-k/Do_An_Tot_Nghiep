@@ -25,7 +25,7 @@ function CategoryManagementPage() {
 
   // --- 1. THÊM STATE PHÂN TRANG ---
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 7; // Giới hạn 7 danh mục mỗi trang theo ý ní
+  const itemsPerPage = 4; // Giới hạn 7 danh mục mỗi trang theo ý ní
 
   const loadData = async () => {
     setLoading(true);

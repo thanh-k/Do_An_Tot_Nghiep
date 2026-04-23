@@ -2,13 +2,6 @@ import { Outlet } from "react-router-dom";
 import { APP_META } from "@/constants";
 
 function AuthLayout() {
-  const features = [
-    "Tách riêng AuthLayout",
-    "Form validation cơ bản",
-    "Toast feedback rõ ràng",
-    "Dễ chuyển sang backend thật",
-  ];
-
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="grid min-h-screen lg:grid-cols-[1.02fr_0.98fr]">
@@ -32,37 +25,22 @@ function AuthLayout() {
 
             <div className="max-w-2xl space-y-8">
               <span className="inline-flex rounded-full border border-sky-200 bg-white/80 px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-sky-700 shadow-sm backdrop-blur">
-                Auth Experience
+                E-commerce NovaShop
               </span>
 
               <div className="space-y-6">
                 <h1 className="text-5xl font-extrabold leading-tight tracking-tight text-slate-900">
-                  Hệ thống xác thực mô phỏng gọn gàng, hiện đại và sẵn sàng mở rộng.
+                  Trải nghiệm mua sắm hiện đại và đồng bộ.
                 </h1>
 
                 <p className="max-w-2xl text-xl leading-9 text-slate-600">
-                  Luồng đăng nhập, đăng ký, quên mật khẩu được xây dựng theo chuẩn frontend
-                  production-ready, sử dụng localStorage và Context API để mô phỏng trạng thái
-                  người dùng.
+                  Hệ thống đăng nhập, đăng ký trực quan, thao tác nhanh gọn và được tối ưu hóa cho thương mại điện tử.
                 </p>
-              </div>
-
-              <div className="grid gap-4 pt-4 sm:grid-cols-2">
-                {features.map((item) => (
-                  <div
-                    key={item}
-                    className="rounded-2xl border border-white/70 bg-white/75 px-5 py-5 text-base font-medium text-slate-700 shadow-sm backdrop-blur"
-                  >
-                    {item}
-                  </div>
-                ))}
-              </div>
+              </div>              
             </div>
-
             <div />
           </div>
         </div>
-
         <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-10 sm:px-6 lg:px-10">
           <div className="w-full max-w-3xl">
             <Outlet />

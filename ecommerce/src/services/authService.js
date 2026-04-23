@@ -1,13 +1,5 @@
 import { STORAGE_KEYS } from "@/constants";
-import {
-  createId,
-  getDb,
-  setStorageData,
-  getStorageData,
-  removeStorageData,
-  updateDb,
-  simulateDelay,
-} from "@/services/storageService";
+import apiClient from "@/services/apiClient";
 
 const defaultAvatar =
   "data:image/svg+xml;utf8," +
@@ -19,102 +11,134 @@ const defaultAvatar =
     </svg>
   `);
 
-const sanitizeUser = (user) => {
-  const { password, ...safeUser } = user;
-  return safeUser;
+const mapUser = (user) => {
+  if (!user) return null;
+  return {
+    ...user,
+    name: user.fullName,
+    phone: user.primaryPhone || user.phone || "",
+    address: user.primaryAddress || user.address || "",
+    role: user.role?.toLowerCase(),
+    avatar: user.avatar || defaultAvatar,
+    addresses: user.addresses || [],
+  };
+};
+
+const persistUser = (user) => {
+  localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
 };
 
 export const authService = {
   getCurrentUser() {
-    return getStorageData(STORAGE_KEYS.CURRENT_USER, null);
+    const raw = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+    return raw ? JSON.parse(raw) : null;
   },
 
-  async login({ email, password }) {
-    await simulateDelay(400);
-    const db = getDb();
-    const user = db.users.find(
-      (item) => item.email.toLowerCase() === email.toLowerCase() && item.password === password
-    );
+  async fetchCurrentUser() {
+    const user = mapUser(await apiClient.request("/users/me"));
+    persistUser(user);
+    return user;
+  },
 
-    if (!user) {
-      throw new Error("Email hoặc mật khẩu không chính xác.");
-    }
+  async login({ identifier, password }) {
+    const result = await apiClient.request("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ identifier, password }),
+    });
+    apiClient.setToken(result.accessToken);
+    const user = mapUser(result.user);
+    persistUser(user);
+    return user;
+  },
 
-    const safeUser = sanitizeUser(user);
-    setStorageData(STORAGE_KEYS.CURRENT_USER, safeUser);
-    return safeUser;
+  async sendRegistrationOtp(email) {
+    return apiClient.request("/auth/register/send-otp", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
   },
 
   async register(payload) {
-    await simulateDelay(450);
-    const db = getDb();
-    const existed = db.users.some((item) => item.email.toLowerCase() === payload.email.toLowerCase());
-
-    if (existed) {
-      throw new Error("Email này đã tồn tại trong hệ thống.");
-    }
-
-    const createdUser = {
-      id: createId("user"),
-      role: "user",
-      avatar: payload.avatar || defaultAvatar,
-      createdAt: new Date().toISOString(),
-      ...payload,
-    };
-
-    await updateDb((current) => ({
-      ...current,
-      users: [createdUser, ...current.users],
-    }));
-
-    const safeUser = sanitizeUser(createdUser);
-    setStorageData(STORAGE_KEYS.CURRENT_USER, safeUser);
-    return safeUser;
-  },
-
-  async forgotPassword(email) {
-    await simulateDelay(600);
-    const db = getDb();
-    const exists = db.users.some((item) => item.email.toLowerCase() === email.toLowerCase());
-
-    if (!exists) {
-      throw new Error("Không tìm thấy tài khoản với email này.");
-    }
-
-    return {
-      success: true,
-      message: "Yêu cầu đặt lại mật khẩu đã được ghi nhận (mock). Vui lòng kiểm tra email demo.",
-    };
-  },
-
-  async updateProfile(userId, payload) {
-    await simulateDelay(350);
-    let nextUser = null;
-
-    await updateDb((current) => {
-      const users = current.users.map((item) => {
-        if (item.id !== userId) return item;
-        nextUser = {
-          ...item,
-          ...payload,
-        };
-        return nextUser;
-      });
-
-      return {
-        ...current,
-        users,
-      };
+    const result = await apiClient.request("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(payload),
     });
+    apiClient.setToken(result.accessToken);
+    const user = mapUser(result.user);
+    persistUser(user);
+    return user;
+  },
 
-    const safeUser = sanitizeUser(nextUser);
-    setStorageData(STORAGE_KEYS.CURRENT_USER, safeUser);
-    return safeUser;
+  async completeGoogleRegistration(payload) {
+    const result = await apiClient.request("/auth/google/complete-registration", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    apiClient.setToken(result.accessToken);
+    const user = mapUser(result.user);
+    persistUser(user);
+    return user;
+  },
+
+  getGoogleAuthUrl(mode = "login") {
+    const apiBase = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1").replace(/\/api\/v1$/, "");
+    return `${apiBase}/api/v1/auth/oauth2/authorize/google?mode=${mode}`;
+  },
+
+  async handleOAuthCallback(token) {
+    apiClient.setToken(token);
+    const user = await this.fetchCurrentUser();
+    return user;
+  },
+
+  async updateProfile(payload) {
+    const user = mapUser(
+      await apiClient.request("/users/me", {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      })
+    );
+    persistUser(user);
+    return user;
+  },
+
+  async updateAvatar(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+    const user = mapUser(
+      await apiClient.request("/users/me/avatar", {
+        method: "PUT",
+        body: formData,
+      })
+    );
+    persistUser(user);
+    return user;
+  },
+
+  async changePassword(payload) {
+    return apiClient.request("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async sendForgotPasswordOtp(email) {
+    return apiClient.request("/auth/forgot-password/send-otp", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  async resetPassword(payload) {
+    return apiClient.request("/auth/forgot-password/reset", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   },
 
   logout() {
-    removeStorageData(STORAGE_KEYS.CURRENT_USER);
-    return true;
+    apiClient.setToken(null);
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
   },
 };
 
