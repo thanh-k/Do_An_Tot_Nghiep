@@ -12,4 +12,9 @@ public interface BrandRepository extends JpaRepository<Brand, Long> {
 
     // Tìm thương hiệu theo Slug (dùng cho Frontend sau này)
     Optional<Brand> findBySlug(String slug);
+
+    // Tìm kiếm Brand theo tên (trả về Optional để check isPresent)
+    Optional<Brand> findByName(String name);
+
+    
 }

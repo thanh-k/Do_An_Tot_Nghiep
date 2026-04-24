@@ -3,7 +3,7 @@ import PageHeader from "@/components/common/PageHeader";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ProductGrid from "@/components/product/ProductGrid";
 import useWishlist from "@/hooks/useWishlist";
-import productService from "@/services/productService";
+import productService from "@/services/admin/productService";
 
 function WishlistPage() {
   const { wishlistItems } = useWishlist();
@@ -14,7 +14,11 @@ function WishlistPage() {
     productService
       .getAllProducts()
       .then((items) =>
-        setProducts(items.filter((product) => wishlistItems.some((item) => item.id === product.id)))
+        setProducts(
+          items.filter((product) =>
+            wishlistItems.some((item) => item.id === product.id),
+          ),
+        ),
       )
       .finally(() => setLoading(false));
   }, [wishlistItems]);

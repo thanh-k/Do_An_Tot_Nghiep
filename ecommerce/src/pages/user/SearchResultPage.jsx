@@ -6,7 +6,7 @@ import LoadingSpinner from "@/components/common/LoadingSpinner";
 import PageHeader from "@/components/common/PageHeader";
 import ProductGrid from "@/components/product/ProductGrid";
 import { useDebounce } from "@/hooks/useDebounce";
-import productService from "@/services/productService";
+import productService from "@/services/admin/productService";
 
 function SearchResultPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -43,7 +43,10 @@ function SearchResultPage() {
         description="Tìm kiếm sản phẩm bằng chữ hoặc ký tự. Khu vực này dùng mock data và lọc trực tiếp trên frontend."
       />
 
-      <form onSubmit={handleSubmit} className="mb-6 rounded-3xl border border-slate-200 bg-white p-4">
+      <form
+        onSubmit={handleSubmit}
+        className="mb-6 rounded-3xl border border-slate-200 bg-white p-4"
+      >
         <div className="grid gap-4 md:grid-cols-[1fr_auto]">
           <Input
             value={keyword}
@@ -61,7 +64,9 @@ function SearchResultPage() {
         {queryParam ? (
           <p>
             Đang hiển thị kết quả cho từ khoá:
-            <span className="ml-2 font-semibold text-slate-900">"{queryParam}"</span>
+            <span className="ml-2 font-semibold text-slate-900">
+              "{queryParam}"
+            </span>
           </p>
         ) : (
           <p>Nhập từ khoá để bắt đầu tìm kiếm.</p>

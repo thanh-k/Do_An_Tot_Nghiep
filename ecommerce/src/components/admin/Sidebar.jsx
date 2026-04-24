@@ -26,7 +26,7 @@ const items = [
     label: "Dashboard",
     icon: LayoutDashboard,
     end: true,
-    permissions: ["ANALYTICS_VIEW", "USER_VIEW", "PRODUCT_VIEW", "ORDER_VIEW"],
+    permissions: ["ANALYTICS_VIEW", "USER_VIEW", "PRODUCT_VIEW", "ORDER_VIEW", "CATEGORY_VIEW", "BRAND_VIEW", "CONTACT_VIEW"],
   },
   {
     to: "/admin/products",
@@ -39,6 +39,12 @@ const items = [
     label: "Danh mục",
     icon: FolderTree,
     permissions: ["CATEGORY_VIEW"],
+  },
+  {
+    to: "/admin/brands",
+    label: "Thương hiệu",
+    icon: FolderTree,
+    permissions: ["BRAND_VIEW"],
   },
   {
     to: "/admin/orders",
@@ -102,7 +108,7 @@ function Sidebar({ mobile = false, onNavigate }) {
 
   const visibleItems = currentRole === "SUPER_ADMIN"
     ? items
-    : items.filter((item) => hasAnyPermission(currentUser, item.permissions));
+    : items.filter((item) => item.permissions.length === 0 || hasAnyPermission(currentUser, item.permissions));
 
   return (
     <aside className={cn("flex h-full flex-col border-r border-slate-200 bg-slate-950 text-slate-300", mobile ? "w-full" : "w-[280px]")}> 

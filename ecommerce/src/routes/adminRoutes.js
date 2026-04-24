@@ -10,6 +10,7 @@ import AdminProfilePage from "@/pages/admin/AdminProfilePage";
 import NewsTopicManagementPage from "@/pages/admin/NewsTopicManagementPage";
 import NewsPostManagementPage from "@/pages/admin/NewsPostManagementPage";
 import ContactManagementPage from "@/pages/admin/ContactManagementPage";
+import BrandManagementPage from "@/pages/admin/BrandManagementPage";
 
 export const adminRoutes = [
   {
@@ -26,6 +27,11 @@ export const adminRoutes = [
     path: "categories",
     component: CategoryManagementPage,
     permissions: ["CATEGORY_VIEW"],
+  },
+  {
+    path: "brands",
+    component: BrandManagementPage,
+    permissions: ["BRAND_VIEW"], // nhớ thêm quyền này ở backend nếu chưa có
   },
   {
     path: "orders",

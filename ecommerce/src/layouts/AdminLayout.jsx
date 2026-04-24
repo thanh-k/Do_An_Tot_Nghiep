@@ -5,8 +5,9 @@ import AdminHeader from "@/components/admin/AdminHeader";
 
 const titleMap = {
   "/admin": "Tổng quan hệ thống",
+  "/admin/categories": "Quản lý danh mục",
+  "/admin/brands": "Quản lý thương hiệu",
   "/admin/products": "Quản lý sản phẩm",
-  "/admin/categories": "Quản lý category",
   "/admin/orders": "Quản lý đơn hàng",
   "/admin/users": "Quản lý khách hàng",
   "/admin/customers": "Quản lý khách hàng",

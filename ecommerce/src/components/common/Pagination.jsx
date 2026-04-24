@@ -1,3 +1,4 @@
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import Button from "@/components/common/Button";
 import cn from "@/utils/cn";
 

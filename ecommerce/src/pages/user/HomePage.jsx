@@ -11,12 +11,12 @@ import {
   Camera,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import SectionHeader from "@/components/common/SectionHeader";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ProductGrid from "@/components/product/ProductGrid";
-import { categoryService } from "@/services/categoryService";
-import productService from "@/services/productService";
+import { categoryService } from "@/services/admin/categoryService";
+import productService from "@/services/admin/productService";
 import newsService from "@/services/newsService";
 
 const fadeInUp = {
@@ -47,8 +47,14 @@ function HomePage() {
       newsService.getTrendingPosts(),
     ])
       .then(([homeCollections, categoriesData, newsData, trendingData]) => {
-        setCollections(homeCollections);
-        setCategories(categoriesData);
+        setCollections(homeCollections || {
+          banners: [],
+          featured: [],
+          latest: [],
+          deals: [],
+        });
+
+        setCategories(Array.isArray(categoriesData) ? categoriesData : []);
 
         const posts = Array.isArray(newsData?.content)
           ? newsData.content
@@ -86,12 +92,8 @@ function HomePage() {
 
         const original = Number(bestVariant.compareAtPrice || 0);
         const sale = Number(bestVariant.price || 0);
-
-        if (!original || original <= sale) return null;
-
-        const discountPercent = Math.round(
-          ((original - sale) / original) * 100
-        );
+        const discountPercent =
+          original > 0 ? Math.round(((original - sale) / original) * 100) : 0;
 
         return {
           ...product,
@@ -99,6 +101,8 @@ function HomePage() {
           sale,
           discountPercent,
           image: bestVariant.images?.[0] || product.thumbnail,
+          reviewCount: product.reviewCount || 0,
+          rating: product.rating || 4.8,
         };
       })
       .filter(Boolean)
@@ -136,8 +140,8 @@ function HomePage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
-        <div className="grid grid-cols-1 xl:grid-cols-[220px_minmax(0,1fr)_320px] gap-4 items-stretch overflow-hidden">
-          <aside className="bg-white rounded-[20px] shadow-md overflow-hidden border border-slate-200 min-w-0">
+        <div className="grid grid-cols-1 xl:grid-cols-[230px_minmax(0,1fr)_330px] gap-4 items-stretch overflow-hidden">
+          <aside className="bg-white rounded-[22px] shadow-md overflow-hidden border border-slate-200 min-w-0">
             <div className="bg-rose-600 px-4 py-4">
               <h2 className="text-white font-black text-sm uppercase tracking-wider">
                 Danh mục sản phẩm
@@ -153,9 +157,7 @@ function HomePage() {
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="text-slate-400 group-hover:text-rose-600 transition-colors shrink-0">
-                      {cat.name?.includes("Điện thoại") && (
-                        <Smartphone size={18} />
-                      )}
+                      {cat.name?.includes("Điện thoại") && <Smartphone size={18} />}
                       {cat.name?.includes("Laptop") && <Laptop size={18} />}
                       {cat.name?.includes("Tablet") && (
                         <TabletSmartphone size={18} />
@@ -166,10 +168,12 @@ function HomePage() {
                       {cat.name?.includes("Đồng hồ") && <Watch size={18} />}
                       {cat.name?.includes("Máy ảnh") && <Camera size={18} />}
                     </div>
+
                     <span className="text-sm font-semibold text-slate-700 group-hover:text-rose-600 transition-colors truncate">
                       {cat.name}
                     </span>
                   </div>
+
                   <ChevronRight
                     size={14}
                     className="text-slate-300 group-hover:text-rose-600 group-hover:translate-x-1 transition-all shrink-0"
@@ -180,11 +184,11 @@ function HomePage() {
           </aside>
 
           <div className="grid grid-rows-[1fr_auto] gap-4 min-w-0">
-            <div className="relative min-h-[360px] rounded-[28px] overflow-hidden shadow-lg group min-w-0">
+            <div className="relative min-h-[360px] rounded-[28px] overflow-hidden shadow-lg group">
               <img
                 src="https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=1400&q=80"
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 alt="banner-hoi-vien"
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-900/55 to-transparent" />
 
@@ -213,7 +217,7 @@ function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-4 min-w-0">
               <Link
                 to="/vouchers"
-                className="group relative min-h-[132px] rounded-[22px] overflow-hidden shadow-md min-w-0"
+                className="group relative min-h-[132px] rounded-[22px] overflow-hidden shadow-md"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-blue-500 transition-all duration-300 group-hover:from-rose-500 group-hover:to-orange-400" />
                 <div className="relative z-10 h-full flex flex-col justify-center px-8 py-6 text-white">
@@ -231,7 +235,7 @@ function HomePage() {
 
               <Link
                 to="/vouchers"
-                className="group relative min-h-[132px] rounded-[22px] overflow-hidden shadow-md min-w-0"
+                className="group relative min-h-[132px] rounded-[22px] overflow-hidden shadow-md"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-slate-900 to-indigo-950 transition-all duration-300 group-hover:from-rose-600 group-hover:to-pink-500" />
                 <div className="relative z-10 h-full flex flex-col justify-center px-8 py-6 text-white">
@@ -250,50 +254,61 @@ function HomePage() {
           </div>
 
           <div className="min-w-0">
-            <div className="bg-white rounded-[30px] border-2 border-slate-800/80 shadow-md p-4 h-[520px] flex flex-col overflow-hidden">
+            <div className="bg-white rounded-[28px] border border-slate-300 shadow-[0_12px_30px_rgba(15,23,42,0.12)] p-4 h-[520px] flex flex-col overflow-hidden">
               {highlightProduct ? (
                 <Link
                   to={`/products/${highlightProduct.slug || highlightProduct.id}`}
                   className="group flex h-full flex-col"
                 >
-                  <div className="rounded-[24px] border-2 border-slate-800/80 bg-gradient-to-br from-rose-500 to-pink-600 h-[230px] overflow-hidden">
-                    <img
-                      src={highlightProduct.image || highlightProduct.thumbnail}
-                      alt={highlightProduct.name}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  </div>
-
-                  <div className="px-2 pt-4 flex-1 flex flex-col justify-between min-h-0">
-                    <div>
-                      <h3 className="text-[28px] leading-tight font-black text-slate-900 mb-3 line-clamp-2 min-h-[68px]">
-                        {highlightProduct.name}
-                      </h3>
-
-                      <p className="text-xl italic line-through text-slate-500 font-medium min-h-[32px]">
-                        {formatCurrency(highlightProduct.original)}
-                      </p>
-
-                      <div className="mt-1 flex items-end gap-3 flex-wrap min-h-[64px]">
-                        <p className="text-[34px] leading-none font-black text-slate-900">
-                          {formatCurrency(highlightProduct.sale)}
-                        </p>
-
-                        <span className="rounded-full bg-rose-600 px-3 py-1 text-sm font-black text-white shadow-sm">
-                          -{highlightProduct.discountPercent}%
-                        </span>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={highlightProduct.id}
+                      initial={{ opacity: 0.45, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0.45, scale: 0.98 }}
+                      transition={{ duration: 0.35 }}
+                      className="flex h-full flex-col"
+                    >
+                      <div className="rounded-[22px] border border-slate-300 bg-slate-50 h-[230px] overflow-hidden flex items-center justify-center p-4">
+                        <img
+                          src={highlightProduct.image || highlightProduct.thumbnail}
+                          alt={highlightProduct.name}
+                          className="max-h-full max-w-full object-contain transition-transform duration-500 group-hover:scale-105"
+                        />
                       </div>
-                    </div>
 
-                    <div>
-                      <div className="mt-4 flex items-center gap-2 text-amber-400 min-h-[28px]">
-                        <span className="text-lg">★ ★ ★ ★ ★</span>
-                        <span className="text-slate-500 text-sm font-semibold">
-                          4.9 (438 đánh giá)
-                        </span>
+                      <div className="px-2 pt-4 flex-1 flex flex-col justify-between min-h-0">
+                        <div>
+                          <h3 className="text-[28px] leading-tight font-black text-slate-900 mb-3 line-clamp-2 min-h-[68px]">
+                            {highlightProduct.name}
+                          </h3>
+
+                          <p className="text-xl italic line-through text-slate-500 font-medium min-h-[32px]">
+                            {formatCurrency(highlightProduct.original)}
+                          </p>
+
+                          <div className="mt-1 flex items-end gap-3 flex-wrap min-h-[64px]">
+                            <p className="text-[34px] leading-none font-black text-slate-900">
+                              {formatCurrency(highlightProduct.sale)}
+                            </p>
+
+                            <span className="rounded-full bg-rose-600 px-3 py-1 text-sm font-black text-white shadow-sm">
+                              -{highlightProduct.discountPercent}%
+                            </span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="mt-4 flex items-center gap-2 text-amber-400 min-h-[28px]">
+                            <span className="text-lg">★ ★ ★ ★ ★</span>
+                            <span className="text-slate-500 text-sm font-semibold">
+                              {highlightProduct.rating} ({highlightProduct.reviewCount} đánh giá)
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    </motion.div>
+                  </AnimatePresence>
                 </Link>
               ) : (
                 <div className="h-full flex items-center justify-center text-slate-400 font-semibold">
@@ -309,9 +324,7 @@ function HomePage() {
                       type="button"
                       onClick={() => setHighlightIndex(idx)}
                       className={`h-2.5 rounded-full transition-all ${
-                        idx === highlightIndex
-                          ? "w-8 bg-rose-600"
-                          : "w-2.5 bg-rose-200"
+                        idx === highlightIndex ? "w-8 bg-rose-600" : "w-2.5 bg-rose-200"
                       }`}
                     />
                   ))}
@@ -327,9 +340,9 @@ function HomePage() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
               <h2 className="text-2xl font-black italic uppercase text-rose-600 flex items-center gap-2">
-                <Zap className="animate-pulse fill-rose-600" /> Deal sốc mỗi
-                ngày
+                <Zap className="animate-pulse fill-rose-600" /> Deal sốc mỗi ngày
               </h2>
+
               <div className="flex gap-2 text-white">
                 {["08", "51", "45"].map((time, i) => (
                   <span
@@ -341,6 +354,7 @@ function HomePage() {
                 ))}
               </div>
             </div>
+
             <Link
               to="/products"
               className="text-sm font-bold text-rose-600 hover:underline"
@@ -348,6 +362,7 @@ function HomePage() {
               Xem thêm
             </Link>
           </div>
+
           <ProductGrid products={collections.featured.slice(0, 5)} />
         </div>
       </motion.section>
@@ -355,31 +370,11 @@ function HomePage() {
       <motion.section className="container-padded py-4" {...fadeInUp}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {[
-            {
-              color: "bg-indigo-500",
-              label: "Giảm 50%",
-              desc: "Đơn tối thiểu 100k",
-            },
-            {
-              color: "bg-blue-500",
-              label: "Giảm 10k",
-              desc: "Đơn tối thiểu 100k",
-            },
-            {
-              color: "bg-green-500",
-              label: "Freeship",
-              desc: "Đơn tối thiểu 100k",
-            },
-            {
-              color: "bg-rose-500",
-              label: "Giảm 2k",
-              desc: "Đơn tối thiểu 100k",
-            },
-            {
-              color: "bg-amber-500",
-              label: "Giảm 200k",
-              desc: "Đơn tối thiểu 100k",
-            },
+            { color: "bg-indigo-500", label: "Giảm 50%", desc: "Đơn tối thiểu 100k" },
+            { color: "bg-blue-500", label: "Giảm 10k", desc: "Đơn tối thiểu 100k" },
+            { color: "bg-green-500", label: "Freeship", desc: "Đơn tối thiểu 100k" },
+            { color: "bg-rose-500", label: "Giảm 2k", desc: "Đơn tối thiểu 100k" },
+            { color: "bg-amber-500", label: "Giảm 200k", desc: "Đơn tối thiểu 100k" },
           ].map((v, i) => (
             <motion.div
               key={i}
@@ -431,6 +426,7 @@ function HomePage() {
               <h2 className="text-xl font-black uppercase border-l-4 border-rose-600 pl-4">
                 Thông tin thị trường
               </h2>
+
               <Link
                 to="/news"
                 className="text-sm font-bold text-rose-600 hover:underline"
@@ -459,9 +455,11 @@ function HomePage() {
                         className="w-full h-48 object-cover transition duration-500 group-hover:scale-110"
                       />
                     </div>
+
                     <h3 className="font-bold text-slate-800 line-clamp-2 hover:text-rose-600 transition-colors">
                       {item.title}
                     </h3>
+
                     <p className="text-xs text-slate-500 mt-2 line-clamp-2">
                       {item.summary || "Bài viết đang được cập nhật nội dung..."}
                     </p>
@@ -476,6 +474,7 @@ function HomePage() {
               <h2 className="text-xl font-black uppercase border-l-4 border-rose-600 pl-4">
                 Tin mới cập nhật
               </h2>
+
               <Link
                 to="/news"
                 className="text-sm font-bold text-rose-600 hover:underline"
@@ -504,10 +503,12 @@ function HomePage() {
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:rotate-3 group-hover:scale-110"
                       />
                     </div>
+
                     <div>
                       <h3 className="text-sm font-bold leading-snug line-clamp-2 group-hover:text-rose-600 transition">
                         {item.title}
                       </h3>
+
                       <p className="mt-1 text-xs text-slate-500 line-clamp-2">
                         {item.summary || "Bài viết đang được cập nhật nội dung..."}
                       </p>

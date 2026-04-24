@@ -188,3 +188,47 @@ Nội dung thực hiện:
 - Fix lỗi hiển thị message không rõ ràng 
 - Kiểm tra và đảm bảo API hoạt động đúng với frontend 
 ✍️ Người thực hiện: Thanh
+📅 Ngày: 24/04/2026
+🧩 Nội dung công việc:
+1. Đồng bộ source code từ nhánh dev sang nhánh cá nhân
+- Lấy code mới từ branch dev về branch cá nhân `thanh`
+- Kiểm tra các thay đổi sau khi đồng bộ source
+- Rà soát lại các module frontend bị ảnh hưởng sau khi merge code nhóm
+
+2. Xử lý lỗi phát sinh ở Frontend sau khi lấy code từ branch dev
+- Fix lỗi trùng key trong Sidebar admin:
+    + /admin
+    + /admin/products
+    + /admin/categories
+    + /admin/orders
+    + /admin/profile
+- Kiểm tra và loại bỏ các menu / route bị khai báo trùng
+- Đồng bộ lại hiển thị menu theo permission
+
+3. Sửa lỗi chức năng quản lý sản phẩm
+- Fix lỗi khi bấm “Sửa sản phẩm” bị crash
+- Xử lý trường hợp dữ liệu specifications không đúng định dạng JSON
+- Bổ sung parse dữ liệu an toàn cho:
+    + specifications
+    + variant attributes
+- Đảm bảo form chỉnh sửa sản phẩm hoạt động ổn định với dữ liệu cũ
+
+4. Kiểm tra và xử lý lỗi dữ liệu trang chủ
+- Rà soát lỗi gọi API sản phẩm cho trang chủ
+- Kiểm tra nguyên nhân endpoint `/products/home` bị lỗi khi frontend load dữ liệu
+- Điều chỉnh hướng xử lý phía frontend để tránh làm vỡ giao diện trang chủ
+- Kiểm tra lại dữ liệu hiển thị:
+    + sản phẩm nổi bật
+    + sản phẩm mới
+    + sản phẩm giảm giá
+
+5. Tối ưu hiển thị sản phẩm ở trang chủ
+- Điều chỉnh lại khung hiển thị hình ảnh sản phẩm
+- Hạn chế tình trạng ảnh bị cắt mất chi tiết khi render ra card
+- Tối ưu giao diện để hình ảnh hiển thị đồng đều, đẹp hơn
+
+6. Hoàn thiện lại source code để chuẩn bị cập nhật lên branch cá nhân
+- Rà soát lại các lỗi console phía frontend
+- Kiểm tra lại luồng hoạt động sau khi fix
+- Hoàn thiện source FE trên branch `thanh` để tiếp tục cập nhật lên Git
+✍️ Người thực hiện: Thanh

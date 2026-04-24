@@ -99,6 +99,23 @@ export default function ProductReviews() {
     }
   }, [activeFilter, reviews]);
 
+  // --- LOGIC TÍNH TOÁN SAO ĐÁNH GIÁ ĐỘNG TỪ MẢNG REVIEWS ---
+  const stats = useMemo(() => {
+    if (reviews.length === 0)
+      return { avg: 0, counts: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }, total: 0 };
+    const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    let sum = 0;
+    reviews.forEach((r) => {
+      counts[r.rating] = (counts[r.rating] || 0) + 1;
+      sum += r.rating;
+    });
+    return {
+      avg: (sum / reviews.length).toFixed(1),
+      counts,
+      total: reviews.length,
+    };
+  }, [reviews]);
+
   // --- LOGIC GỬI ĐÁNH GIÁ MỚI ---
   const handleSubmitReview = (e) => {
     e.preventDefault();
@@ -134,40 +151,54 @@ export default function ProductReviews() {
             </h4>
             <div className="flex flex-col items-center">
               <span className="text-8xl font-black text-slate-900 leading-none italic">
-                4.9
+                {stats.avg}
               </span>
               <div className="flex gap-1 my-6 text-yellow-400">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={24} fill="currentColor" />
+                  <Star
+                    key={i}
+                    size={24}
+                    fill={i < Math.round(stats.avg) ? "currentColor" : "none"}
+                    className={
+                      i >= Math.round(stats.avg) ? "text-slate-200" : ""
+                    }
+                  />
                 ))}
               </div>
               <p className="text-sm font-bold text-slate-500 italic">
-                (1.240 nhận xét từ khách hàng)
+                ({stats.total} nhận xét từ khách hàng)
               </p>
             </div>
           </div>
 
           <div className="lg:col-span-8 flex flex-col gap-4">
-            {[5, 4, 3, 2, 1].map((star) => (
-              <div key={star} className="flex items-center gap-4">
-                <span className="text-xs font-black text-slate-400 w-12 uppercase tracking-tighter">
-                  {star} Sao
-                </span>
-                <div className="flex-1 h-3 bg-slate-50 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    whileInView={{
-                      width: star === 5 ? "85%" : star === 4 ? "10%" : "5%",
-                    }}
-                    transition={{ duration: 1 }}
-                    className={`h-full rounded-full bg-gradient-to-r ${star === 5 ? "from-yellow-400 to-orange-500" : "from-slate-200 to-slate-300"}`}
-                  />
+            {[5, 4, 3, 2, 1].map((star) => {
+              // Tính toán phần trăm thanh tiến trình tự động
+              const percentage =
+                stats.total > 0
+                  ? Math.round((stats.counts[star] / stats.total) * 100)
+                  : 0;
+              return (
+                <div key={star} className="flex items-center gap-4">
+                  <span className="text-xs font-black text-slate-400 w-12 uppercase tracking-tighter">
+                    {star} Sao
+                  </span>
+                  <div className="flex-1 h-3 bg-slate-50 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      whileInView={{
+                        width: `${percentage}%`,
+                      }}
+                      transition={{ duration: 1 }}
+                      className={`h-full rounded-full bg-gradient-to-r ${star >= 4 ? "from-yellow-400 to-orange-500" : "from-slate-200 to-slate-300"}`}
+                    />
+                  </div>
+                  <span className="text-xs font-bold text-slate-600 w-10">
+                    {percentage}%
+                  </span>
                 </div>
-                <span className="text-xs font-bold text-slate-600 w-10">
-                  {star === 5 ? "85%" : star === 4 ? "10%" : "1%"}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

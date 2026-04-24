@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.ecommerce.modules.brand.service.BrandValidatorService;
 import java.io.IOException;
 import java.util.List;
 
@@ -20,6 +21,7 @@ public class BrandController {
 
     private final BrandService brandService;
     private final CloudinaryService cloudinaryService;
+    private final BrandValidatorService brandValidator; // Inject cái validator
 
     @GetMapping
     public ApiResponse<List<BrandResponse>> getAll() {
@@ -39,8 +41,14 @@ public class BrandController {
     public ApiResponse<BrandResponse> createWithImage(
             @RequestPart("data") @Valid BrandRequest request,
             @RequestPart("file") MultipartFile file) throws IOException {
+
+        // 1. PHẢI VALIDATE TRƯỚC (Để nếu trùng tên thì dừng luôn, đỡ tốn công upload)
+        brandValidator.validate(request, file, null);
+
         String logoUrl = cloudinaryService.uploadFile(file, "brands");
         request.setLogo(logoUrl);
+
+
         return ApiResponse.<BrandResponse>builder()
                 .result(brandService.create(request))
                 .build();
@@ -50,17 +58,13 @@ public class BrandController {
     @PutMapping("/with-image/{id}")
     public ApiResponse<BrandResponse> updateWithImage(
             @PathVariable Long id,
-            @RequestPart("data") @Valid BrandRequest request,
+            @RequestPart("data") @Valid BrandRequest request, // thêm @Valid để validate request
             @RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
 
-        // Nếu người dùng có chọn file mới thì mới đẩy lên Cloudinary
-        if (file != null && !file.isEmpty()) {
-            String logoUrl = cloudinaryService.uploadFile(file, "brands");
-            request.setLogo(logoUrl);
-        }
-
+        brandValidator.validate(request, file, id);
+        
         return ApiResponse.<BrandResponse>builder()
-                .result(brandService.update(id, request))
+                .result(brandService.updateWithImage(id, request, file))
                 .build();
     }
 

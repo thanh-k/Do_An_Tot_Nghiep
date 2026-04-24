@@ -34,6 +34,19 @@ function ProductCard({ product }) {
     addToCart(product, defaultVariant, 1);
   };
 
+  const handleBuyNow = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!defaultVariant) {
+      navigate(`/products/${product.slug}`);
+      return;
+    }
+
+    addToCart(product, defaultVariant, 1);
+    navigate("/checkout"); // Chuyển thẳng sang trang thanh toán
+  };
+
   const handleWishlist = (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -47,7 +60,7 @@ function ProductCard({ product }) {
           <img
             src={getProductPrimaryImage(product)}
             alt={product.name}
-            className="h-60 w-full object-cover transition duration-500 group-hover:scale-105"
+            className="h-60 w-full object-contain p-4 transition duration-500 group-hover:scale-105"
           />
 
           <div className="absolute left-4 top-4 flex flex-wrap gap-2">
@@ -74,7 +87,9 @@ function ProductCard({ product }) {
           >
             <Heart
               size={18}
-              className={isInWishlist(product.id) ? "fill-rose-500 text-rose-500" : ""}
+              className={
+                isInWishlist(product.id) ? "fill-rose-500 text-rose-500" : ""
+              }
             />
           </button>
         </div>
@@ -82,7 +97,7 @@ function ProductCard({ product }) {
         <div className="space-y-4 p-5">
           <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
             <Tag size={14} />
-            <span>{product.brand}</span>
+            <span> {product.brand?.name || "Khác"}</span>
           </div>
 
           <div className="space-y-2">
@@ -107,10 +122,19 @@ function ProductCard({ product }) {
             ) : null}
           </div>
 
-          <Button fullWidth onClick={handleAddToCart}>
-            <ShoppingCart size={16} />
-            Thêm vào giỏ
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="px-3 text-slate-600"
+              onClick={handleAddToCart}
+              title="Thêm vào giỏ hàng"
+            >
+              <ShoppingCart size={18} />
+            </Button>
+            <Button fullWidth onClick={handleBuyNow}>
+              Mua ngay
+            </Button>
+          </div>
         </div>
       </article>
     </Link>

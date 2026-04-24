@@ -6,9 +6,11 @@ import DataTable from "@/components/admin/DataTable";
 import Button from "@/components/common/Button";
 import Input from "@/components/common/Input";
 import PageHeader from "@/components/common/PageHeader";
-import { categoryService } from "@/services/categoryService";
-import productService from "@/services/productService";
+import { categoryService } from "@/services/admin/categoryService";
+import productService from "@/services/admin/productService";
 import { useDebounce } from "@/hooks/useDebounce";
+
+import Pagination from "@/components/common/Pagination";
 
 function CategoryManagementPage() {
   const [loading, setLoading] = useState(true);
@@ -21,27 +23,48 @@ function CategoryManagementPage() {
     category: null,
   });
 
-  const loadData = () => {
+  // --- 1. THÊM STATE PHÂN TRANG ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 4; // Giới hạn 7 danh mục mỗi trang theo ý ní
+
+  const loadData = async () => {
     setLoading(true);
-    Promise.all([categoryService.getCategories(), productService.getAllProducts()])
-      .then(([categoriesData, productsData]) => {
-        setCategories(categoriesData);
-        setProducts(productsData);
-      })
-      .finally(() => setLoading(false));
+    try {
+      const data = await categoryService.getCategories();
+      setCategories(data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     loadData();
   }, []);
 
+  // --- 2. LOGIC XỬ LÝ DỮ LIỆU ---
+
+  // Lọc theo từ khóa tìm kiếm
   const filteredCategories = useMemo(() => {
-    const search = debouncedKeyword.trim().toLowerCase();
-    if (!search) return categories;
-    return categories.filter((category) =>
-      [category.name, category.slug].join(" ").toLowerCase().includes(search)
+    return categories.filter((c) =>
+      c.name.toLowerCase().includes(keyword.toLowerCase()),
     );
-  }, [categories, debouncedKeyword]);
+  }, [categories, keyword]);
+
+  // Chia nhỏ dữ liệu để hiển thị đúng trang hiện tại (7 cái)
+  const paginatedCategories = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredCategories.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredCategories, currentPage]);
+
+  // Tính tổng số trang dựa trên kết quả đã lọc
+  const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
+
+  // Reset về trang 1 mỗi khi gõ tìm kiếm để tránh lỗi hiển thị trang trống
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [keyword]);
 
   const columns = [
     {
@@ -49,7 +72,12 @@ function CategoryManagementPage() {
       title: "Category",
       render: (row) => (
         <div className="flex gap-3">
-          <img src={row.image} alt={row.name} className="h-14 w-14 rounded-xl object-cover" />
+          {/* Sửa row.image thành row.icon để khớp Backend */}
+          <img
+            src={row.icon}
+            alt={row.name}
+            className="h-14 w-14 rounded-xl object-cover"
+          />
           <div>
             <p className="font-semibold text-slate-900">{row.name}</p>
             <p className="text-xs text-slate-500">{row.slug}</p>
@@ -60,14 +88,19 @@ function CategoryManagementPage() {
     {
       key: "description",
       title: "Mô tả",
-      render: (row) => <p className="line-clamp-2 max-w-xl text-sm">{row.description}</p>,
+      render: (row) => (
+        <p className="line-clamp-2 max-w-xl text-sm">{row.description}</p>
+      ),
     },
     {
       key: "products",
       title: "Số sản phẩm",
       render: (row) => (
         <span className="font-semibold text-brand-700">
-          {products.filter((product) => product.categoryId === row.id).length}
+          {/* Nếu ní chưa có API Product thật thì tạm thời để 0 hoặc filter list cũ */}
+          {products
+            ? products.filter((p) => p.categoryId === row.id).length
+            : 0}
         </span>
       ),
     },
@@ -83,7 +116,6 @@ function CategoryManagementPage() {
             onClick={() => setModalState({ open: true, category: row })}
           >
             <Pencil size={14} />
-            Sửa
           </Button>
           <Button
             variant="danger"
@@ -101,7 +133,6 @@ function CategoryManagementPage() {
             }}
           >
             <Trash2 size={14} />
-            Xoá
           </Button>
         </div>
       ),
@@ -111,11 +142,15 @@ function CategoryManagementPage() {
   const handleSave = async (payload) => {
     try {
       await categoryService.saveCategory(payload);
-      toast.success(payload.id ? "Cập nhật category thành công" : "Tạo category thành công");
+      toast.success(
+        payload.id ? "Cập nhật thành công" : "Thêm mới thành công!",
+      );
       setModalState({ open: false, category: null });
       loadData();
-    } catch (error) {
-      toast.error(error.message);
+    } catch (e) {
+      // Axios sẽ để dữ liệu Backend trả về trong e.response.data
+      const serverError = e.response?.data?.message || "Lỗi không xác định";
+      toast.error(serverError); // Bây giờ nó sẽ hiện "Tên danh mục này đã tồn tại!" thay vì lỗi 500
     }
   };
 
@@ -140,7 +175,23 @@ function CategoryManagementPage() {
         />
       </div>
 
-      {loading ? <div className="card p-8 text-center text-sm text-slate-500">Đang tải dữ liệu...</div> : <DataTable columns={columns} data={filteredCategories} pagination={{ enabled: true, pageSize: 8, itemLabel: "category" }} />}
+      {loading ? (
+        <div className="card p-8 text-center text-sm text-slate-500">
+          Đang tải dữ liệu...
+        </div>
+      ) : (
+        <>
+          {/* TRUYỀN paginatedCategories VÀO DATA TABLE (Thay vì truyền filteredCategories) */}
+          <DataTable columns={columns} data={paginatedCategories} />
+
+          {/* --- 3. GỌI COMPONENT PHÂN TRANG --- */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={(page) => setCurrentPage(page)}
+          />
+        </>
+      )}
 
       <CategoryFormModal
         isOpen={modalState.open}
