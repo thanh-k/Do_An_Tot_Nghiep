@@ -26,7 +26,15 @@ const items = [
     label: "Dashboard",
     icon: LayoutDashboard,
     end: true,
-    permissions: ["ANALYTICS_VIEW", "USER_VIEW", "PRODUCT_VIEW", "ORDER_VIEW", "CATEGORY_VIEW", "BRAND_VIEW", "CONTACT_VIEW"],
+    permissions: [
+      "ANALYTICS_VIEW",
+      "USER_VIEW",
+      "PRODUCT_VIEW",
+      "ORDER_VIEW",
+      "CATEGORY_VIEW",
+      "BRAND_VIEW",
+      "CONTACT_VIEW",
+    ],
   },
   {
     to: "/admin/products",
@@ -106,21 +114,82 @@ function Sidebar({ mobile = false, onNavigate }) {
   const { currentUser } = useAuth();
   const currentRole = normalizeRole(currentUser?.role);
 
-  const visibleItems = currentRole === "SUPER_ADMIN"
-    ? items
-    : items.filter((item) => item.permissions.length === 0 || hasAnyPermission(currentUser, item.permissions));
+  const visibleItems =
+    currentRole === "SUPER_ADMIN"
+      ? items
+      : items.filter(
+          (item) =>
+            item.permissions.length === 0 ||
+            hasAnyPermission(currentUser, item.permissions),
+        );
 
   return (
-    <aside className={cn("flex h-full flex-col border-r border-slate-200 bg-slate-950 text-slate-300", mobile ? "w-full" : "w-[280px]")}> 
+    <aside
+      className={cn(
+        "flex h-full flex-col border-r border-slate-200 bg-slate-950 text-slate-300",
+        mobile ? "w-full" : "w-[280px]",
+      )}
+    >
       <div className="border-b border-slate-800 p-6">
-        <img src={logo} alt="NovaShop" className="h-10 w-auto brightness-[1.7]" />
-        <p className="mt-4 text-sm leading-6 text-slate-400">Bảng điều khiển quản trị frontend cho website thương mại điện tử.</p>
+        <img
+          src={logo}
+          alt="NovaShop"
+          className="h-10 w-auto brightness-[1.7]"
+        />
+        <p className="mt-4 text-sm leading-6 text-slate-400">
+          Bảng điều khiển quản trị frontend cho website thương mại điện tử.
+        </p>
       </div>
+
       <div className="border-b border-slate-800 p-4">
-        <Link to="/" onClick={onNavigate} className="flex items-center gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-brand-600"><House size={18} />Về trang client</Link>
+        <Link
+          to="/"
+          onClick={onNavigate}
+          className="flex items-center gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-brand-600"
+        >
+          <House size={18} />
+          Về trang client
+        </Link>
       </div>
-      <nav className="flex-1 space-y-1 p-4">{visibleItems.map((item) => { const Icon = item.icon; return <NavLink key={item.to} end={item.end} to={item.to} onClick={onNavigate} className={({ isActive }) => cn("flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition", isActive ? "bg-brand-600 text-white" : "text-slate-300 hover:bg-slate-900 hover:text-white")}><Icon size={18} />{item.label}</NavLink>; })}</nav>
-      <div className="border-t border-slate-800 p-4"><div className="rounded-2xl bg-slate-900 p-4"><div className="mb-2 flex items-center gap-3"><Settings2 size={18} className="text-brand-400" /><p className="text-sm font-semibold text-white">Permission Based Admin</p></div><p className="text-xs leading-5 text-slate-400">Menu được hiển thị theo permission, không phụ thuộc cứng vào role.</p></div></div>
+
+      <nav className="flex-1 space-y-1 p-4">
+        {visibleItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={item.to}
+              end={item.end}
+              to={item.to}
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition",
+                  isActive
+                    ? "bg-brand-600 text-white"
+                    : "text-slate-300 hover:bg-slate-900 hover:text-white",
+                )
+              }
+            >
+              <Icon size={18} />
+              {item.label}
+            </NavLink>
+          );
+        })}
+      </nav>
+
+      <div className="border-t border-slate-800 p-4">
+        <div className="rounded-2xl bg-slate-900 p-4">
+          <div className="mb-2 flex items-center gap-3">
+            <Settings2 size={18} className="text-brand-400" />
+            <p className="text-sm font-semibold text-white">
+              Permission Based Admin
+            </p>
+          </div>
+          <p className="text-xs leading-5 text-slate-400">
+            Menu được hiển thị theo permission, không phụ thuộc cứng vào role.
+          </p>
+        </div>
+      </div>
     </aside>
   );
 }
