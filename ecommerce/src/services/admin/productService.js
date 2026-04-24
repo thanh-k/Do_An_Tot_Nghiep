@@ -2,8 +2,11 @@ import axios from "axios";
 
 const API_URL = "http://localhost:8080/api/v1/products";
 
+const getVariantPrice = (product) => Number(product?.variants?.[0]?.price || 0);
+const getCompareAtPrice = (product) =>
+  Number(product?.variants?.[0]?.compareAtPrice || 0);
+
 export const productService = {
-  // Lấy tất cả sản phẩm cho bảng Admin
   async getAllProducts() {
     console.log("--- Gọi API: Lấy tất cả sản phẩm ---");
     try {
@@ -19,15 +22,14 @@ export const productService = {
     }
   },
 
-  // Lấy sản phẩm có phân trang/lọc (cho trang người dùng - nếu cần)
   async getProducts(filters = {}) {
     console.log("--- Gọi API: Lấy sản phẩm kèm Filter ---", filters);
     try {
       const response = await axios.get(API_URL, { params: filters });
       console.log("Kết quả Filter:", response.data.result);
       return {
-        items: response.data.result,
-        total: response.data.result.length, // Tạm thời lấy length vì API chưa trả phân trang
+        items: response.data.result || [],
+        total: response.data.result?.length || 0,
       };
     } catch (error) {
       console.error(
@@ -58,10 +60,8 @@ export const productService = {
     console.log("Dữ liệu gửi lên (Payload):", payload);
 
     try {
-      // Nếu có payload.id thì gọi PUT (Update), ngược lại gọi POST (Create)
       if (payload.id) {
         console.log(`Đang thực hiện cập nhật (PUT) cho ID: ${payload.id}`);
-        // Thêm timeout 15 giây để Axios không bị treo nếu server không phản hồi
         const response = await axios.put(`${API_URL}/${payload.id}`, payload, {
           timeout: 15000,
         });
@@ -69,8 +69,9 @@ export const productService = {
         return response.data.result;
       } else {
         console.log("Đang thực hiện tạo mới (POST)");
-        // Thêm timeout 15 giây
-        const response = await axios.post(API_URL, payload, { timeout: 15000 });
+        const response = await axios.post(API_URL, payload, {
+          timeout: 15000,
+        });
         console.log("Tạo mới thành công:", response.data.result);
         return response.data.result;
       }
@@ -79,7 +80,6 @@ export const productService = {
         "Lỗi khi lưu sản phẩm (400/500):",
         error.response?.data || error.message,
       );
-      // Ní nhìn kỹ dòng log này ở Console trình duyệt để biết Backend báo lỗi trường nào nhé
       throw error;
     }
   },
@@ -99,11 +99,54 @@ export const productService = {
     }
   },
 
-  // // productService.js
-  // const response = await axios.put(`${API_URL}/with-image/${payload.id}`, formData, {
-  //     headers: { "Content-Type": "multipart/form-data" },
-  //     timeout: 10000 // Timeout sau 10 giây
-  // })
+  async getHomeCollections() {
+    try {
+      const res = await axios.get(API_URL);
+      const products = Array.isArray(res.data?.result)
+        ? res.data.result
+        : Array.isArray(res.data)
+          ? res.data
+          : [];
+
+      const featured = products
+        .filter((p) => p?.isFeatured === true || Number(p?.featured) === 1)
+        .slice(0, 8);
+
+      const latest = [...products]
+        .sort((a, b) => {
+          const dateA = new Date(a?.createdAt || a?.updatedAt || 0).getTime();
+          const dateB = new Date(b?.createdAt || b?.updatedAt || 0).getTime();
+          if (dateA !== dateB) return dateB - dateA;
+          return Number(b?.id || 0) - Number(a?.id || 0);
+        })
+        .slice(0, 8);
+
+      const deals = products
+        .filter((product) => getCompareAtPrice(product) > getVariantPrice(product))
+        .sort(
+          (a, b) =>
+            getCompareAtPrice(b) -
+            getVariantPrice(b) -
+            (getCompareAtPrice(a) - getVariantPrice(a)),
+        )
+        .slice(0, 8);
+
+      return {
+        banners: [],
+        featured: featured.length > 0 ? featured : latest.slice(0, 8),
+        latest,
+        deals,
+      };
+    } catch (error) {
+      console.error("Lỗi load home collections từ /products:", error);
+      return {
+        banners: [],
+        featured: [],
+        latest: [],
+        deals: [],
+      };
+    }
+  },
 };
 
 export default productService;

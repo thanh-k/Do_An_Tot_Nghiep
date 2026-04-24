@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Mail, ShieldCheck, User } from "lucide-react";
+import { Eye, EyeOff, Mail, ShieldCheck, User } from "lucide-react";
 import Button from "@/components/common/Button";
 import Input from "@/components/common/Input";
 import Modal from "@/components/common/Modal";
@@ -23,6 +23,8 @@ function RegisterPage() {
   const [form, setForm] = useState({ fullName: "", email: "", password: "", confirmPassword: "" });
   const [otpCode, setOtpCode] = useState("");
   const [errors, setErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const otpInputRef = useRef(null);
 
   if (currentUser) return <Navigate to="/" replace />;
@@ -164,18 +166,38 @@ function RegisterPage() {
 
           <Input
             label="Mật khẩu"
-            type="password"
+            type={showPassword ? "text" : "password"}
             value={form.password}
             error={errors.password}
             onChange={(event) => handleChange("password", event.target.value)}
+            rightIcon={
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="text-slate-400 transition hover:text-slate-600"
+                aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            }
           />
 
           <Input
             label="Xác nhận mật khẩu"
-            type="password"
+            type={showConfirmPassword ? "text" : "password"}
             value={form.confirmPassword}
             error={errors.confirmPassword}
             onChange={(event) => handleChange("confirmPassword", event.target.value)}
+            rightIcon={
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                className="text-slate-400 transition hover:text-slate-600"
+                aria-label={showConfirmPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+              >
+                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            }
           />
 
           <div className="md:col-span-2 text-xs text-slate-500">Sau khi tạo tài khoản, bạn có thể vào hồ sơ để thêm nhiều địa chỉ và số điện thoại.</div>

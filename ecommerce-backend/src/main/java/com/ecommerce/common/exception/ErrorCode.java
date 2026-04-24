@@ -74,6 +74,23 @@ public enum ErrorCode {
     ROLE_REQUIRED(1303, "Vui lòng chọn ít nhất một vai trò", HttpStatus.BAD_REQUEST),
     ROLE_CODE_REQUIRED(1304, "Mã vai trò là bắt buộc", HttpStatus.BAD_REQUEST),
     SYSTEM_ROLE_LOCKED(1305, "Không thể chỉnh sửa vai trò hệ thống", HttpStatus.BAD_REQUEST),
+
+    NEWS_TOPIC_NOT_FOUND(1401, "Không tìm thấy chủ đề tin tức", HttpStatus.NOT_FOUND),
+    NEWS_TOPIC_ALREADY_EXISTS(1402, "Chủ đề tin tức đã tồn tại", HttpStatus.BAD_REQUEST),
+    NEWS_TOPIC_REQUIRED(1403, "Tên chủ đề tin tức là bắt buộc", HttpStatus.BAD_REQUEST),
+    NEWS_TOPIC_HAS_POSTS(1404, "Không thể xóa chủ đề vì vẫn còn bài viết", HttpStatus.BAD_REQUEST),
+    NEWS_POST_NOT_FOUND(1411, "Không tìm thấy bài viết", HttpStatus.NOT_FOUND),
+    NEWS_POST_REQUIRED(1412, "Tiêu đề bài viết là bắt buộc", HttpStatus.BAD_REQUEST),
+    NEWS_POST_CONTENT_REQUIRED(1413, "Nội dung bài viết là bắt buộc", HttpStatus.BAD_REQUEST),
+    NEWS_POST_STATUS_REQUIRED(1414, "Trạng thái bài viết là bắt buộc", HttpStatus.BAD_REQUEST),
+    CONTACT_NOT_FOUND(1501, "Không tìm thấy liên hệ", HttpStatus.NOT_FOUND),
+    CONTACT_NAME_INVALID(1502, "Họ và tên liên hệ không hợp lệ", HttpStatus.BAD_REQUEST),
+    CONTACT_PHONE_INVALID(1503, "Số điện thoại liên hệ phải gồm đúng 10 chữ số", HttpStatus.BAD_REQUEST),
+    CONTACT_EMAIL_INVALID(1504, "Email liên hệ không hợp lệ", HttpStatus.BAD_REQUEST),
+    CONTACT_MESSAGE_INVALID(1505, "Nội dung liên hệ phải có ít nhất 10 ký tự", HttpStatus.BAD_REQUEST),
+    CONTACT_STATUS_REQUIRED(1506, "Trạng thái liên hệ là bắt buộc", HttpStatus.BAD_REQUEST),
+    CONTACT_REPLY_REQUIRED(1507, "Nội dung phản hồi là bắt buộc", HttpStatus.BAD_REQUEST),
+    CONTACT_MESSAGE_REQUIRED(400, "Vui lòng nhập nội dung liên hệ", HttpStatus.BAD_REQUEST),
     ;
 
     private final int code;

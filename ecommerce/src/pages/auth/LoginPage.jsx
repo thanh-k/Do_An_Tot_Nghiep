@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Lock, UserCircle2 } from "lucide-react";
+import { Eye, EyeOff, Lock, UserCircle2 } from "lucide-react";
 import Button from "@/components/common/Button";
 import Input from "@/components/common/Input";
 import useAuth from "@/hooks/useAuth";
@@ -15,6 +15,7 @@ function LoginPage() {
   const [form, setForm] = useState({ identifier: "admin@novashop.vn", password: "Admin@123" });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   if (currentUser) return <Navigate to={location.state?.from?.pathname || "/"} replace />;
 
@@ -51,7 +52,25 @@ function LoginPage() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input label="Email hoặc số điện thoại" value={form.identifier} error={errors.identifier} onChange={(event) => handleChange("identifier", event.target.value)} leftIcon={<UserCircle2 size={18} />} placeholder="Nhập email hoặc số điện thoại" />
-        <Input label="Mật khẩu" type="password" value={form.password} error={errors.password} onChange={(event) => handleChange("password", event.target.value)} leftIcon={<Lock size={18} />} placeholder="Nhập mật khẩu" />
+        <Input
+          label="Mật khẩu"
+          type={showPassword ? "text" : "password"}
+          value={form.password}
+          error={errors.password}
+          onChange={(event) => handleChange("password", event.target.value)}
+          leftIcon={<Lock size={18} />}
+          rightIcon={
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="text-slate-400 transition hover:text-slate-600"
+              aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          }
+          placeholder="Nhập mật khẩu"
+        />
         <div className="text-right text-sm">
           <Link to="/forgot-password" className="font-medium text-brand-600">Quên mật khẩu?</Link>
         </div>

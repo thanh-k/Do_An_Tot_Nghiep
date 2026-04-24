@@ -5,6 +5,11 @@ import com.ecommerce.entity.AccessRole;
 import com.ecommerce.entity.PhonePrefix;
 import com.ecommerce.entity.User;
 import com.ecommerce.entity.UserAddress;
+import com.ecommerce.modules.news.entity.NewsPost;
+import com.ecommerce.modules.news.entity.NewsPostStatus;
+import com.ecommerce.modules.news.entity.NewsTopic;
+import com.ecommerce.modules.news.repository.NewsPostRepository;
+import com.ecommerce.modules.news.repository.NewsTopicRepository;
 import com.ecommerce.modules.phoneprefix.repository.PhonePrefixRepository;
 import com.ecommerce.modules.role.entity.RoleName;
 import com.ecommerce.modules.role.repository.AccessPermissionRepository;
@@ -21,6 +26,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
+import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +44,8 @@ public class DataInitializer implements CommandLineRunner {
     private final JdbcTemplate jdbcTemplate;
     private final AccessPermissionRepository accessPermissionRepository;
     private final AccessRoleRepository accessRoleRepository;
+    private final NewsTopicRepository newsTopicRepository;
+    private final NewsPostRepository newsPostRepository;
 
     @Override
     public void run(String... args) throws Exception {
@@ -45,6 +53,7 @@ public class DataInitializer implements CommandLineRunner {
         seedPhonePrefixes();
         seedAccessControl();
         seedAdminAccount();
+        seedNewsContent();
         syncUsersToDynamicRoles();
     }
 
@@ -91,90 +100,55 @@ public class DataInitializer implements CommandLineRunner {
     private void seedAccessControl() {
         List<AccessPermission> permissions = List.of(
 
-                // =========================
-                // SYSTEM / ACCESS
-                // =========================
                 permission("ROLE_MANAGE", "Quản lý danh sách vai trò", "ACCESS"),
                 permission("ROLE_ASSIGN", "Gán vai trò cho người dùng", "ACCESS"),
 
-                // =========================
-                // USER / STAFF / CUSTOMER
-                // =========================
                 permission("USER_VIEW", "Xem người dùng", "USER"),
                 permission("USER_CREATE", "Tạo người dùng", "USER"),
                 permission("USER_UPDATE", "Cập nhật người dùng", "USER"),
                 permission("USER_DELETE", "Xóa người dùng", "USER"),
+                permission("USER_LOCK", "Khóa / mở khóa người dùng", "USER"),
                 permission("CUSTOMER_VIEW", "Xem khách hàng", "CUSTOMER"),
                 permission("STAFF_VIEW", "Xem nhân sự", "STAFF"),
 
-                // =========================
-                // PHONE PREFIX
-                // =========================
                 permission("PHONE_PREFIX_VIEW", "Xem đầu số điện thoại", "PHONE"),
                 permission("PHONE_PREFIX_MANAGE", "Quản lý đầu số điện thoại", "PHONE"),
 
-                // =========================
-                // NEWS TOPIC
-                // =========================
                 permission("NEWS_TOPIC_VIEW", "Xem chủ đề tin tức", "NEWS_TOPIC"),
                 permission("NEWS_TOPIC_CREATE", "Thêm chủ đề tin tức", "NEWS_TOPIC"),
                 permission("NEWS_TOPIC_UPDATE", "Sửa chủ đề tin tức", "NEWS_TOPIC"),
                 permission("NEWS_TOPIC_DELETE", "Xóa chủ đề tin tức", "NEWS_TOPIC"),
 
-                // =========================
-                // NEWS POST
-                // =========================
                 permission("NEWS_POST_VIEW", "Xem bài viết tin tức", "NEWS_POST"),
                 permission("NEWS_POST_CREATE", "Thêm bài viết tin tức", "NEWS_POST"),
                 permission("NEWS_POST_UPDATE", "Sửa bài viết tin tức", "NEWS_POST"),
                 permission("NEWS_POST_DELETE", "Xóa bài viết tin tức", "NEWS_POST"),
                 permission("NEWS_POST_PUBLISH", "Xuất bản bài viết tin tức", "NEWS_POST"),
 
-                // =========================
-                // CONTACT
-                // =========================
                 permission("CONTACT_VIEW", "Xem liên hệ", "CONTACT"),
                 permission("CONTACT_REPLY", "Phản hồi liên hệ", "CONTACT"),
                 permission("CONTACT_UPDATE", "Cập nhật trạng thái liên hệ", "CONTACT"),
 
-                // =========================
-                // ANALYTICS
-                // =========================
                 permission("ANALYTICS_VIEW", "Xem thống kê", "ANALYTICS"),
                 permission("ANALYTICS_EXPORT", "Xuất báo cáo thống kê", "ANALYTICS"),
 
-                // =========================
-                // RECOMMENDATION
-                // =========================
                 permission("RECOMMENDATION_VIEW", "Xem gợi ý sản phẩm", "RECOMMENDATION"),
                 permission("RECOMMENDATION_MANAGE", "Quản lý gợi ý sản phẩm", "RECOMMENDATION"),
 
-                // =========================
-                // WALLET
-                // =========================
                 permission("WALLET_VIEW", "Xem ví thành viên", "WALLET"),
                 permission("WALLET_TOPUP", "Nạp tiền vào ví", "WALLET"),
                 permission("WALLET_DEDUCT", "Trừ tiền ví", "WALLET"),
                 permission("WALLET_TRANSACTION_VIEW", "Xem lịch sử giao dịch ví", "WALLET"),
 
-                // =========================
-                // MEMBERSHIP
-                // =========================
                 permission("MEMBERSHIP_VIEW", "Xem hạng thành viên", "MEMBERSHIP"),
                 permission("MEMBERSHIP_UPDATE", "Cập nhật hạng thành viên", "MEMBERSHIP"),
                 permission("MEMBERSHIP_MANAGE", "Quản lý hạng thành viên", "MEMBERSHIP"),
 
-                // =========================
-                // PAYMENT BACKEND
-                // =========================
                 permission("PAYMENT_VIEW", "Xem thông tin thanh toán", "PAYMENT"),
                 permission("PAYMENT_USE", "Sử dụng thanh toán", "PAYMENT"),
                 permission("PAYMENT_MANAGE", "Quản lý thanh toán", "PAYMENT"),
                 permission("PAYMENT_VERIFY", "Xác thực giao dịch thanh toán", "PAYMENT"),
 
-                // =========================
-                // VOUCHER BACKEND
-                // =========================
                 permission("VOUCHER_VIEW", "Xem voucher", "VOUCHER"),
                 permission("VOUCHER_CREATE", "Thêm voucher", "VOUCHER"),
                 permission("VOUCHER_UPDATE", "Sửa voucher", "VOUCHER"),
@@ -182,64 +156,37 @@ public class DataInitializer implements CommandLineRunner {
                 permission("VOUCHER_VALIDATE", "Kiểm tra voucher", "VOUCHER"),
                 permission("VOUCHER_APPLY", "Áp dụng voucher", "VOUCHER"),
 
-                // =========================
-                // PRODUCT
-                // =========================
                 permission("PRODUCT_VIEW", "Xem sản phẩm", "PRODUCT"),
                 permission("PRODUCT_CREATE", "Thêm sản phẩm", "PRODUCT"),
                 permission("PRODUCT_UPDATE", "Sửa sản phẩm", "PRODUCT"),
                 permission("PRODUCT_DELETE", "Xóa sản phẩm", "PRODUCT"),
 
-                // =========================
-                // CATEGORY
-                // =========================
                 permission("CATEGORY_VIEW", "Xem danh mục", "CATEGORY"),
                 permission("CATEGORY_CREATE", "Thêm danh mục", "CATEGORY"),
                 permission("CATEGORY_UPDATE", "Sửa danh mục", "CATEGORY"),
                 permission("CATEGORY_DELETE", "Xóa danh mục", "CATEGORY"),
 
-                // =========================
-                // INVENTORY
-                // =========================
                 permission("INVENTORY_VIEW", "Xem tồn kho", "INVENTORY"),
                 permission("INVENTORY_UPDATE", "Cập nhật tồn kho", "INVENTORY"),
 
-                // =========================
-                // IMAGE
-                // =========================
                 permission("IMAGE_UPLOAD", "Tải ảnh sản phẩm", "IMAGE"),
                 permission("IMAGE_DELETE", "Xóa ảnh sản phẩm", "IMAGE"),
 
-                // =========================
-                // VISION
-                // =========================
                 permission("VISION_SEARCH", "Tìm kiếm bằng hình ảnh", "VISION"),
                 permission("VISION_MANAGE", "Quản lý tìm kiếm hình ảnh", "VISION"),
 
-                // =========================
-                // COMPARE
-                // =========================
                 permission("COMPARE_PRODUCT_USE", "So sánh sản phẩm", "COMPARE"),
 
-                // =========================
-                // CART
-                // =========================
                 permission("CART_VIEW", "Xem giỏ hàng", "CART"),
                 permission("CART_ADD", "Thêm vào giỏ hàng", "CART"),
                 permission("CART_UPDATE", "Cập nhật giỏ hàng", "CART"),
                 permission("CART_DELETE", "Xóa khỏi giỏ hàng", "CART"),
 
-                // =========================
-                // ORDER
-                // =========================
                 permission("ORDER_CREATE", "Tạo đơn hàng", "ORDER"),
                 permission("ORDER_VIEW", "Xem đơn hàng", "ORDER"),
                 permission("ORDER_UPDATE", "Cập nhật đơn hàng", "ORDER"),
                 permission("ORDER_DELETE", "Xóa đơn hàng", "ORDER"),
 
-                // =========================
-                // REVIEW / COMMENT
-                // =========================
                 permission("REVIEW_VIEW", "Xem bình luận", "REVIEW"),
                 permission("REVIEW_CREATE", "Thêm bình luận", "REVIEW"),
                 permission("REVIEW_UPDATE", "Sửa bình luận", "REVIEW"),
@@ -260,6 +207,7 @@ public class DataInitializer implements CommandLineRunner {
                         "USER_VIEW",
                         "USER_CREATE",
                         "USER_UPDATE",
+                        "USER_LOCK",
                         "USER_DELETE",
                         "CUSTOMER_VIEW",
                         "STAFF_VIEW",
@@ -348,6 +296,7 @@ public class DataInitializer implements CommandLineRunner {
                         "USER_CREATE",
                         "USER_UPDATE",
                         "USER_DELETE",
+                        "USER_LOCK",
                         "CUSTOMER_VIEW",
                         "STAFF_VIEW",
 
@@ -487,6 +436,109 @@ public class DataInitializer implements CommandLineRunner {
                         .isDefault(true)
                         .build()
         );
+    }
+
+    private void seedNewsContent() {
+        if (newsTopicRepository.count() > 0 || newsPostRepository.count() > 0) return;
+
+        LocalDateTime now = LocalDateTime.now();
+
+        NewsTopic tech = newsTopicRepository.save(NewsTopic.builder()
+                .name("Công nghệ")
+                .slug("cong-nghe")
+                .description("Tin tức công nghệ mới nhất")
+                .active(true)
+                .displayOrder(1)
+                .createdAt(now)
+                .updatedAt(now)
+                .build());
+
+        NewsTopic review = newsTopicRepository.save(NewsTopic.builder()
+                .name("Đánh giá")
+                .slug("danh-gia")
+                .description("Các bài đánh giá thiết bị nổi bật")
+                .active(true)
+                .displayOrder(2)
+                .createdAt(now)
+                .updatedAt(now)
+                .build());
+
+        NewsTopic tips = newsTopicRepository.save(NewsTopic.builder()
+                .name("Thủ thuật")
+                .slug("thu-thuat")
+                .description("Mẹo sử dụng thiết bị hiệu quả hơn")
+                .active(true)
+                .displayOrder(3)
+                .createdAt(now)
+                .updatedAt(now)
+                .build());
+
+        User author = userRepository.findByEmailIgnoreCase("admin@novashop.vn").orElse(null);
+        if (author == null) return;
+
+        newsPostRepository.save(NewsPost.builder()
+                .title("Kỷ nguyên chip M4: Apple thiết lập tiêu chuẩn mới cho hiệu năng AI")
+                .slug("ky-nguyen-chip-m4-apple-thiet-lap-tieu-chuan-moi-cho-hieu-nang-ai")
+                .summary("Phân tích sức mạnh mới của chip M4 và tác động lên hệ sinh thái thiết bị hiện đại.")
+                .content("<p>Apple tiếp tục tạo dấu ấn với thế hệ chip M4 mới, tối ưu mạnh cho các tác vụ AI và hiệu suất đồ họa.</p><p>Trong bài viết này, NovaShop sẽ phân tích điểm mới, hiệu năng và trải nghiệm thực tế mà M4 mang lại.</p><h3>Điểm nổi bật</h3><ul><li>Hiệu suất CPU/GPU tăng đáng kể</li><li>Tối ưu cho các ứng dụng AI</li><li>Tiết kiệm điện năng hơn</li></ul>")
+                .thumbnail("https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1200")
+                .status(NewsPostStatus.PUBLISHED)
+                .featured(true)
+                .viewCount(1200L)
+                .publishedAt(now.minusDays(2))
+                .createdAt(now)
+                .updatedAt(now)
+                .topic(tech)
+                .author(author)
+                .build());
+
+        newsPostRepository.save(NewsPost.builder()
+                .title("Đánh giá ROG Strix SCAR 18 (2026): quái vật gaming cho game thủ chuyên nghiệp")
+                .slug("danh-gia-rog-strix-scar-18-2026")
+                .summary("Mẫu laptop gaming hiệu năng cao với màn hình mini-LED và hệ tản nhiệt nâng cấp.")
+                .content("<p>ROG Strix SCAR 18 hướng đến game thủ hiệu năng cao với cấu hình mạnh, màn hình lớn và tản nhiệt tốt.</p>")
+                .thumbnail("https://images.unsplash.com/photo-1629429408209-1f912961dbd8?q=80&w=1200")
+                .status(NewsPostStatus.PUBLISHED)
+                .featured(false)
+                .viewCount(980L)
+                .publishedAt(now.minusDays(3))
+                .createdAt(now)
+                .updatedAt(now)
+                .topic(review)
+                .author(author)
+                .build());
+
+        newsPostRepository.save(NewsPost.builder()
+                .title("Cách tối ưu pin trên iPhone trong 5 phút")
+                .slug("cach-toi-uu-pin-tren-iphone-trong-5-phut")
+                .summary("Một số thiết lập nhỏ nhưng giúp thời lượng pin cải thiện rõ rệt mỗi ngày.")
+                .content("<p>Việc tối ưu pin trên iPhone có thể bắt đầu từ điều chỉnh độ sáng, dịch vụ nền và các tuỳ chọn hệ thống cơ bản.</p>")
+                .thumbnail("https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=1200")
+                .status(NewsPostStatus.PUBLISHED)
+                .featured(false)
+                .viewCount(860L)
+                .publishedAt(now.minusDays(1))
+                .createdAt(now)
+                .updatedAt(now)
+                .topic(tips)
+                .author(author)
+                .build());
+
+        newsPostRepository.save(NewsPost.builder()
+                .title("Xu hướng setup bàn làm việc tối giản trong năm 2026")
+                .slug("xu-huong-setup-ban-lam-viec-toi-gian-trong-nam-2026")
+                .summary("Góc làm việc đẹp, gọn gàng giúp tăng cảm hứng và khả năng tập trung khi làm việc.")
+                .content("<p>Phong cách tối giản đang trở thành xu hướng mạnh mẽ trong giới công nghệ và làm việc sáng tạo.</p>")
+                .thumbnail("https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1200")
+                .status(NewsPostStatus.PUBLISHED)
+                .featured(false)
+                .viewCount(740L)
+                .publishedAt(now.minusHours(18))
+                .createdAt(now)
+                .updatedAt(now)
+                .topic(tech)
+                .author(author)
+                .build());
     }
 
     private void syncUsersToDynamicRoles() {
