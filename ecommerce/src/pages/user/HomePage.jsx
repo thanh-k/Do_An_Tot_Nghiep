@@ -47,20 +47,22 @@ function HomePage() {
       newsService.getTrendingPosts(),
     ])
       .then(([homeCollections, categoriesData, newsData, trendingData]) => {
-        setCollections(homeCollections || {
-          banners: [],
-          featured: [],
-          latest: [],
-          deals: [],
-        });
+        setCollections(
+          homeCollections || {
+            banners: [],
+            featured: [],
+            latest: [],
+            deals: [],
+          },
+        );
 
         setCategories(Array.isArray(categoriesData) ? categoriesData : []);
 
         const posts = Array.isArray(newsData?.content)
           ? newsData.content
           : Array.isArray(newsData)
-          ? newsData
-          : [];
+            ? newsData
+            : [];
 
         setNews(posts);
         setTrendingNews(Array.isArray(trendingData) ? trendingData : []);
@@ -363,7 +365,7 @@ function HomePage() {
             </Link>
           </div>
 
-          <ProductGrid products={collections.featured.slice(0, 5)} />
+          <ProductGrid products={collections.featured?.slice(0, 5) || []} />
         </div>
       </motion.section>
 
@@ -401,7 +403,7 @@ function HomePage() {
             actionLabel="Xem thêm"
           />
           <div className="mt-6">
-            <ProductGrid products={collections.latest.slice(0, 6)} />
+            <ProductGrid products={collections.latest?.slice(0, 6) || []} />
           </div>
         </div>
       </motion.section>
@@ -414,7 +416,7 @@ function HomePage() {
             actionLabel="Xem thêm"
           />
           <div className="mt-6">
-            <ProductGrid products={collections.featured.slice(2, 8)} />
+            <ProductGrid products={collections.featured?.slice(2, 8) || []} />
           </div>
         </div>
       </motion.section>

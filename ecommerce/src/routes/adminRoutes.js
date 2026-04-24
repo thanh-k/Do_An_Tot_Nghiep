@@ -31,7 +31,7 @@ export const adminRoutes = [
   {
     path: "brands",
     component: BrandManagementPage,
-    permissions: ["BRAND_VIEW"], // nhớ thêm quyền này ở backend nếu chưa có
+    permissions: ["BRAND_VIEW"],
   },
   {
     path: "orders",
