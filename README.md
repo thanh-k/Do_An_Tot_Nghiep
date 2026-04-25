@@ -232,3 +232,17 @@ Nội dung thực hiện:
 - Kiểm tra lại luồng hoạt động sau khi fix
 - Hoàn thiện source FE trên branch `thanh` để tiếp tục cập nhật lên Git
 ✍️ Người thực hiện: Thanh
+
+📅 Ngày: 25/04/2026
+🧩 Nội dung công việc:
+
+1 FE:
+- Tối ưu giao diện điện thoại
+- Chỉnh sửa hiển thị trang sản phẩm theo hướng gọn hơn trên mobile
+- Tối ưu bộ lọc, danh sách sản phẩm và khung chat AI trên điện thoại
+
+2 BE:
+- Thêm API chat AI
+- Kết nối frontend với backend cho chức năng tư vấn sản phẩm 
+- Tối ưu phản hồi AI và hỗ trợ ngữ cảnh hội thoại
+✍️ Người thực hiện: Thanh
