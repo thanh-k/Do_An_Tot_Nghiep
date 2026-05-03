@@ -9,7 +9,6 @@ services:
       - "3307:3306"
     volumes:
       - db_data:/var/lib/mysql
-
   backend:
     build: .
     container_name: ecommerce_backend
@@ -20,10 +19,10 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/ecommerce_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
       SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
     volumes:
       - ./uploads:/app/uploads
     depends_on:
       - db
-
 volumes:
   db_data:
