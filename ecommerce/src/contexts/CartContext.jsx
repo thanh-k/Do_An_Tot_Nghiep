@@ -1,19 +1,42 @@
-import { createContext, useMemo } from "react";
+import { createContext, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { STORAGE_KEYS } from "@/constants";
 import { buildVariantLabel } from "@/utils/product";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
+import useAuth from "@/hooks/useAuth";
 
 export const CartContext = createContext(null);
 
 export function CartProvider({ children }) {
-  const [cartItems, setCartItems] = useLocalStorage(STORAGE_KEYS.CART, []);
+  const { currentUser } = useAuth();
+  const [cartItems, setCartItems] = useState([]);
+
+  // 1. Tạo key động dựa trên tài khoản người dùng
+  const cartKey = useMemo(() => {
+    return currentUser
+      ? `${STORAGE_KEYS.CART}_user_${currentUser.id}`
+      : `${STORAGE_KEYS.CART}_guest`;
+  }, [currentUser]);
+
+  // 2. Load lại giỏ hàng mỗi khi đăng nhập/đăng xuất (đổi key)
+  useEffect(() => {
+    const stored = localStorage.getItem(cartKey);
+    setCartItems(stored ? JSON.parse(stored) : []);
+  }, [cartKey]);
+
+  // 3. Hàm cập nhật state và lưu đồng thời xuống localStorage cho user hiện tại
+  const updateCart = (updater) => {
+    setCartItems((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      localStorage.setItem(cartKey, JSON.stringify(next));
+      return next;
+    });
+  };
 
   const addToCart = (product, variant, quantity = 1) => {
     const itemId = `${product.id}_${variant.id}`;
     const label = buildVariantLabel(variant);
 
-    setCartItems((prev) => {
+    updateCart((prev) => {
       const existed = prev.find((item) => item.id === itemId);
       if (existed) {
         return prev.map((item) =>
@@ -22,7 +45,7 @@ export function CartProvider({ children }) {
                 ...item,
                 quantity: Math.min(item.quantity + quantity, item.maxStock),
               }
-            : item
+            : item,
         );
       }
 
@@ -49,29 +72,34 @@ export function CartProvider({ children }) {
   };
 
   const updateQuantity = (itemId, quantity) => {
-    setCartItems((prev) =>
+    updateCart((prev) =>
       prev.map((item) =>
         item.id === itemId
           ? {
               ...item,
               quantity: Math.min(Math.max(quantity, 1), item.maxStock || 99),
             }
-          : item
-      )
+          : item,
+      ),
     );
   };
 
   const removeFromCart = (itemId) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== itemId));
+    updateCart((prev) => prev.filter((item) => item.id !== itemId));
     toast.success("Đã xoá sản phẩm khỏi giỏ hàng");
   };
 
-  const clearCart = () => setCartItems([]);
+  const clearCart = () => updateCart([]);
+
+  // Thêm hàm xoá danh sách các sản phẩm đã được thanh toán
+  const removeMultipleFromCart = (itemIds) => {
+    updateCart((prev) => prev.filter((item) => !itemIds.includes(item.id)));
+  };
 
   const value = useMemo(() => {
     const subtotal = cartItems.reduce(
       (sum, item) => sum + item.price * item.quantity,
-      0
+      0,
     );
     const itemsCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -83,6 +111,7 @@ export function CartProvider({ children }) {
       updateQuantity,
       removeFromCart,
       clearCart,
+      removeMultipleFromCart,
     };
   }, [cartItems]);
 

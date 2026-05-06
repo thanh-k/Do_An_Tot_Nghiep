@@ -3,30 +3,81 @@ import Modal from "@/components/common/Modal";
 import toast from "react-hot-toast";
 import Input from "@/components/common/Input";
 import Button from "@/components/common/Button";
-import axios from "axios";
-import { brandService } from "@/services/admin/brandService";
-
-// --- THÊM DỮ LIỆU GỢI Ý MẪU TẠI ĐÂY ---
-const SUGGESTIONS = {
-  colors: ["Đen", "Trắng", "Titan", "Đỏ", "Xanh", "Vàng", "Bạc", "Xám", "Hồng"],
-  storages: ["64GB", "128GB", "256GB", "512GB", "1TB"],
-  rams: ["4GB", "8GB", "12GB", "16GB", "32GB", "64GB"],
-  ssds: ["256GB", "512GB", "1TB", "2TB"],
-};
+import { CATEGORY_VARIANT_CONFIG, ATTRIBUTE_OPTIONS } from "@/utils/categoryConfig";
+import { createId } from "@/services/storageService";
+import { fileToDataUrl } from "@/utils/file";
 
 const createVariantState = () => ({
-  id: "temp-" + Math.random().toString(36).substr(2, 9),
+  id: createId("var"),
   sku: "",
-  color: "",
-  storage: "",
-  ram: "",
-  ssd: "",
   price: "",
   compareAtPrice: "",
   stock: 0,
   image: "",
   imageFile: null,
 });
+
+const safeParseJson = (value, fallback = null) => {
+  if (value === null || value === undefined || value === "") return fallback;
+  if (typeof value === "object") return value;
+  if (typeof value !== "string") return fallback;
+
+  const trimmed = value.trim();
+  if (!trimmed) return fallback;
+
+  const looksLikeJson =
+    (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+    (trimmed.startsWith("[") && trimmed.endsWith("]"));
+
+  if (!looksLikeJson) return fallback;
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return fallback;
+  }
+};
+
+const formatSpecificationsToText = (specifications) => {
+  if (!specifications) return "";
+
+  if (typeof specifications === "object" && !Array.isArray(specifications)) {
+    return Object.entries(specifications)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join("\n");
+  }
+
+  if (typeof specifications === "string") {
+    const parsed = safeParseJson(specifications, null);
+
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return Object.entries(parsed)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join("\n");
+    }
+
+    return specifications;
+  }
+
+  return "";
+};
+
+const mapVariantAttributes = (attributes) => {
+  const parsed = safeParseJson(attributes, null);
+  const attrs =
+    parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed
+      : typeof attributes === "object" && attributes !== null
+        ? attributes
+        : {};
+
+  return {
+    color: attrs?.color || "",
+    storage: attrs?.storage || "",
+    ram: attrs?.ram || "",
+    ssd: attrs?.ssd || "",
+  };
+};
 
 // 1. Hàm khởi tạo state đã fix để hiện RAM/SSD và dữ liệu cũ
 const getInitialState = (product) => ({
@@ -39,15 +90,10 @@ const getInitialState = (product) => ({
   description: product?.description || "",
   thumbnail: product?.thumbnail || "",
   thumbnailFile: null,
-  // Fix: Nạp thông số từ DB vào ô gõ text
   specsText: product?.specifications
-    ? typeof product.specifications === "string"
-      ? Object.entries(JSON.parse(product.specifications))
-          .map(([k, v]) => `${k}: ${v}`)
-          .join("\n")
-      : Object.entries(product.specifications)
-          .map(([k, v]) => `${k}: ${v}`)
-          .join("\n")
+    ? Object.entries(product.specifications)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join("\n")
     : "",
   isFeatured: Boolean(product?.isFeatured),
   isNew: Boolean(product?.isNew),
@@ -58,7 +104,7 @@ const getInitialState = (product) => ({
         const attrs =
           typeof v.attributes === "string"
             ? JSON.parse(v.attributes)
-            : v.attributes;
+            : v.attributes || {};
         return {
           id: v.id,
           sku: v.sku || "",
@@ -66,27 +112,31 @@ const getInitialState = (product) => ({
           compareAtPrice: v.compareAtPrice || "",
           stock: v.stock || 0,
           image: v.image || "",
-          color: attrs?.color || "",
-          storage: attrs?.storage || "",
-          ram: attrs?.ram || "",
-          ssd: attrs?.ssd || "",
           imageFile: null,
+          ...attrs
         };
       })
     : [createVariantState()],
 });
 
-function ProductFormModal({
-  isOpen,
-  onClose,
-  categories = [], // Danh sách truyền từ cha
-  initialProduct = null,
-  onSubmit,
-}) {
+function ProductFormModal({ isOpen, onClose, categories = [], initialProduct = null, onSubmit }) {
   const [form, setForm] = useState(getInitialState(initialProduct));
   const [brands, setBrands] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({}); // THÊM STATE LƯU LỖI
+
+  // LOGIC ĐỘNG: Lấy danh sách các thuộc tính cần hiển thị dựa theo Danh mục
+  const activeAttributes = useMemo(() => {
+    if (!form.categoryId || !categories?.length) return [{ key: "color", ...ATTRIBUTE_OPTIONS["color"] }];
+    
+    const category = categories.find((c) => String(c.id) === String(form.categoryId));
+    if (!category) return [{ key: "color", ...ATTRIBUTE_OPTIONS["color"] }];
+
+    const catSlug = category.slug || category.name.toLowerCase().replace(/ /g, '-').normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const attributeKeys = CATEGORY_VARIANT_CONFIG[catSlug] || CATEGORY_VARIANT_CONFIG["default"] || ["color"];
+    
+    return attributeKeys.map(key => ({ key: key, ...ATTRIBUTE_OPTIONS[key] }));
+  }, [form.categoryId, categories]);
 
   // LOG 1: Kiểm tra xem khi Modal mở, biến categories nhận được gì từ Page cha
   useEffect(() => {
@@ -98,89 +148,32 @@ function ProductFormModal({
   }, [isOpen, categories]);
 
   useEffect(() => {
-    const initialState = getInitialState(initialProduct);
-    setForm(initialState);
-    if (isOpen) {
-      validateAll(initialState); // FIX: Hiển thị báo đỏ ngay khi mở Modal
-      brandService
-        .getBrands()
-        .then((data) => {
-          console.log("Dữ liệu brands tải thành công:", data);
-          setBrands(data);
-        })
-        .catch((err) => {
-          console.error("Lỗi tải thương hiệu:", err);
-          toast.error("Lỗi tải thương hiệu");
-        });
-    }
+    setForm(getInitialState(initialProduct));
   }, [initialProduct, isOpen]);
 
-  // 2. Fix Upload để vào đúng folder 'ecommerce/products'
-  const uploadImage = async (file) => {
-    if (!file) return null;
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", "product_preset");
-    // THÊM DÒNG NÀY ĐỂ VÀO FOLDER RIÊNG
-    formData.append("folder", "ecommerce/products");
+  const modalTitle = useMemo(
+    () => (initialProduct ? "Cập nhật sản phẩm" : "Thêm sản phẩm mới"),
+    [initialProduct]
+  );
 
-    const res = await axios.post(
-      "https://api.cloudinary.com/v1_1/daz76ckfi/image/upload",
-      formData,
-    );
-    return res.data.secure_url;
+  const updateField = (field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Hàm tạo slug tự động
-  const convertToSlug = (text) => {
-    return text
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[đĐ]/g, "d")
-      .replace(/([^0-9a-z-\s])/g, "")
-      .replace(/(\s+)/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-+|-+$/g, "");
+  const updateVariant = (variantId, field, value) => {
+    setForm((prev) => ({
+      ...prev,
+      variants: prev.variants.map((variant) =>
+        variant.id === variantId ? { ...variant, [field]: value } : variant
+      ),
+    }));
   };
 
-  // --- VALIDATE REAL-TIME CHO FORM CHÍNH ---
-  const validateField = (field, value) => {
-    let errMsg = "";
-    // Chuyển đổi an toàn sang chuỗi để tránh lỗi khi value bị null
-    const valStr = value !== null && value !== undefined ? String(value) : "";
-
-    if (field === "name") {
-      if (!valStr.trim()) errMsg = "Tên sản phẩm không được để trống";
-      else if (valStr.trim().length < 2) errMsg = "Tên phải từ 2 ký tự trở lên";
-    }
-    if (field === "categoryId" && !value) errMsg = "Vui lòng chọn danh mục";
-    if (field === "brandId" && !value) errMsg = "Vui lòng chọn thương hiệu";
-    if (field === "thumbnailFile") {
-      if (!value && !form.thumbnail) errMsg = "Vui lòng chọn ảnh đại diện";
-      else if (value && value.size > 1024 * 1024)
-        errMsg = "Dung lượng ảnh vượt quá 1MB";
-    }
-    if (field === "description" && !valStr.trim())
-      errMsg = "Mô tả chi tiết không được để trống";
-    if (field === "specsText") {
-      if (!valStr.trim()) {
-        errMsg = "Thông số không được để trống";
-      } else {
-        const lines = valStr
-          .split("\n")
-          .map((l) => l.trim())
-          .filter(Boolean);
-        for (const line of lines) {
-          if (!line.includes(":") || line.split(":")[0].trim() === "") {
-            errMsg =
-              "Sai định dạng. Vui lòng nhập 'Tên: Giá trị' (VD: Chip: M3)";
-            break;
-          }
-        }
-      }
-    }
-    setErrors((prev) => ({ ...prev, [field]: errMsg }));
+  const addVariant = () => {
+    setForm((prev) => ({
+      ...prev,
+      variants: [...prev.variants, createVariantState()],
+    }));
   };
 
   // --- VALIDATE REAL-TIME CHO TỪNG BIẾN THỂ ---
@@ -190,14 +183,9 @@ function ProductFormModal({
     // Chuyển đổi an toàn sang chuỗi để kiểm tra dấu âm
     const valStr = value !== null && value !== undefined ? String(value) : "";
 
-    if (field === "color" && !valStr.trim()) errMsg = "Màu không được để trống";
+    const attrKeys = activeAttributes.map(a => a.key);
+    if (attrKeys.includes(field) && !valStr.trim()) errMsg = "Không được để trống";
 
-    if (field === "storage") {
-      if (!valStr.trim()) errMsg = "Không được để trống";
-    }
-    if (field === "ram") {
-      if (!valStr.trim()) errMsg = "Không được để trống";
-    }
     if (field === "price") {
       if (!valStr.trim()) errMsg = "Giá bán không được để trống";
       else if (Number(value) < 1) errMsg = "Giá bán phải từ 1đ trở lên";
@@ -262,14 +250,11 @@ function ProductFormModal({
     }
 
     currentForm.variants.forEach((v) => {
-      if (!v.color?.trim())
-        newErrors[`variant_${v.id}_color`] = "Màu không được để trống";
-
-      if (!v.storage?.trim())
-        newErrors[`variant_${v.id}_storage`] = "Không được để trống";
-
-      if (!v.ram?.trim())
-        newErrors[`variant_${v.id}_ram`] = "Không được để trống";
+      activeAttributes.forEach((attr) => {
+        if (!String(v[attr.key] || "").trim()) {
+          newErrors[`variant_${v.id}_${attr.key}`] = "Không được để trống";
+        }
+      });
 
       if (!String(v.price || "").trim())
         newErrors[`variant_${v.id}_price`] = "Giá bán không được để trống";
@@ -312,47 +297,36 @@ function ProductFormModal({
     }
 
     const hasVariantErrors = form.variants.some(
-      (v) =>
-        !v.color?.trim() ||
-        !v.storage?.trim() ||
-        !v.ram?.trim() ||
-        !String(v.price || "").trim() ||
-        Number(v.price) < 1 ||
-        !String(v.compareAtPrice || "").trim() ||
-        Number(v.compareAtPrice) <= 0 ||
-        (v.price && Number(v.compareAtPrice) < Number(v.price)) ||
-        Number(v.stock) < 0 ||
-        v.stock === "" ||
-        (v.imageFile && v.imageFile.size > 1024 * 1024),
+      (v) => {
+        const hasAttrError = activeAttributes.some(attr => !String(v[attr.key] || "").trim());
+        return hasAttrError || !String(v.price || "").trim() || Number(v.price) < 1 ||
+          !String(v.compareAtPrice || "").trim() || Number(v.compareAtPrice) <= 0 ||
+          (v.price && Number(v.compareAtPrice) < Number(v.price)) || Number(v.stock) < 0 ||
+          v.stock === "" || (v.imageFile && v.imageFile.size > 1024 * 1024);
+      }
     );
     if (hasVariantErrors) return true;
 
     return Object.values(errors).some((err) => !!err);
   }, [form, errors]);
 
+  const removeVariant = (variantId) => {
+    setForm((prev) => ({
+      ...prev,
+      variants: prev.variants.filter((variant) => variant.id !== variantId),
+    }));
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
-
-    // Quét toàn bộ lỗi khi bấm Lưu
-    if (!validateAll()) {
-      toast.error("Vui lòng điền đầy đủ các thông tin bị lỗi màu đỏ!");
-      return;
-    }
-
     setSubmitting(true);
     try {
-      // 1. Tạo Slug chuẩn từ tên sản phẩm trước (Dùng chung cho cả Payload và SKU)
-      const generatedSlug = form.slug || convertToSlug(form.name);
-
-      console.log("Slug được tạo mới:", generatedSlug);
-
-      // 2. Xử lý Specifications (Thông số kỹ thuật)
-      const specificationsObj = (form.specsText || "")
+      const generatedSlug = form.slug || form.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/([^0-9a-z-\s])/g, "").replace(/(\s+)/g, "-");
+      
+      const specifications = form.specsText
         .split("\n")
         .map((line) => line.trim())
-        .filter(
-          (line) => line.includes(":") && line.split(":")[0].trim() !== "",
-        )
+        .filter(Boolean)
         .reduce((acc, line) => {
           const parts = line.split(":");
           const key = parts[0].trim();
@@ -361,35 +335,32 @@ function ProductFormModal({
           return acc;
         }, {});
 
-      const specifications = JSON.stringify(specificationsObj);
-
-      // 3. Upload Thumbnail
-      let thumbnail = form.thumbnail;
-      if (form.thumbnailFile) {
-        thumbnail = await uploadImage(form.thumbnailFile);
-      }
-
-      // 4. Xử lý Variants và Tạo SKU tự động theo Slug mới
       const resolvedVariants = await Promise.all(
         // FIX: Lấy thêm 'index' từ vòng lặp map
         form.variants.map(async (v, index) => {
           let variantImg = v.image;
-          if (v.imageFile) variantImg = await uploadImage(v.imageFile);
+          if (v.imageFile) variantImg = await fileToDataUrl(v.imageFile);
 
-          // Tạo SKU: [TÊN-KHONG-DAU]-[MAU]
-          const cleanColor = (v.color || "")
+          // Tự động tạo SKU dựa theo 2 thuộc tính động đầu tiên
+          const firstAttrVal = String(v[activeAttributes[0]?.key] || "")
             .toUpperCase()
             .normalize("NFD")
             .replace(/[\u0300-\u036f]/g, "")
             .replace(/[đĐ]/g, "d")
-            .trim();
-
-          const cleanStorage = (v.storage || "")
-            .toUpperCase()
+            .trim()
             .replace(/\s+/g, "");
 
-          // FIX: Chèn thêm dung lượng và index vào chuỗi SKU để đảm bảo 100% không bao giờ trùng lặp
-          const newSku = `${generatedSlug.toUpperCase()}-${cleanColor || "VAR"}${cleanStorage ? `-${cleanStorage}` : ""}-${index + 1}`;
+          const secondAttrVal = activeAttributes.length > 1 
+            ? String(v[activeAttributes[1]?.key] || "").toUpperCase().replace(/\s+/g, "")
+            : "";
+
+          const newSku = `${generatedSlug.toUpperCase()}-${firstAttrVal || "VAR"}${secondAttrVal ? `-${secondAttrVal}` : ""}-${index + 1}`;
+
+          // Gom tất cả thuộc tính động lại để lưu dạng JSON
+          const attrsToSave = {};
+          activeAttributes.forEach(attr => {
+            attrsToSave[attr.key] = v[attr.key] || "";
+          });
 
           return {
             sku: newSku,
@@ -397,42 +368,24 @@ function ProductFormModal({
             compareAtPrice: Number(v.compareAtPrice || v.price) || 0,
             stock: Number(v.stock) || 0,
             image: variantImg,
-            attributes: JSON.stringify({
-              color: v.color || "",
-              storage: v.storage || "",
-              ram: v.ram || "",
-              ssd: v.ssd || "",
-            }),
+            attributes: JSON.stringify(attrsToSave),
           };
         }),
       );
 
-      // 5. Tạo Payload cuối cùng gửi về Backend
+      const thumbnail = form.thumbnailFile
+        ? await fileToDataUrl(form.thumbnailFile)
+        : form.thumbnail || resolvedVariants[0]?.images?.[0] || "";
+
       const payload = {
-        id: form.id || null,
-        name: form.name?.trim(),
-        slug: generatedSlug, // Sử dụng slug đã tạo ở trên
-        categoryId: Number(form.categoryId),
-        brandId: Number(form.brandId),
-        shortDescription: form.shortDescription?.trim() || "Chưa có mô tả ngắn",
-        description: form.description?.trim() || "Chưa có mô tả chi tiết",
-        thumbnail: thumbnail || "",
-        specifications: specifications,
-        isFeatured: form.isFeatured,
-        isNew: form.isNew,
-        isSale: form.isSale,
+        ...initialProduct,
+        ...form,
+        thumbnail,
+        images: [...new Set([thumbnail, ...resolvedVariants.flatMap((item) => item.images)].filter(Boolean))],
+        specifications,
         variants: resolvedVariants,
-        // FIX: Dùng Set để loại bỏ các URL ảnh bị trùng lặp tránh lỗi Unique Constraint DB
-        images: [
-          ...new Set(
-            [thumbnail, ...resolvedVariants.map((v) => v.image)].filter(
-              Boolean,
-            ),
-          ),
-        ],
       };
 
-      console.log("Dữ liệu cuối cùng gửi đi:", payload);
       await onSubmit(payload);
     } catch (error) {
       console.error("Lỗi crash tại Frontend:", error);
@@ -440,49 +393,6 @@ function ProductFormModal({
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const updateField = (field, value) => {
-    setForm((prev) => {
-      const newForm = { ...prev, [field]: value };
-      if (field === "name") {
-        newForm.slug = convertToSlug(value); // Tự động cập nhật slug khi gõ tên
-      }
-      return newForm;
-    });
-
-    // Gọi kiểm tra lỗi NGAY LẬP TỨC khi người dùng gõ phím
-    validateField(field, value);
-  };
-
-  const updateVariant = (variantId, field, value) => {
-    setForm((prev) => ({
-      ...prev,
-      variants: prev.variants.map((v) =>
-        v.id === variantId ? { ...v, [field]: value } : v,
-      ),
-    }));
-
-    // Gọi kiểm tra lỗi biến thể NGAY LẬP TỨC
-    validateVariant(variantId, field, value);
-  };
-
-  const addVariant = () => {
-    setForm((prev) => {
-      const newForm = {
-        ...prev,
-        variants: [...prev.variants, createVariantState()],
-      };
-      validateAll(newForm); // FIX: Quét và hiển thị lỗi đỏ ngay lập tức cho biến thể mới
-      return newForm;
-    });
-  };
-
-  const removeVariant = (variantId) => {
-    setForm((prev) => ({
-      ...prev,
-      variants: prev.variants.filter((v) => v.id !== variantId),
-    }));
   };
 
   return (
@@ -494,25 +404,8 @@ function ProductFormModal({
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid gap-4 lg:grid-cols-2">
-          <div>
-            <Input
-              label="Tên sản phẩm *"
-              value={form.name}
-              onChange={(e) => updateField("name", e.target.value)}
-              required
-            />
-            {errors.name && (
-              <p className="mt-1 text-xs text-red-500 font-medium">
-                {errors.name}
-              </p>
-            )}
-          </div>
-          <Input
-            label="Slug"
-            value={form.slug}
-            disabled
-            hint="Slug được tạo tự động từ tên sản phẩm."
-          />
+          <Input label="Tên sản phẩm" value={form.name} onChange={(e) => updateField("name", e.target.value)} required />
+          <Input label="Slug" value={form.slug} onChange={(e) => updateField("slug", e.target.value)} hint="Có thể để trống, hệ thống sẽ tự tạo từ tên." />
           <div className="space-y-2">
             <label className="text-sm font-medium">
               Danh mục <span className="text-red-500">*</span>
@@ -520,40 +413,13 @@ function ProductFormModal({
             <select
               value={form.categoryId}
               onChange={(e) => updateField("categoryId", e.target.value)}
-              className={`w-full rounded-xl border p-3 text-sm focus:ring-2 focus:ring-brand-500 ${errors.categoryId ? "border-red-500 bg-red-50" : "border-slate-200"}`}
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
+              required
             >
               <option value="">Chọn danh mục</option>
-              {/* LOG 2: Ní có thể đặt log trực tiếp trong map để xem từng item */}
-              {categories && categories.length > 0 ? (
-                categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))
-              ) : (
-                <option disabled>Không có danh mục nào (Đang tải...)</option>
-              )}
-            </select>
-            {errors.categoryId && (
-              <p className="mt-1 text-xs text-red-500 font-medium">
-                {errors.categoryId}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Thương hiệu <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={form.brandId}
-              onChange={(e) => updateField("brandId", e.target.value)}
-              className={`w-full rounded-xl border p-3 text-sm focus:ring-2 focus:ring-brand-500 ${errors.brandId ? "border-red-500 bg-red-50" : "border-slate-200"}`}
-            >
-              <option value="">Chọn thương hiệu</option>
-              {brands.map((brand) => (
-                <option key={brand.id} value={brand.id}>
-                  {brand.name}
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
                 </option>
               ))}
             </select>
@@ -563,309 +429,125 @@ function ProductFormModal({
               </p>
             )}
           </div>
-
-          {/* Các phần còn lại giữ nguyên... */}
-          <div className="mt-2 space-y-2">
-            <label className="text-sm font-medium">
-              Ảnh đại diện <span className="text-red-500">*</span>
-            </label>
+          <Input label="Thương hiệu" value={form.brand} onChange={(e) => updateField("brand", e.target.value)} required />
+          <div className="space-y-2 lg:col-span-2">
+            <label className="text-sm font-medium text-slate-700">Ảnh đại diện sản phẩm</label>
             <input
               type="file"
               accept="image/*"
-              onChange={(e) =>
-                updateField("thumbnailFile", e.target.files?.[0] || null)
-              }
-              className={`w-full border p-2 rounded-xl text-sm file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs hover:file:bg-brand-100 ${errors.thumbnailFile ? "border-red-500 bg-red-50 file:bg-red-100 file:text-red-700" : "file:bg-brand-50 file:text-brand-700"}`}
+              onChange={(e) => updateField("thumbnailFile", e.target.files?.[0] || null)}
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm"
             />
-            {errors.thumbnailFile && (
-              <p className="mt-1 text-xs text-red-500 font-medium">
-                {errors.thumbnailFile}
-              </p>
-            )}
-            {(form.thumbnailFile || form.thumbnail) && (
-              <div className="relative w-32 h-32 mt-2 group">
-                <img
-                  src={
-                    form.thumbnailFile
-                      ? URL.createObjectURL(form.thumbnailFile)
-                      : form.thumbnail
-                  }
-                  className="w-full h-full object-cover rounded-2xl border shadow-sm"
-                  alt="Preview Thumbnail"
-                />
-                {/* Nút xóa ảnh nếu cần thì thêm ở đây */}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div>
-          <Input
-            label="Mô tả chi tiết *"
-            textarea
-            rows={4}
-            value={form.description}
-            onChange={(e) => updateField("description", e.target.value)}
-          />
-          {errors.description && (
-            <p className="mt-1 text-xs text-red-500 font-medium">
-              {errors.description}
-            </p>
-          )}
-        </div>
-        <div>
-          <Input
-            label="Thông số (Tên: Giá trị) *"
-            textarea
-            rows={4}
-            value={form.specsText}
-            onChange={(e) => updateField("specsText", e.target.value)}
-            hint="Ví dụ: Chip: Apple M3"
-          />
-          {errors.specsText && (
-            <p className="mt-1 text-xs text-red-500 font-medium">
-              {errors.specsText}
-            </p>
-          )}
-        </div>
-
-        <div className="flex gap-4">
-          {["isFeatured", "isNew", "isSale"].map((key) => (
-            <label
-              key={key}
-              className="flex items-center gap-2 border p-3 rounded-xl cursor-pointer hover:bg-slate-50"
-            >
-              <input
-                type="checkbox"
-                checked={form[key]}
-                onChange={(e) => updateField(key, e.target.checked)}
-                className="w-4 h-4 text-brand-600"
+            {(form.thumbnailFile || form.thumbnail) ? (
+              <img
+                src={form.thumbnailFile ? URL.createObjectURL(form.thumbnailFile) : form.thumbnail}
+                alt="Thumbnail"
+                className="h-44 w-full rounded-2xl object-cover"
               />
-              <span className="text-sm">
-                {key === "isFeatured"
-                  ? "Nổi bật"
-                  : key === "isNew"
-                    ? "Mới"
-                    : "Giảm giá"}
-              </span>
-            </label>
-          ))}
-        </div>
-
-        <div className="border p-4 rounded-3xl space-y-4 bg-white">
-          <div className="flex justify-between items-center">
-            <h4 className="font-semibold text-slate-800">Biến thể sản phẩm</h4>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addVariant}
-            >
-              + Thêm variant
-            </Button>
+            ) : null}
           </div>
-          {form.variants.map((variant, index) => (
-            <div
-              key={variant.id}
-              className="border p-4 rounded-xl bg-slate-50 grid gap-3 md:grid-cols-7 relative"
-            >
-              <div>
-                <Input
-                  label="Màu *"
-                  list="color-list"
-                  value={variant.color}
-                  onChange={(e) =>
-                    updateVariant(variant.id, "color", e.target.value)
-                  }
-                />
-                {errors[`variant_${variant.id}_color`] && (
-                  <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">
-                    {errors[`variant_${variant.id}_color`]}
-                  </p>
-                )}
-              </div>
-              <div>
-                <Input
-                  label="Dung lượng *"
-                  type="text"
-                  list="storage-list"
-                  value={variant.storage}
-                  onChange={(e) =>
-                    updateVariant(variant.id, "storage", e.target.value)
-                  }
-                />
-                {errors[`variant_${variant.id}_storage`] && (
-                  <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">
-                    {errors[`variant_${variant.id}_storage`]}
-                  </p>
-                )}
-              </div>
-              <div>
-                <Input
-                  label="RAM *"
-                  type="text"
-                  list="ram-list"
-                  value={variant.ram}
-                  onChange={(e) =>
-                    updateVariant(variant.id, "ram", e.target.value)
-                  }
-                />
-                {errors[`variant_${variant.id}_ram`] && (
-                  <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">
-                    {errors[`variant_${variant.id}_ram`]}
-                  </p>
-                )}
-              </div>
-              <div>
-                <Input
-                  label="SSD"
-                  type="text"
-                  list="ssd-list"
-                  value={variant.ssd}
-                  onChange={(e) =>
-                    updateVariant(variant.id, "ssd", e.target.value)
-                  }
-                />
-                {errors[`variant_${variant.id}_ssd`] && (
-                  <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">
-                    {errors[`variant_${variant.id}_ssd`]}
-                  </p>
-                )}
-              </div>
-              <div>
-                <Input
-                  label="Giá bán *"
-                  type="number"
-                  value={variant.price}
-                  onChange={(e) =>
-                    updateVariant(variant.id, "price", e.target.value)
-                  }
-                />
-                {errors[`variant_${variant.id}_price`] && (
-                  <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">
-                    {errors[`variant_${variant.id}_price`]}
-                  </p>
-                )}
-              </div>
-              <div>
-                <Input
-                  label="Giá gốc (Cũ) *"
-                  type="number"
-                  value={variant.compareAtPrice}
-                  placeholder="Gạch ngang..."
-                  onChange={(e) =>
-                    updateVariant(variant.id, "compareAtPrice", e.target.value)
-                  }
-                />
-                {errors[`variant_${variant.id}_compareAtPrice`] && (
-                  <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">
-                    {errors[`variant_${variant.id}_compareAtPrice`]}
-                  </p>
-                )}
-              </div>
-              <div>
-                <Input
-                  label="Kho *"
-                  type="number"
-                  value={variant.stock}
-                  onChange={(e) =>
-                    updateVariant(variant.id, "stock", e.target.value)
-                  }
-                />
-                {errors[`variant_${variant.id}_stock`] && (
-                  <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">
-                    {errors[`variant_${variant.id}_stock`]}
-                  </p>
-                )}
-              </div>
-              <div className="md:col-span-5 space-y-2">
-                <label className="text-xs font-medium block">
-                  Ảnh biến thể
-                </label>
-                <div className="flex items-center gap-4">
-                  <input
-                    type="file"
-                    onChange={(e) =>
-                      updateVariant(variant.id, "imageFile", e.target.files[0])
-                    }
-                    className="text-xs flex-1 border p-1 rounded-lg"
-                  />
-
-                  {/* HIỂN THỊ ẢNH BIẾN THỂ TẠI ĐÂY */}
-                  {(variant.imageFile || variant.image) && (
-                    <div className="relative w-16 h-16 shrink-0">
-                      <img
-                        src={
-                          variant.imageFile
-                            ? URL.createObjectURL(variant.imageFile)
-                            : variant.image
-                        }
-                        className="w-full h-full object-cover rounded-lg border shadow-xs"
-                        alt="Variant Preview"
-                      />
-                    </div>
-                  )}
-                </div>
-                {errors[`variant_${variant.id}_imageFile`] && (
-                  <p className="text-[10px] text-red-500 font-medium">
-                    {errors[`variant_${variant.id}_imageFile`]}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-end justify-end">
-                {form.variants.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeVariant(variant.id)}
-                    className="text-rose-500 text-xs font-medium hover:underline"
-                  >
-                    Xóa variant
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
         </div>
 
-        {/* Các danh sách gợi ý (Datalist) cho biến thể để trình duyệt hiển thị pop-up khi bấm vào Input */}
-        <datalist id="color-list">
-          {SUGGESTIONS.colors.map((c) => (
-            <option key={c} value={c} />
-          ))}
-        </datalist>
-        <datalist id="storage-list">
-          {SUGGESTIONS.storages.map((s) => (
-            <option key={s} value={s} />
-          ))}
-        </datalist>
-        <datalist id="ram-list">
-          {SUGGESTIONS.rams.map((r) => (
-            <option key={r} value={r} />
-          ))}
-        </datalist>
-        <datalist id="ssd-list">
-          {SUGGESTIONS.ssds.map((s) => (
-            <option key={s} value={s} />
-          ))}
-        </datalist>
+        <Input label="Mô tả chi tiết" textarea rows={5} value={form.description} onChange={(e) => updateField("description", e.target.value)} />
 
-        <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={onClose}
-            disabled={submitting}
-          >
-            Hủy
-          </Button>
-          <Button
-            type="submit"
-            loading={submitting}
-            disabled={isInvalid || submitting}
-            className={isInvalid ? "opacity-50 cursor-not-allowed" : ""}
-          >
-            {initialProduct ? "Lưu thay đổi" : "Tạo sản phẩm"}
-          </Button>
+        <Input
+          label="Thông số kỹ thuật"
+          textarea
+          rows={6}
+          value={form.specsText}
+          onChange={(e) => updateField("specsText", e.target.value)}
+          hint='Mỗi dòng theo định dạng "Tên thông số: Giá trị".'
+        />
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label className="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3">
+            <input type="checkbox" checked={form.isFeatured} onChange={(e) => updateField("isFeatured", e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
+            <span className="text-sm font-medium text-slate-700">Nổi bật</span>
+          </label>
+          <label className="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3">
+            <input type="checkbox" checked={form.isNew} onChange={(e) => updateField("isNew", e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
+            <span className="text-sm font-medium text-slate-700">Sản phẩm mới</span>
+          </label>
+          <label className="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3">
+            <input type="checkbox" checked={form.isSale} onChange={(e) => updateField("isSale", e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
+            <span className="text-sm font-medium text-slate-700">Đang giảm giá</span>
+          </label>
+        </div>
+
+        <div className="space-y-4 rounded-3xl border border-slate-200 p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-lg font-semibold text-slate-900">Biến thể sản phẩm</h4>
+              <p className="text-sm text-slate-500">Giá, tồn kho, hình ảnh và thuộc tính được cấu hình riêng cho từng variant.</p>
+            </div>
+            <Button variant="outline" onClick={addVariant}>Thêm variant</Button>
+          </div>
+
+          <div className="space-y-4">
+            {form.variants.map((variant, index) => (
+              <div key={variant.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="mb-4 flex items-center justify-between">
+                  <h5 className="font-semibold text-slate-900">Variant #{index + 1}</h5>
+                  {form.variants.length > 1 ? (
+                    <button type="button" onClick={() => removeVariant(variant.id)} className="text-sm font-medium text-rose-600">Xóa variant</button>
+                  ) : null}
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  {activeAttributes.map((attr) => (
+                    <div key={attr.key}>
+                      <Input label={`${attr.label} *`} list={`${attr.key}-list`} value={variant[attr.key] || ""} onChange={(e) => updateVariant(variant.id, attr.key, e.target.value)} />
+                      {errors[`variant_${variant.id}_${attr.key}`] && <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">{errors[`variant_${variant.id}_${attr.key}`]}</p>}
+                    </div>
+                  ))}
+                  <div>
+                    <Input label="Giá bán *" type="number" value={variant.price} onChange={(e) => updateVariant(variant.id, "price", e.target.value)} />
+                    {errors[`variant_${variant.id}_price`] && <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">{errors[`variant_${variant.id}_price`]}</p>}
+                  </div>
+                  <div>
+                    <Input label="Giá gốc (Cũ) *" type="number" value={variant.compareAtPrice} placeholder="Gạch ngang..." onChange={(e) => updateVariant(variant.id, "compareAtPrice", e.target.value)} />
+                    {errors[`variant_${variant.id}_compareAtPrice`] && <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">{errors[`variant_${variant.id}_compareAtPrice`]}</p>}
+                  </div>
+                  <div>
+                    <Input label="Tồn kho *" type="number" value={variant.stock} onChange={(e) => updateVariant(variant.id, "stock", e.target.value)} />
+                    {errors[`variant_${variant.id}_stock`] && <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">{errors[`variant_${variant.id}_stock`]}</p>}
+                  </div>
+                  <div className="space-y-2 md:col-span-2 xl:col-span-1">
+                    <label className="text-sm font-medium text-slate-700">Ảnh variant</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => updateVariant(variant.id, "imageFile", e.target.files?.[0] || null)}
+                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm"
+                    />
+                    {errors[`variant_${variant.id}_imageFile`] && <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">{errors[`variant_${variant.id}_imageFile`]}</p>}
+                  </div>
+                </div>
+
+                {(variant.imageFile || variant.image) ? (
+                  <img
+                    src={variant.imageFile ? URL.createObjectURL(variant.imageFile) : variant.image}
+                    alt={`Variant ${index + 1}`}
+                    className="mt-4 h-40 w-full rounded-2xl object-cover"
+                  />
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Các danh sách gợi ý (Datalist) TỰ ĐỘNG ĐƯỢC MAP TỪ CONFIG CHO TRÌNH DUYỆT */}
+        {Object.entries(ATTRIBUTE_OPTIONS).map(([key, attr]) => (
+          <datalist id={`${key}-list`} key={key}>
+            {attr.options.map((opt) => (
+              <option key={opt} value={opt} />
+            ))}
+          </datalist>
+        ))}
+
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={onClose}>Hủy</Button>
+          <Button type="submit" loading={submitting}>{initialProduct ? "Lưu thay đổi" : "Tạo sản phẩm"}</Button>
         </div>
       </form>
     </Modal>

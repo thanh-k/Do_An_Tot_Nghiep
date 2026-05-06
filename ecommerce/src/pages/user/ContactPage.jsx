@@ -1,17 +1,19 @@
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import {
   Mail,
   Phone,
   MapPin,
-  Clock,
   Send,
   MessageSquare,
   Facebook,
   Instagram,
   Youtube,
   Globe,
-  Sparkles,
 } from "lucide-react";
+import useAuth from "@/hooks/useAuth";
+import contactService from "@/services/contactService";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -20,15 +22,96 @@ const fadeInUp = {
   transition: { duration: 0.6 },
 };
 
+const initialForm = {
+  fullName: "",
+  phone: "",
+  email: "",
+  message: "",
+};
+
+const initialErrors = {
+  fullName: "",
+  phone: "",
+  email: "",
+  message: "",
+};
+
 function ContactPage() {
-  const handleSubmit = (e) => {
+  const { currentUser } = useAuth();
+  const [form, setForm] = useState(initialForm);
+  const [errors, setErrors] = useState(initialErrors);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    setForm((prev) => ({
+      ...prev,
+      fullName: currentUser.fullName || currentUser.name || "",
+      phone: currentUser.phone || "",
+      email: currentUser.email || "",
+    }));
+  }, [currentUser]);
+
+  const updateField = (field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => ({ ...prev, [field]: "" }));
+  };
+
+  const mapBackendErrorToField = (message) => {
+    const msg = (message || "").toLowerCase();
+
+    if (msg.includes("tên") || msg.includes("họ và tên")) {
+      return { field: "fullName", message };
+    }
+    if (msg.includes("điện thoại") || msg.includes("đầu số") || msg.includes("số điện thoại")) {
+      return { field: "phone", message };
+    }
+    if (msg.includes("email")) {
+      return { field: "email", message };
+    }
+    if (msg.includes("nội dung")) {
+      return { field: "message", message };
+    }
+
+    return null;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert("Cảm ơn bạn! Tin nhắn đã được gửi đi thành công.");
+    setErrors(initialErrors);
+    setSubmitting(true);
+
+    try {
+      await contactService.create(form);
+
+      toast.success("Cảm ơn bạn! Tin nhắn đã được gửi đi thành công.");
+
+      setForm({
+        ...initialForm,
+        fullName: currentUser?.fullName || currentUser?.name || "",
+        phone: currentUser?.phone || "",
+        email: currentUser?.email || "",
+      });
+    } catch (error) {
+      const message = error.message || "Gửi liên hệ thất bại";
+      const mapped = mapBackendErrorToField(message);
+
+      if (mapped) {
+        setErrors((prev) => ({
+          ...prev,
+          [mapped.field]: mapped.message,
+        }));
+      }
+
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <div className="bg-[#fcfcfc] min-h-screen pb-20">
-      {/* 1. HERO SECTION */}
       <section className="relative py-24 bg-slate-950 text-white overflow-hidden">
         <div className="absolute inset-0 z-0">
           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-rose-600/20 rounded-full blur-[120px] animate-pulse" />
@@ -44,26 +127,27 @@ function ContactPage() {
             <MessageSquare size={14} />
             Kết nối với chúng tôi
           </motion.div>
+
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-5xl md:text-7xl font-black italic tracking-tighter mb-6"
           >
-            CHÚNG TÔI LUÔN <br />{" "}
+            CHÚNG TÔI LUÔN <br />
             <span className="text-rose-600 text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-orange-400">
               LẮNG NGHE BẠN
             </span>
           </motion.h1>
+
           <p className="max-w-2xl mx-auto text-slate-400 text-lg">
-            Mọi thắc mắc, góp ý của bạn là động lực để ND MALL hoàn thiện hơn
-            mỗi ngày. Hãy để lại lời nhắn, chúng tôi sẽ phản hồi trong vòng 24h.
+            Mọi thắc mắc, góp ý của bạn là động lực để ND MALL hoàn thiện hơn mỗi ngày.
+            Hãy để lại lời nhắn, chúng tôi sẽ phản hồi trong vòng 24h.
           </p>
         </div>
       </section>
 
       <div className="container-padded -mt-20 relative z-20">
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* 2. CONTACT INFO CARDS */}
           <div className="lg:col-span-1 space-y-6">
             {[
               {
@@ -102,22 +186,17 @@ function ContactPage() {
                 <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-2">
                   {item.title}
                 </h4>
-                <p className="text-xl font-black text-slate-900 mb-1">
-                  {item.content}
-                </p>
+                <p className="text-xl font-black text-slate-900 mb-1">{item.content}</p>
                 <p className="text-sm text-slate-500 font-medium">{item.sub}</p>
               </motion.div>
             ))}
 
-            {/* Social Media Connect */}
             <motion.div
               {...fadeInUp}
               className="bg-slate-900 p-8 rounded-[2rem] text-white overflow-hidden relative"
             >
               <div className="relative z-10">
-                <h4 className="text-lg font-black mb-6 italic uppercase">
-                  Theo dõi ND MALL
-                </h4>
+                <h4 className="text-lg font-black mb-6 italic uppercase">Theo dõi ND MALL</h4>
                 <div className="flex gap-4">
                   <a
                     href="#"
@@ -139,14 +218,10 @@ function ContactPage() {
                   </a>
                 </div>
               </div>
-              <Globe
-                size={150}
-                className="absolute -right-10 -bottom-10 opacity-10 rotate-12"
-              />
+              <Globe size={150} className="absolute -right-10 -bottom-10 opacity-10 rotate-12" />
             </motion.div>
           </div>
 
-          {/* 3. CONTACT FORM */}
           <motion.div
             {...fadeInUp}
             className="lg:col-span-2 bg-white p-10 md:p-16 rounded-[3rem] shadow-2xl border border-slate-100"
@@ -155,10 +230,7 @@ function ContactPage() {
               Gửi tin nhắn <span className="text-rose-600">cho chúng tôi</span>
             </h2>
 
-            <form
-              onSubmit={handleSubmit}
-              className="grid grid-cols-1 md:grid-cols-2 gap-6"
-            >
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-xs font-black uppercase text-slate-500 ml-1">
                   Họ và tên
@@ -166,10 +238,20 @@ function ContactPage() {
                 <input
                   required
                   type="text"
+                  value={form.fullName}
+                  onChange={(e) => updateField("fullName", e.target.value)}
                   placeholder="Nguyễn Văn A"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all font-medium"
+                  className={`w-full bg-slate-50 border rounded-2xl px-6 py-4 outline-none transition-all font-medium ${
+                    errors.fullName
+                      ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/10"
+                      : "border-slate-200 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10"
+                  }`}
                 />
+                {errors.fullName && (
+                  <p className="text-sm text-red-500 ml-1">{errors.fullName}</p>
+                )}
               </div>
+
               <div className="space-y-2">
                 <label className="text-xs font-black uppercase text-slate-500 ml-1">
                   Số điện thoại
@@ -177,10 +259,20 @@ function ContactPage() {
                 <input
                   required
                   type="tel"
+                  value={form.phone}
+                  onChange={(e) => updateField("phone", e.target.value)}
                   placeholder="09xx xxx xxx"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all font-medium"
+                  className={`w-full bg-slate-50 border rounded-2xl px-6 py-4 outline-none transition-all font-medium ${
+                    errors.phone
+                      ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/10"
+                      : "border-slate-200 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10"
+                  }`}
                 />
+                {errors.phone && (
+                  <p className="text-sm text-red-500 ml-1">{errors.phone}</p>
+                )}
               </div>
+
               <div className="md:col-span-2 space-y-2">
                 <label className="text-xs font-black uppercase text-slate-500 ml-1">
                   Địa chỉ Email
@@ -188,10 +280,20 @@ function ContactPage() {
                 <input
                   required
                   type="email"
+                  value={form.email}
+                  onChange={(e) => updateField("email", e.target.value)}
                   placeholder="name@example.com"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all font-medium"
+                  className={`w-full bg-slate-50 border rounded-2xl px-6 py-4 outline-none transition-all font-medium ${
+                    errors.email
+                      ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/10"
+                      : "border-slate-200 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10"
+                  }`}
                 />
+                {errors.email && (
+                  <p className="text-sm text-red-500 ml-1">{errors.email}</p>
+                )}
               </div>
+
               <div className="md:col-span-2 space-y-2">
                 <label className="text-xs font-black uppercase text-slate-500 ml-1">
                   Nội dung tin nhắn
@@ -199,17 +301,27 @@ function ContactPage() {
                 <textarea
                   required
                   rows="5"
+                  value={form.message}
+                  onChange={(e) => updateField("message", e.target.value)}
                   placeholder="Bạn muốn chia sẻ điều gì với ND MALL?"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all font-medium resize-none"
-                ></textarea>
+                  className={`w-full bg-slate-50 border rounded-2xl px-6 py-4 outline-none transition-all font-medium resize-none ${
+                    errors.message
+                      ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/10"
+                      : "border-slate-200 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10"
+                  }`}
+                />
+                {errors.message && (
+                  <p className="text-sm text-red-500 ml-1">{errors.message}</p>
+                )}
               </div>
 
               <div className="md:col-span-2 pt-4">
                 <button
                   type="submit"
-                  className="w-full md:w-fit bg-rose-600 text-white px-12 py-5 rounded-full font-black uppercase tracking-widest hover:bg-rose-700 transition-all shadow-[0_20px_40px_rgba(225,29,72,0.3)] flex items-center justify-center gap-3 group"
+                  disabled={submitting}
+                  className="w-full md:w-fit bg-rose-600 text-white px-12 py-5 rounded-full font-black uppercase tracking-widest hover:bg-rose-700 transition-all shadow-[0_20px_40px_rgba(225,29,72,0.3)] flex items-center justify-center gap-3 group disabled:opacity-60"
                 >
-                  Gửi yêu cầu ngay
+                  {submitting ? "Đang gửi..." : "Gửi yêu cầu ngay"}
                   <Send
                     size={18}
                     className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"
@@ -221,7 +333,6 @@ function ContactPage() {
         </div>
       </div>
 
-      {/* 4. GOOGLE MAPS PLACEHOLDER */}
       <section className="container-padded py-20">
         <motion.div
           {...fadeInUp}
@@ -234,22 +345,8 @@ function ContactPage() {
             allowFullScreen=""
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"
-          ></iframe>
-          <div className="absolute top-10 left-10 bg-white/90 backdrop-blur-md p-6 rounded-3xl shadow-2xl border border-rose-100 hidden md:block">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-rose-600 rounded-2xl text-white">
-                <MapPin size={20} />
-              </div>
-              <div>
-                <p className="font-black text-slate-900 leading-none">
-                  Vị trí của chúng tôi
-                </p>
-                <p className="text-xs text-slate-500 mt-1">
-                  Ghé thăm Showroom ND MALL
-                </p>
-              </div>
-            </div>
-          </div>
+            title="Bản đồ vị trí ND MALL"
+          />
         </motion.div>
       </section>
     </div>

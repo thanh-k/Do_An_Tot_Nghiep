@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { KeyRound, Mail, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, KeyRound, Mail, ShieldCheck } from "lucide-react";
 import Button from "@/components/common/Button";
 import Input from "@/components/common/Input";
 import useAuth from "@/hooks/useAuth";
@@ -317,20 +317,40 @@ function ForgotPasswordPage() {
 
             <Input
               label="Mật khẩu mới"
-              type="password"
+              type={showNewPassword ? "text" : "password"}
               value={form.newPassword}
               error={errors.newPassword}
               onChange={(event) => handleChange("newPassword", event.target.value)}
               leftIcon={<KeyRound size={18} />}
+              rightIcon={
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword((prev) => !prev)}
+                  className="text-slate-400 transition hover:text-slate-600"
+                  aria-label={showNewPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                >
+                  {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              }
             />
 
             <Input
               label="Xác nhận mật khẩu mới"
-              type="password"
+              type={showConfirmPassword ? "text" : "password"}
               value={form.confirmPassword}
               error={errors.confirmPassword}
               onChange={(event) => handleChange("confirmPassword", event.target.value)}
               leftIcon={<KeyRound size={18} />}
+              rightIcon={
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  className="text-slate-400 transition hover:text-slate-600"
+                  aria-label={showConfirmPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              }
             />
 
             <Button type="submit" fullWidth loading={loading}>

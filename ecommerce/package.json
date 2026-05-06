@@ -9,7 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+<<<<<<< HEAD
     "axios": "^1.16.0",
+=======
+>>>>>>> 547609ecd281352f79599557eff341c1dc03b317
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",

@@ -12,7 +12,9 @@ function renderRoute(route) {
   const Element = route.component;
   const element = <Element />;
 
-  const content = route.roles?.length ? (
+  const content = route.permissions?.length ? (
+    <ProtectedRoute permissions={route.permissions}>{element}</ProtectedRoute>
+  ) : route.roles?.length ? (
     <ProtectedRoute roles={route.roles}>{element}</ProtectedRoute>
   ) : (
     element
@@ -38,7 +40,7 @@ function AppRoutes() {
       <Route
         path="/admin"
         element={
-          <ProtectedRoute roles={["admin", "super_admin", "ADMIN", "SUPER_ADMIN"]}>
+          <ProtectedRoute requireAdmin>
             <AdminLayout />
           </ProtectedRoute>
         }

@@ -17,6 +17,7 @@ import {
   getDefaultVariant,
 } from "@/utils/product";
 import { formatCurrency } from "@/utils/format";
+import { ATTRIBUTE_OPTIONS } from "@/utils/categoryConfig";
 
 // Hàm format chuỗi hiển thị biến thể rõ ràng cho Giỏ Hàng
 const formatCartVariant = (item) => {
@@ -29,16 +30,13 @@ const formatCartVariant = (item) => {
     }
   }
 
-  const color = attrs.color || item.color;
-  const storage = attrs.storage || item.storage;
-  const ram = attrs.ram || item.ram;
-  const ssd = attrs.ssd || item.ssd;
-
   const parts = [];
-  if (color) parts.push(`Màu: ${color}`);
-  if (storage) parts.push(`Dung lượng: ${storage}`);
-  if (ram) parts.push(`RAM: ${ram}`);
-  if (ssd) parts.push(`SSD: ${ssd}`);
+  Object.keys(ATTRIBUTE_OPTIONS).forEach((key) => {
+    const val = attrs[key] || item[key];
+    if (val) {
+      parts.push(`${ATTRIBUTE_OPTIONS[key]?.label || key}: ${val}`);
+    }
+  });
 
   if (parts.length > 0) return parts.join(" / ");
 
@@ -70,12 +68,14 @@ const getAttributeValue = (variant, key) => {
   return String(attrs?.[key] ?? variant?.[key] ?? "").trim();
 };
 
-const buildSelectedAttributesFromVariant = (variant) => ({
-  color: getAttributeValue(variant, "color"),
-  storage: getAttributeValue(variant, "storage"),
-  ram: getAttributeValue(variant, "ram"),
-  ssd: getAttributeValue(variant, "ssd"),
-});
+const buildSelectedAttributesFromVariant = (variant) => {
+  const result = {};
+  Object.keys(ATTRIBUTE_OPTIONS).forEach((key) => {
+    const val = getAttributeValue(variant, key);
+    if (val) result[key] = val;
+  });
+  return result;
+};
 
 function CartPage() {
   const navigate = useNavigate();
