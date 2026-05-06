@@ -3,7 +3,7 @@ import PageHeader from "@/components/common/PageHeader";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ProductGrid from "@/components/product/ProductGrid";
 import useWishlist from "@/hooks/useWishlist";
-import productService from "@/services/admin/productService";
+import userProductService from "@/services/user/productService";
 
 function WishlistPage() {
   const { wishlistItems } = useWishlist();
@@ -11,15 +11,23 @@ function WishlistPage() {
   const [products, setProducts] = useState([]);
 
   useEffect(() => {
-    productService
-      .getAllProducts()
-      .then((items) =>
-        setProducts(
-          items.filter((product) =>
-            wishlistItems.some((item) => item.id === product.id),
-          ),
-        ),
-      )
+    if (!wishlistItems || wishlistItems.length === 0) {
+      setProducts([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    // Lấy thông tin chi tiết mới nhất của từng sản phẩm trong wishlist
+    Promise.all(
+      wishlistItems.map((item) =>
+        userProductService.getProductBySlug(item.slug).catch(() => null),
+      ),
+    )
+      .then((results) => {
+        // Lọc bỏ những sản phẩm trả về null (có thể do đã bị xóa khỏi hệ thống)
+        setProducts(results.filter(Boolean));
+      })
       .finally(() => setLoading(false));
   }, [wishlistItems]);
 

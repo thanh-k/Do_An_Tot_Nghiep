@@ -28,4 +28,14 @@ public class MailService {
         message.setText("Mã xác thực của bạn là: " + code + "\nMã có hiệu lực trong " + display + ".");
         mailSender.send(message);
     }
+
+    public void sendSimpleEmail(String to, String subject, String content) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(from);
+        message.setTo(to);
+        message.setSubject(subject);
+        message.setText(content);
+        mailSender.send(message);
+    }
+
 }

@@ -3,9 +3,15 @@ server:
 
 spring:
   datasource:
+<<<<<<< HEAD
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/ecommerce_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8}
     username: ${SPRING_DATASOURCE_USERNAME:root}
     password: ${SPRING_DATASOURCE_PASSWORD:} 
+=======
+    url: jdbc:mysql://localhost:3307/ecommerce_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8
+    username: root
+    password:
+>>>>>>> 547609ecd281352f79599557eff341c1dc03b317
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   servlet:
@@ -15,6 +21,7 @@ spring:
 
   flyway:
     enabled: false
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -32,17 +39,21 @@ spring:
       client:
         registration:
           google:
-            client-id: 785478977086-ipc9qkf0cvgn2eaitsa681aafj5dqq7r.apps.googleusercontent.com
-            client-secret: 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
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
             scope:
               - openid
               - profile
               - email
+<<<<<<< HEAD
+=======
+
+>>>>>>> 547609ecd281352f79599557eff341c1dc03b317
   mail:
     host: smtp.gmail.com
     port: 587
-    username: kieuxuanthanh999@gmail.com
-    password: xpicierhaxudjvhw
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_APP_PASSWORD}
     properties:
       mail:
         smtp:
@@ -52,7 +63,7 @@ spring:
 
 app:
   jwt:
-    secret: VGhpc0lzQVN1cGVyU2VjcmV0S2V5Rm9ySmF2YVNwcmluZ0Jvb3RGYW5wYWdlQmFja2VuZA==
+    secret: ${JWT_SECRET}
     expiration: 86400000
 
   upload-dir: uploads
@@ -62,12 +73,12 @@ app:
     authorized-redirect-uri: http://localhost:5173/auth/oauth2/callback
 
   mail:
-    from: kieuxuanthanh999@gmail.com
+    from: ${MAIL_USERNAME}
 
   otp:
     expiration-minutes: 10
 
   cloudinary:
-    cloud-name: daz76ckfi
-    api-key: 539561267477747
-    api-secret: bC3fPgCaWAu6nlsk5Si699o4peM
+    cloud-name: ${CLOUDINARY_CLOUD_NAME}
+    api-key: ${CLOUDINARY_API_KEY}
+    api-secret: ${CLOUDINARY_API_SECRET}

@@ -3,6 +3,31 @@ import Modal from "@/components/common/Modal";
 import Input from "@/components/common/Input";
 import Button from "@/components/common/Button";
 
+// DANH SÁCH GỢI Ý TÊN DANH MỤC CHUẨN (Khớp 100% với config biến thể)
+const SUGGESTED_CATEGORIES = [
+  "Điện thoại",
+  "Laptop",
+  "Macbook",
+  "Máy tính bảng",
+  "Đồng hồ thông minh",
+  "Tai nghe",
+  "Loa",
+  "Bàn phím",
+  "Chuột",
+  "Màn hình",
+  "Máy ảnh",
+  "Sạc dự phòng",
+  "Ốp lưng",
+  "Tivi",
+  "Tủ lạnh",
+  "Máy giặt",
+  "Điều hòa",
+  "Quạt điều hòa",
+  "Balo, túi xách",
+  "Quần áo",
+  "Giày dép",
+];
+
 const getInitialState = (category) => ({
   id: category?.id || "",
   name: category?.name || "",
@@ -138,6 +163,7 @@ function CategoryFormModal({
               label="Tên danh mục"
               value={form.name}
               onChange={(e) => updateField("name", e.target.value)}
+              list="suggested-categories-list"
               required
             />
             {errors.name && (
@@ -212,6 +238,12 @@ function CategoryFormModal({
             )
           )}
         </div>
+
+        <datalist id="suggested-categories-list">
+          {SUGGESTED_CATEGORIES.map((cat) => (
+            <option key={cat} value={cat} />
+          ))}
+        </datalist>
 
         <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
           <Button type="button" variant="ghost" onClick={onClose}>

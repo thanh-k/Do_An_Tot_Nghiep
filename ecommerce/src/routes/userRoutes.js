@@ -11,12 +11,13 @@ import OrderHistoryPage from "@/pages/user/OrderHistoryPage";
 import AboutPage from "@/pages/user/AboutPage";
 import ContactPage from "@/pages/user/ContactPage";
 import NewsPage from "@/pages/user/NewsPage";
+import NewsDetailPage from "@/pages/user/NewsDetailPage";
 import VoucherPage from "@/pages/user/VoucherPage";
 import ComparePage from "@/pages/user/ComparePage";
 import UserDashboard from "@/pages/user/UserDashboard";
 
 import FAQPage from "@/pages/user/FAQPage";
-
+import OrderDetailPage from "@/pages/user/OrderDetailPage";
 
 export const userRoutes = [
   { index: true, component: HomePage },
@@ -33,8 +34,9 @@ export const userRoutes = [
   { path: "about", component: AboutPage },
   { path: "contact", component: ContactPage },
   { path: "news", component: NewsPage },
+  { path: "news/:slug", component: NewsDetailPage },
   { path: "vouchers", component: VoucherPage },
   { path: "compare", component: ComparePage },
-
+  { path: "orders/:id", component: OrderDetailPage, roles: ["user", "admin"] },
   { path: "faq", component: FAQPage },
 ];

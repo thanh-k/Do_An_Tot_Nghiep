@@ -60,7 +60,8 @@ public class UserServiceImpl implements UserService {
         user.setFullName(normalizedName);
         user.setEmail(normalizedEmail);
 
-        return userMapper.toResponse(userRepository.save(user));
+        User saved = userRepository.save(user);
+        return userMapper.toResponse(saved);
     }
 
     @Override
@@ -77,7 +78,8 @@ public class UserServiceImpl implements UserService {
         }
 
         user.setAvatar(cloudinaryService.uploadFile(file, "avatars"));
-        return userMapper.toResponse(userRepository.save(user));
+        User saved = userRepository.save(user);
+        return userMapper.toResponse(saved);
     }
 
     @Override
@@ -130,7 +132,29 @@ public class UserServiceImpl implements UserService {
             user.setActive(request.getActive());
         }
 
-        return userMapper.toResponse(userRepository.save(user));
+        User saved = userRepository.save(user);
+        return userMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public UserResponse toggleStatus(Long id) {
+        User currentUser = getCurrentAuthenticatedUser();
+        User user = findUserById(id);
+
+        if (currentUser.getId().equals(user.getId())) {
+            throw new AppException(ErrorCode.ROLE_INVALID);
+        }
+
+        if (user.getRole() == RoleName.SUPER_ADMIN) {
+            throw new AppException(ErrorCode.ROLE_INVALID);
+        }
+
+        user.setActive(!Boolean.TRUE.equals(user.getActive()));
+        userRepository.save(user);
+
+        User reloaded = findUserById(id);
+        return userMapper.toResponse(reloaded);
     }
 
     @Override

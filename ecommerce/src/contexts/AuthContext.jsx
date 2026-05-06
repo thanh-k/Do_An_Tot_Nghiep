@@ -1,6 +1,7 @@
 import { createContext, useEffect, useMemo, useState } from "react";
 import authService from "@/services/authService";
 import apiClient from "@/services/apiClient";
+import { canAccessAdminPanel } from "@/utils/permission";
 
 export const AuthContext = createContext(null);
 
@@ -34,7 +35,7 @@ export function AuthProvider({ children }) {
       currentUser,
       isInitializing,
       isAuthenticated: Boolean(currentUser),
-      isAdmin: ["ADMIN", "SUPER_ADMIN", "admin", "super_admin"].includes(currentUser?.role),
+      isAdmin: canAccessAdminPanel(currentUser),
       login: async (payload) => {
         const user = await authService.login(payload);
         setCurrentUser(user);
