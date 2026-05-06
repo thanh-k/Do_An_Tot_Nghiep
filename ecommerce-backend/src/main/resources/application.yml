@@ -39,10 +39,7 @@ spring:
               - openid
               - profile
               - email
-<<<<<<< HEAD
-=======
-
->>>>>>> 547609ecd281352f79599557eff341c1dc03b317
+              
   mail:
     host: smtp.gmail.com
     port: 587
