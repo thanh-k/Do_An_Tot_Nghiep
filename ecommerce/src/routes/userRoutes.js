@@ -16,7 +16,7 @@ import ComparePage from "@/pages/user/ComparePage";
 import UserDashboard from "@/pages/user/UserDashboard";
 
 import FAQPage from "@/pages/user/FAQPage";
-
+import OrderDetailPage from "@/pages/user/OrderDetailPage";
 
 export const userRoutes = [
   { index: true, component: HomePage },
@@ -35,6 +35,6 @@ export const userRoutes = [
   { path: "news", component: NewsPage },
   { path: "vouchers", component: VoucherPage },
   { path: "compare", component: ComparePage },
-
+  { path: "orders/:id", component: OrderDetailPage, roles: ["user", "admin"] },
   { path: "faq", component: FAQPage },
 ];

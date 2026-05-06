@@ -43,8 +43,40 @@ function ProductCard({ product }) {
       return;
     }
 
-    addToCart(product, defaultVariant, 1);
-    navigate("/checkout"); // Chuyển thẳng sang trang thanh toán
+    const itemId = `direct_${product.id}_${defaultVariant.id}`;
+
+    let variantAttrs = {};
+    if (typeof defaultVariant.attributes === "string") {
+      try {
+        variantAttrs = JSON.parse(defaultVariant.attributes);
+      } catch (e) {}
+    } else if (defaultVariant.attributes) {
+      variantAttrs = defaultVariant.attributes;
+    }
+
+    const variantLabel =
+      Object.entries(variantAttrs)
+        .map(([key, value]) => `${value}`)
+        .join(" / ") || "Mặc định";
+
+    const directItem = {
+      id: itemId,
+      productId: product.id,
+      name: product.name,
+      slug: product.slug,
+      image: getProductPrimaryImage(product),
+      variantId: defaultVariant.id,
+      variantLabel: variantLabel,
+      attributes: defaultVariant.attributes,
+      quantity: 1,
+      price: defaultVariant.price,
+      compareAtPrice: defaultVariant.compareAtPrice,
+      maxStock: defaultVariant.stock || 1,
+    };
+
+    navigate("/checkout", {
+      state: { directItems: [directItem] },
+    });
   };
 
   const handleWishlist = (event) => {

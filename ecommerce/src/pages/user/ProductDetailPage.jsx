@@ -8,7 +8,6 @@ import QuantitySelector from "@/components/common/QuantitySelector";
 import Rating from "@/components/common/Rating";
 import ProductGallery from "@/components/product/ProductGallery";
 import ProductGrid from "@/components/product/ProductGrid";
-import ProductVariantSelector from "@/components/product/ProductVariantSelector";
 import useCart from "@/hooks/useCart";
 import useWishlist from "@/hooks/useWishlist";
 import userProductService from "@/services/user/productService";
@@ -18,6 +17,10 @@ import {
   findVariantByAttributes,
   getDefaultVariant,
 } from "@/utils/product";
+import {
+  ATTRIBUTE_OPTIONS,
+  CATEGORY_VARIANT_CONFIG,
+} from "@/utils/categoryConfig";
 
 import ProductReviews from "@/components/product/ProductReviews";
 
@@ -34,23 +37,35 @@ const getAttributeValue = (variant, key) => {
     return "";
   }
 
-  return normalizeValue(variant?.attributes?.[key] ?? variant?.[key] ?? "");
+  let attrs = variant.attributes;
+  if (typeof attrs === "string") {
+    try {
+      attrs = JSON.parse(attrs);
+    } catch (e) {
+      attrs = {};
+    }
+  }
+  return normalizeValue(attrs?.[key] ?? variant?.[key] ?? "");
 };
 
-const buildSelectedAttributesFromVariant = (variant) => ({
-  color: getAttributeValue(variant, "color"),
-  storage: getAttributeValue(variant, "storage"),
-  ram: getAttributeValue(variant, "ram"),
-  ssd: getAttributeValue(variant, "ssd"),
-});
+const buildSelectedAttributesFromVariant = (variant) => {
+  const result = {};
+  Object.keys(ATTRIBUTE_OPTIONS).forEach((key) => {
+    const val = getAttributeValue(variant, key);
+    if (val) result[key] = val;
+  });
+  return result;
+};
 
 const formatVariantLabel = (attributes) => {
-  if (!attributes) return "Mặc định";
+  if (!attributes || Object.keys(attributes).length === 0) return "Mặc định";
   const parts = [];
-  if (attributes.color) parts.push(`Màu: ${attributes.color}`);
-  if (attributes.storage) parts.push(`Dung lượng: ${attributes.storage}`);
-  if (attributes.ram) parts.push(`RAM: ${attributes.ram}`);
-  if (attributes.ssd) parts.push(`SSD: ${attributes.ssd}`);
+  Object.entries(attributes).forEach(([key, value]) => {
+    if (value) {
+      const label = ATTRIBUTE_OPTIONS[key]?.label || key;
+      parts.push(`${label}: ${value}`);
+    }
+  });
   return parts.join(" / ") || "Mặc định";
 };
 
@@ -88,6 +103,40 @@ function ProductDetailPage() {
       getDefaultVariant(productData)
     );
   }, [productData, selectedAttributes]);
+
+  // LOGIC ĐỘNG: Lấy danh sách các thuộc tính cần hiển thị dựa theo Danh mục (Giống hệt Admin)
+  const activeAttributes = useMemo(() => {
+    if (!productData || !productData.category)
+      return [{ key: "color", ...ATTRIBUTE_OPTIONS["color"] }];
+
+    const catSlug =
+      productData.category.slug ||
+      productData.category.name
+        .toLowerCase()
+        .replace(/ /g, "-")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    const attributeKeys = CATEGORY_VARIANT_CONFIG[catSlug] ||
+      CATEGORY_VARIANT_CONFIG["default"] || ["color"];
+
+    return attributeKeys.map((key) => ({
+      key: key,
+      ...ATTRIBUTE_OPTIONS[key],
+    }));
+  }, [productData]);
+
+  // LOGIC ĐỘNG: Lọc ra các giá trị CÓ THẬT của từng thuộc tính từ danh sách biến thể
+  const availableOptions = useMemo(() => {
+    if (!productData || !productData.variants) return {};
+    const options = {};
+    activeAttributes.forEach((attr) => {
+      const values = productData.variants
+        .map((v) => getAttributeValue(v, attr.key))
+        .filter((val) => val !== "" && val !== null && val !== undefined);
+      options[attr.key] = [...new Set(values)]; // Loại bỏ các giá trị trùng lặp
+    });
+    return options;
+  }, [productData, activeAttributes]);
 
   useEffect(() => {
     if (!selectedVariant) {
@@ -162,8 +211,30 @@ function ProductDetailPage() {
   };
 
   const handleBuyNow = () => {
-    addToCart(productData, selectedVariant, quantity);
-    navigate("/checkout");
+    const itemId = `direct_${productData.id}_${selectedVariant.id}`;
+
+    // Truyền trực tiếp dữ liệu sản phẩm sang Checkout để tránh phụ thuộc vào độ trễ của state Giỏ hàng
+    const directItem = {
+      id: itemId,
+      productId: productData.id,
+      name: productData.name,
+      slug: productData.slug,
+      image:
+        selectedVariant.images?.[0] ||
+        selectedVariant.image ||
+        productData.thumbnail,
+      variantId: selectedVariant.id,
+      variantLabel: formatVariantLabel(selectedAttributes),
+      attributes: selectedVariant.attributes,
+      quantity: Math.min(quantity, selectedVariant.stock || 1),
+      price: selectedVariant.price,
+      compareAtPrice: selectedVariant.compareAtPrice,
+      maxStock: selectedVariant.stock || 1,
+    };
+
+    navigate("/checkout", {
+      state: { directItems: [directItem] },
+    });
   };
 
   return (
@@ -253,11 +324,43 @@ function ProductDetailPage() {
             </p>
           </div>
 
-          <ProductVariantSelector
-            variants={productData.variants}
-            selectedAttributes={selectedAttributes}
-            onChange={handleAttributeChange}
-          />
+          {/* RENDER CÁC NÚT CHỌN BIẾN THỂ ĐỘNG TỪ CONFIG */}
+          <div className="space-y-5 py-4 border-y border-slate-100">
+            {activeAttributes.map((attr) => {
+              const options = availableOptions[attr.key];
+              // Nếu thuộc tính này không có biến thể nào dùng tới thì ẩn đi
+              if (!options || options.length === 0) return null;
+
+              return (
+                <div key={attr.key}>
+                  <h3 className="mb-3 text-sm font-semibold text-slate-900">
+                    {attr.label}
+                  </h3>
+                  <div className="flex flex-wrap gap-3">
+                    {options.map((option) => {
+                      const isSelected =
+                        selectedAttributes[attr.key] === option;
+                      return (
+                        <button
+                          key={option}
+                          onClick={() =>
+                            handleAttributeChange(attr.key, option)
+                          }
+                          className={`rounded-xl border px-5 py-2.5 text-sm font-medium transition-all ${
+                            isSelected
+                              ? "border-brand-600 bg-brand-50 text-brand-700 shadow-sm"
+                              : "border-slate-200 bg-white text-slate-600 hover:border-brand-300 hover:bg-slate-50"
+                          }`}
+                        >
+                          {option}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
           <div className="space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-6">
             <div className="flex flex-wrap items-center gap-4">

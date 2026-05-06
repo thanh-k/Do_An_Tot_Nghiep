@@ -8,6 +8,8 @@ const titleMap = {
   "/admin/categories": "Quản lý danh mục",
   "/admin/brands": "Quản lý thương hiệu",
   "/admin/products": "Quản lý sản phẩm",
+  "/admin/vouchers": "Quản lý Voucher",
+
   "/admin/orders": "Quản lý đơn hàng",
   "/admin/users": "Quản lý khách hàng",
   "/admin/customers": "Quản lý khách hàng",

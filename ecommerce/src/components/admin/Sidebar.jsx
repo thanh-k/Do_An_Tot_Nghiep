@@ -10,6 +10,7 @@ import {
   UserCircle2,
   Users,
   BadgeCheck,
+  Ticket,
 } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import logo from "@/assets/logo.svg";
@@ -20,6 +21,7 @@ const items = [
   { to: "/admin/categories", label: "Danh mục", icon: FolderTree },
   { to: "/admin/brands", label: "Thương hiệu", icon: FolderTree },
   { to: "/admin/products", label: "Sản phẩm", icon: Boxes },
+  { to: "/admin/vouchers", label: "Voucher", icon: Ticket },
   { to: "/admin/orders", label: "Đơn hàng", icon: PackageCheck },
   { to: "/admin/customers", label: "Khách hàng", icon: Users },
   { to: "/admin/staff", label: "Nhân sự", icon: ShieldUser },

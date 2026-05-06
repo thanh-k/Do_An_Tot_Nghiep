@@ -8,6 +8,7 @@ import RoleManagementPage from "@/pages/admin/RoleManagementPage";
 import PhonePrefixManagementPage from "@/pages/admin/PhonePrefixManagementPage";
 import AdminProfilePage from "@/pages/admin/AdminProfilePage";
 import BrandManagementPage from "@/pages/admin/BrandManagementPage";
+import VoucherManagementPage from "@/pages/admin/VoucherManagementPage";
 
 export const adminRoutes = [
   { index: true, component: AdminDashboardPage },
@@ -15,6 +16,8 @@ export const adminRoutes = [
   { path: "categories", component: CategoryManagementPage },
   { path: "brands", component: BrandManagementPage },
   { path: "orders", component: OrderManagementPage },
+  { path: "vouchers", component: VoucherManagementPage },
+
   { path: "customers", component: CustomerManagementPage },
   { path: "staff", component: StaffManagementPage },
   { path: "roles", component: RoleManagementPage },

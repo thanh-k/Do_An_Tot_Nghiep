@@ -66,6 +66,12 @@ public enum ErrorCode {
     PHONE_PROVIDER_INVALID(1204, "Tên nhà mạng không hợp lệ", HttpStatus.BAD_REQUEST),
     PHONE_PREFIX_NOT_ALLOWED(1205, "Đầu số điện thoại chưa được cho phép", HttpStatus.BAD_REQUEST),
 
+    VOUCHER_NOT_FOUND(1401, "Không tìm thấy voucher", HttpStatus.NOT_FOUND),
+    VOUCHER_INVALID(1402, "Voucher không hợp lệ, đã hết hạn hoặc hết lượt sử dụng", HttpStatus.BAD_REQUEST),
+    VOUCHER_MIN_ORDER_NOT_MET(1403, "Đơn hàng chưa đạt giá trị tối thiểu để sử dụng voucher", HttpStatus.BAD_REQUEST),
+    INVALID_VOUCHER_DATA(1404, "Vui lòng nhập đầy đủ các thông tin bắt buộc của voucher", HttpStatus.BAD_REQUEST),
+    VOUCHER_IMAGE_REQUIRED(1405, "Vui lòng chọn ảnh cho voucher", HttpStatus.BAD_REQUEST),
+
     BRAND_EXISTED(1008, "Thương hiệu đã tồn tại", HttpStatus.BAD_REQUEST),
     BRAND_NOT_FOUND(1009, "Không tìm thấy thương hiệu", HttpStatus.NOT_FOUND),
 

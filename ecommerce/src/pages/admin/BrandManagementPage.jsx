@@ -25,8 +25,13 @@ function BrandManagementPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const data = await brandService.getBrands();
-      setBrands(data);
+      // Gọi song song API lấy thương hiệu và toàn bộ sản phẩm để đếm số lượng
+      const [brandsData, productsData] = await Promise.all([
+        brandService.getBrands(),
+        productService.getAllProducts(),
+      ]);
+      setBrands(brandsData);
+      setProducts(productsData || []);
     } catch (error) {
       console.error(error);
     } finally {
@@ -90,11 +95,12 @@ function BrandManagementPage() {
     {
       key: "products",
       title: "Số sản phẩm",
-      render: (row) => (
-        <span className="font-semibold text-brand-700">
-          {products.filter((p) => p.brandId === row.id).length}
-        </span>
-      ),
+      render: (row) => {
+        const count = products.filter(
+          (p) => p.brandId === row.id || p.brand?.id === row.id,
+        ).length;
+        return <span className="font-semibold text-brand-700">{count}</span>;
+      },
     },
     {
       key: "actions",
@@ -118,13 +124,42 @@ function BrandManagementPage() {
   ];
 
   const handleDelete = async (row) => {
-    if (!window.confirm(`Xoá thương hiệu "${row.name}"?`)) return;
-    try {
-      await brandService.deleteBrand(row.id);
-      toast.success("Đã xoá thành công");
-      loadData();
-    } catch (e) {
-      toast.error("Không thể xoá thương hiệu này");
+    // 1. Kiểm tra xem có sản phẩm nào đang dùng Thương hiệu này không
+    const relatedProducts = products.filter(
+      (p) => p.brandId === row.id || p.brand?.id === row.id,
+    );
+
+    if (relatedProducts.length > 0) {
+      // 2. Nếu có, hiện cảnh báo đặc biệt
+      const confirmCascade = window.confirm(
+        `CẢNH BÁO: Đang có ${relatedProducts.length} sản phẩm sử dụng thương hiệu "${row.name}".\n\nBạn không thể xóa thông thường. Bạn có chắc chắn muốn XÓA LUÔN thương hiệu này VÀ TẤT CẢ ${relatedProducts.length} sản phẩm liên quan không?`,
+      );
+      if (!confirmCascade) return;
+
+      try {
+        // Xóa tất cả sản phẩm liên quan trước (để tránh lỗi khoá ngoại từ Backend)
+        await Promise.all(
+          relatedProducts.map((p) => productService.deleteProduct(p.id)),
+        );
+        // Sau đó mới xoá thương hiệu
+        await brandService.deleteBrand(row.id);
+        toast.success(
+          `Đã xoá thương hiệu và ${relatedProducts.length} sản phẩm liên quan!`,
+        );
+        loadData();
+      } catch (e) {
+        toast.error("Lỗi khi xoá dữ liệu liên quan. Vui lòng thử lại.");
+      }
+    } else {
+      // 3. Nếu không có sản phẩm nào, xóa bình thường
+      if (!window.confirm(`Xoá thương hiệu "${row.name}"?`)) return;
+      try {
+        await brandService.deleteBrand(row.id);
+        toast.success("Đã xoá thành công");
+        loadData();
+      } catch (e) {
+        toast.error("Không thể xoá thương hiệu này");
+      }
     }
   };
 

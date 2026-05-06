@@ -5,22 +5,11 @@ import Input from "@/components/common/Input";
 import Button from "@/components/common/Button";
 import axios from "axios";
 import { brandService } from "@/services/admin/brandService";
-
-// --- THÊM DỮ LIỆU GỢI Ý MẪU TẠI ĐÂY ---
-const SUGGESTIONS = {
-  colors: ["Đen", "Trắng", "Titan", "Đỏ", "Xanh", "Vàng", "Bạc", "Xám", "Hồng"],
-  storages: ["64GB", "128GB", "256GB", "512GB", "1TB"],
-  rams: ["4GB", "8GB", "12GB", "16GB", "32GB", "64GB"],
-  ssds: ["256GB", "512GB", "1TB", "2TB"],
-};
+import { CATEGORY_VARIANT_CONFIG, ATTRIBUTE_OPTIONS } from "@/utils/categoryConfig";
 
 const createVariantState = () => ({
   id: "temp-" + Math.random().toString(36).substr(2, 9),
   sku: "",
-  color: "",
-  storage: "",
-  ram: "",
-  ssd: "",
   price: "",
   compareAtPrice: "",
   stock: 0,
@@ -58,7 +47,7 @@ const getInitialState = (product) => ({
         const attrs =
           typeof v.attributes === "string"
             ? JSON.parse(v.attributes)
-            : v.attributes;
+            : v.attributes || {};
         return {
           id: v.id,
           sku: v.sku || "",
@@ -66,11 +55,8 @@ const getInitialState = (product) => ({
           compareAtPrice: v.compareAtPrice || "",
           stock: v.stock || 0,
           image: v.image || "",
-          color: attrs?.color || "",
-          storage: attrs?.storage || "",
-          ram: attrs?.ram || "",
-          ssd: attrs?.ssd || "",
           imageFile: null,
+          ...attrs
         };
       })
     : [createVariantState()],
@@ -87,6 +73,19 @@ function ProductFormModal({
   const [brands, setBrands] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({}); // THÊM STATE LƯU LỖI
+
+  // LOGIC ĐỘNG: Lấy danh sách các thuộc tính cần hiển thị dựa theo Danh mục
+  const activeAttributes = useMemo(() => {
+    if (!form.categoryId || !categories?.length) return [{ key: "color", ...ATTRIBUTE_OPTIONS["color"] }];
+    
+    const category = categories.find((c) => String(c.id) === String(form.categoryId));
+    if (!category) return [{ key: "color", ...ATTRIBUTE_OPTIONS["color"] }];
+
+    const catSlug = category.slug || category.name.toLowerCase().replace(/ /g, '-').normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const attributeKeys = CATEGORY_VARIANT_CONFIG[catSlug] || CATEGORY_VARIANT_CONFIG["default"] || ["color"];
+    
+    return attributeKeys.map(key => ({ key: key, ...ATTRIBUTE_OPTIONS[key] }));
+  }, [form.categoryId, categories]);
 
   // LOG 1: Kiểm tra xem khi Modal mở, biến categories nhận được gì từ Page cha
   useEffect(() => {
@@ -190,14 +189,9 @@ function ProductFormModal({
     // Chuyển đổi an toàn sang chuỗi để kiểm tra dấu âm
     const valStr = value !== null && value !== undefined ? String(value) : "";
 
-    if (field === "color" && !valStr.trim()) errMsg = "Màu không được để trống";
+    const attrKeys = activeAttributes.map(a => a.key);
+    if (attrKeys.includes(field) && !valStr.trim()) errMsg = "Không được để trống";
 
-    if (field === "storage") {
-      if (!valStr.trim()) errMsg = "Không được để trống";
-    }
-    if (field === "ram") {
-      if (!valStr.trim()) errMsg = "Không được để trống";
-    }
     if (field === "price") {
       if (!valStr.trim()) errMsg = "Giá bán không được để trống";
       else if (Number(value) < 1) errMsg = "Giá bán phải từ 1đ trở lên";
@@ -262,14 +256,11 @@ function ProductFormModal({
     }
 
     currentForm.variants.forEach((v) => {
-      if (!v.color?.trim())
-        newErrors[`variant_${v.id}_color`] = "Màu không được để trống";
-
-      if (!v.storage?.trim())
-        newErrors[`variant_${v.id}_storage`] = "Không được để trống";
-
-      if (!v.ram?.trim())
-        newErrors[`variant_${v.id}_ram`] = "Không được để trống";
+      activeAttributes.forEach((attr) => {
+        if (!String(v[attr.key] || "").trim()) {
+          newErrors[`variant_${v.id}_${attr.key}`] = "Không được để trống";
+        }
+      });
 
       if (!String(v.price || "").trim())
         newErrors[`variant_${v.id}_price`] = "Giá bán không được để trống";
@@ -312,18 +303,13 @@ function ProductFormModal({
     }
 
     const hasVariantErrors = form.variants.some(
-      (v) =>
-        !v.color?.trim() ||
-        !v.storage?.trim() ||
-        !v.ram?.trim() ||
-        !String(v.price || "").trim() ||
-        Number(v.price) < 1 ||
-        !String(v.compareAtPrice || "").trim() ||
-        Number(v.compareAtPrice) <= 0 ||
-        (v.price && Number(v.compareAtPrice) < Number(v.price)) ||
-        Number(v.stock) < 0 ||
-        v.stock === "" ||
-        (v.imageFile && v.imageFile.size > 1024 * 1024),
+      (v) => {
+        const hasAttrError = activeAttributes.some(attr => !String(v[attr.key] || "").trim());
+        return hasAttrError || !String(v.price || "").trim() || Number(v.price) < 1 ||
+          !String(v.compareAtPrice || "").trim() || Number(v.compareAtPrice) <= 0 ||
+          (v.price && Number(v.compareAtPrice) < Number(v.price)) || Number(v.stock) < 0 ||
+          v.stock === "" || (v.imageFile && v.imageFile.size > 1024 * 1024);
+      }
     );
     if (hasVariantErrors) return true;
 
@@ -376,20 +362,26 @@ function ProductFormModal({
           let variantImg = v.image;
           if (v.imageFile) variantImg = await uploadImage(v.imageFile);
 
-          // Tạo SKU: [TÊN-KHONG-DAU]-[MAU]
-          const cleanColor = (v.color || "")
+          // Tự động tạo SKU dựa theo 2 thuộc tính động đầu tiên
+          const firstAttrVal = String(v[activeAttributes[0]?.key] || "")
             .toUpperCase()
             .normalize("NFD")
             .replace(/[\u0300-\u036f]/g, "")
             .replace(/[đĐ]/g, "d")
-            .trim();
-
-          const cleanStorage = (v.storage || "")
-            .toUpperCase()
+            .trim()
             .replace(/\s+/g, "");
 
-          // FIX: Chèn thêm dung lượng và index vào chuỗi SKU để đảm bảo 100% không bao giờ trùng lặp
-          const newSku = `${generatedSlug.toUpperCase()}-${cleanColor || "VAR"}${cleanStorage ? `-${cleanStorage}` : ""}-${index + 1}`;
+          const secondAttrVal = activeAttributes.length > 1 
+            ? String(v[activeAttributes[1]?.key] || "").toUpperCase().replace(/\s+/g, "")
+            : "";
+
+          const newSku = `${generatedSlug.toUpperCase()}-${firstAttrVal || "VAR"}${secondAttrVal ? `-${secondAttrVal}` : ""}-${index + 1}`;
+
+          // Gom tất cả thuộc tính động lại để lưu dạng JSON
+          const attrsToSave = {};
+          activeAttributes.forEach(attr => {
+            attrsToSave[attr.key] = v[attr.key] || "";
+          });
 
           return {
             sku: newSku,
@@ -397,12 +389,7 @@ function ProductFormModal({
             compareAtPrice: Number(v.compareAtPrice || v.price) || 0,
             stock: Number(v.stock) || 0,
             image: variantImg,
-            attributes: JSON.stringify({
-              color: v.color || "",
-              storage: v.storage || "",
-              ram: v.ram || "",
-              ssd: v.ssd || "",
-            }),
+            attributes: JSON.stringify(attrsToSave),
           };
         }),
       );
@@ -669,69 +656,22 @@ function ProductFormModal({
               key={variant.id}
               className="border p-4 rounded-xl bg-slate-50 grid gap-3 md:grid-cols-7 relative"
             >
-              <div>
-                <Input
-                  label="Màu *"
-                  list="color-list"
-                  value={variant.color}
-                  onChange={(e) =>
-                    updateVariant(variant.id, "color", e.target.value)
-                  }
-                />
-                {errors[`variant_${variant.id}_color`] && (
-                  <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">
-                    {errors[`variant_${variant.id}_color`]}
-                  </p>
-                )}
-              </div>
-              <div>
-                <Input
-                  label="Dung lượng *"
-                  type="text"
-                  list="storage-list"
-                  value={variant.storage}
-                  onChange={(e) =>
-                    updateVariant(variant.id, "storage", e.target.value)
-                  }
-                />
-                {errors[`variant_${variant.id}_storage`] && (
-                  <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">
-                    {errors[`variant_${variant.id}_storage`]}
-                  </p>
-                )}
-              </div>
-              <div>
-                <Input
-                  label="RAM *"
-                  type="text"
-                  list="ram-list"
-                  value={variant.ram}
-                  onChange={(e) =>
-                    updateVariant(variant.id, "ram", e.target.value)
-                  }
-                />
-                {errors[`variant_${variant.id}_ram`] && (
-                  <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">
-                    {errors[`variant_${variant.id}_ram`]}
-                  </p>
-                )}
-              </div>
-              <div>
-                <Input
-                  label="SSD"
-                  type="text"
-                  list="ssd-list"
-                  value={variant.ssd}
-                  onChange={(e) =>
-                    updateVariant(variant.id, "ssd", e.target.value)
-                  }
-                />
-                {errors[`variant_${variant.id}_ssd`] && (
-                  <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">
-                    {errors[`variant_${variant.id}_ssd`]}
-                  </p>
-                )}
-              </div>
+              {/* RENDER FORM NHẬP THUỘC TÍNH ĐỘNG DỰA TRÊN DANH MỤC */}
+              {activeAttributes.map((attr) => (
+                <div key={attr.key}>
+                  <Input
+                    label={`${attr.label} *`}
+                    list={`${attr.key}-list`}
+                    value={variant[attr.key] || ""}
+                    onChange={(e) => updateVariant(variant.id, attr.key, e.target.value)}
+                  />
+                  {errors[`variant_${variant.id}_${attr.key}`] && (
+                    <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">
+                      {errors[`variant_${variant.id}_${attr.key}`]}
+                    </p>
+                  )}
+                </div>
+              ))}
               <div>
                 <Input
                   label="Giá bán *"
@@ -827,27 +767,14 @@ function ProductFormModal({
           ))}
         </div>
 
-        {/* Các danh sách gợi ý (Datalist) cho biến thể để trình duyệt hiển thị pop-up khi bấm vào Input */}
-        <datalist id="color-list">
-          {SUGGESTIONS.colors.map((c) => (
-            <option key={c} value={c} />
-          ))}
-        </datalist>
-        <datalist id="storage-list">
-          {SUGGESTIONS.storages.map((s) => (
-            <option key={s} value={s} />
-          ))}
-        </datalist>
-        <datalist id="ram-list">
-          {SUGGESTIONS.rams.map((r) => (
-            <option key={r} value={r} />
-          ))}
-        </datalist>
-        <datalist id="ssd-list">
-          {SUGGESTIONS.ssds.map((s) => (
-            <option key={s} value={s} />
-          ))}
-        </datalist>
+        {/* Các danh sách gợi ý (Datalist) TỰ ĐỘNG ĐƯỢC MAP TỪ CONFIG CHO TRÌNH DUYỆT */}
+        {Object.entries(ATTRIBUTE_OPTIONS).map(([key, attr]) => (
+          <datalist id={`${key}-list`} key={key}>
+            {attr.options.map(opt => (
+              <option key={opt} value={opt} />
+            ))}
+          </datalist>
+        ))}
 
         <div className="flex justify-end gap-3 pt-4 border-t">
           <Button
