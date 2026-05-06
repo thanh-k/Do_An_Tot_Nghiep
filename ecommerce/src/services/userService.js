@@ -33,6 +33,10 @@ export const userService = {
   async deleteUser(userId) {
     return apiClient.request(`/admin/users/${userId}`, { method: "DELETE" });
   },
+
+  async toggleUserStatus(userId) {
+    return mapUser(await apiClient.request(`/admin/users/${userId}/toggle-status`, { method: "PUT" }));
+  },
   async getProfileAddresses() {
     return apiClient.request("/users/me/addresses");
   },

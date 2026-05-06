@@ -20,6 +20,7 @@ public interface UserService {
     UserResponse getUserById(Long id);
     UserResponse adminUpdateUser(Long id, AdminUserUpdateRequest request);
     void deleteUser(Long id);
+    UserResponse toggleStatus(Long id);
     List<UserAddressResponse> getCurrentUserAddresses();
     UserAddressResponse createCurrentUserAddress(UserAddressRequest request);
     UserAddressResponse updateCurrentUserAddress(Long addressId, UserAddressRequest request);
