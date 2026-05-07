@@ -11,6 +11,7 @@ import NewsTopicManagementPage from "@/pages/admin/NewsTopicManagementPage";
 import NewsPostManagementPage from "@/pages/admin/NewsPostManagementPage";
 import ContactManagementPage from "@/pages/admin/ContactManagementPage";
 import BrandManagementPage from "@/pages/admin/BrandManagementPage";
+import VoucherManagementPage from "@/pages/admin/VoucherManagementPage";
 
 export const adminRoutes = [
   {
@@ -37,6 +38,11 @@ export const adminRoutes = [
     path: "orders",
     component: OrderManagementPage,
     permissions: ["ORDER_VIEW"],
+  },
+  {
+    path: "vouchers",
+    component: VoucherManagementPage,
+    permissions: ["VOUCHER_VIEW"], // Thêm quyền xem voucher
   },
   {
     path: "customers",

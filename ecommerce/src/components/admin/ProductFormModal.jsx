@@ -3,19 +3,17 @@ import Modal from "@/components/common/Modal";
 import toast from "react-hot-toast";
 import Input from "@/components/common/Input";
 import Button from "@/components/common/Button";
+import { CATEGORY_VARIANT_CONFIG, ATTRIBUTE_OPTIONS } from "@/utils/categoryConfig";
 import { createId } from "@/services/storageService";
 import { fileToDataUrl } from "@/utils/file";
 
-const createVariantState = (variant = {}) => ({
-  id: variant.id || createId("var"),
-  color: variant.attributes?.color || variant.color || "",
-  storage: variant.attributes?.storage || variant.storage || "",
-  ram: variant.attributes?.ram || variant.ram || "",
-  ssd: variant.attributes?.ssd || variant.ssd || "",
-  price: variant.price || "",
-  compareAtPrice: variant.compareAtPrice || "",
-  stock: variant.stock ?? 0,
-  image: variant.images?.[0] || "",
+const createVariantState = () => ({
+  id: createId("var"),
+  sku: "",
+  price: "",
+  compareAtPrice: "",
+  stock: 0,
+  image: "",
   imageFile: null,
 });
 
@@ -100,13 +98,54 @@ const getInitialState = (product) => ({
   isFeatured: Boolean(product?.isFeatured),
   isNew: Boolean(product?.isNew),
   isSale: Boolean(product?.isSale),
-  variants: product?.variants?.length ? product.variants.map(createVariantState) : [createVariantState()],
+  // Fix: Hiện danh sách biến thể cũ kèm RAM/SSD
+  variants: product?.variants?.length
+    ? product.variants.map((v) => {
+        const attrs =
+          typeof v.attributes === "string"
+            ? JSON.parse(v.attributes)
+            : v.attributes || {};
+        return {
+          id: v.id,
+          sku: v.sku || "",
+          price: v.price || "",
+          compareAtPrice: v.compareAtPrice || "",
+          stock: v.stock || 0,
+          image: v.image || "",
+          imageFile: null,
+          ...attrs
+        };
+      })
+    : [createVariantState()],
 });
 
 function ProductFormModal({ isOpen, onClose, categories = [], initialProduct = null, onSubmit }) {
   const [form, setForm] = useState(getInitialState(initialProduct));
   const [brands, setBrands] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({}); // THÊM STATE LƯU LỖI
+
+  // LOGIC ĐỘNG: Lấy danh sách các thuộc tính cần hiển thị dựa theo Danh mục
+  const activeAttributes = useMemo(() => {
+    if (!form.categoryId || !categories?.length) return [{ key: "color", ...ATTRIBUTE_OPTIONS["color"] }];
+    
+    const category = categories.find((c) => String(c.id) === String(form.categoryId));
+    if (!category) return [{ key: "color", ...ATTRIBUTE_OPTIONS["color"] }];
+
+    const catSlug = category.slug || category.name.toLowerCase().replace(/ /g, '-').normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const attributeKeys = CATEGORY_VARIANT_CONFIG[catSlug] || CATEGORY_VARIANT_CONFIG["default"] || ["color"];
+    
+    return attributeKeys.map(key => ({ key: key, ...ATTRIBUTE_OPTIONS[key] }));
+  }, [form.categoryId, categories]);
+
+  // LOG 1: Kiểm tra xem khi Modal mở, biến categories nhận được gì từ Page cha
+  useEffect(() => {
+    if (isOpen) {
+      console.log("--- DEBUG CATEGORIES TRONG MODAL ---");
+      console.log("Dữ liệu categories nhận từ Props:", categories);
+      console.log("Số lượng category:", categories?.length);
+    }
+  }, [isOpen, categories]);
 
   useEffect(() => {
     setForm(getInitialState(initialProduct));
@@ -137,6 +176,140 @@ function ProductFormModal({ isOpen, onClose, categories = [], initialProduct = n
     }));
   };
 
+  // --- VALIDATE REAL-TIME CHO TỪNG BIẾN THỂ ---
+  const validateVariant = (variantId, field, value) => {
+    let errMsg = "";
+    const errorKey = `variant_${variantId}_${field}`;
+    // Chuyển đổi an toàn sang chuỗi để kiểm tra dấu âm
+    const valStr = value !== null && value !== undefined ? String(value) : "";
+
+    const attrKeys = activeAttributes.map(a => a.key);
+    if (attrKeys.includes(field) && !valStr.trim()) errMsg = "Không được để trống";
+
+    if (field === "price") {
+      if (!valStr.trim()) errMsg = "Giá bán không được để trống";
+      else if (Number(value) < 1) errMsg = "Giá bán phải từ 1đ trở lên";
+    }
+    if (field === "compareAtPrice") {
+      if (!valStr.trim()) {
+        errMsg = "Giá gốc không được để trống";
+      } else if (Number(value) <= 0) {
+        errMsg = "Giá gốc phải lớn hơn 0";
+      } else {
+        const currentVariant = form.variants.find((v) => v.id === variantId);
+        if (currentVariant?.price && Number(valStr) < Number(currentVariant.price)) {
+          errMsg = "Giá gốc phải lớn hơn Giá bán";
+        }
+      }
+    }
+    if (field === "stock" && (Number(value) < 0 || valStr === ""))
+      errMsg = "Tồn kho không được âm";
+    if (field === "imageFile" && value && value.size > 1024 * 1024) {
+      errMsg = "Ảnh biến thể không được vượt quá 1MB";
+    }
+    setErrors((prev) => ({ ...prev, [errorKey]: errMsg }));
+  };
+
+  // --- KIỂM TRA TOÀN BỘ FORM KHI BẤM LƯU VÀ LÚC MỞ MODAL ---
+  const validateAll = (currentForm = form) => {
+    const newErrors = {};
+    if (!currentForm.name?.trim())
+      newErrors.name = "Tên sản phẩm không được để trống";
+    else if (currentForm.name.trim().length < 2)
+      newErrors.name = "Tên phải từ 2 ký tự trở lên";
+
+    if (!currentForm.categoryId)
+      newErrors.categoryId = "Vui lòng chọn danh mục";
+    if (!currentForm.brandId) newErrors.brandId = "Vui lòng chọn thương hiệu";
+
+    if (!currentForm.thumbnail && !currentForm.thumbnailFile) {
+      newErrors.thumbnailFile = "Vui lòng chọn ảnh đại diện";
+    } else if (
+      currentForm.thumbnailFile &&
+      currentForm.thumbnailFile.size > 1024 * 1024
+    ) {
+      newErrors.thumbnailFile = "Dung lượng ảnh vượt quá 1MB";
+    }
+
+    if (!currentForm.description?.trim())
+      newErrors.description = "Mô tả chi tiết không được để trống";
+
+    if (!currentForm.specsText?.trim()) {
+      newErrors.specsText = "Thông số không được để trống";
+    } else {
+      const lines = currentForm.specsText
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean);
+      for (const line of lines) {
+        if (!line.includes(":") || line.split(":")[0].trim() === "") {
+          newErrors.specsText = "Sai định dạng. Vui lòng nhập 'Tên: Giá trị'";
+          break;
+        }
+      }
+    }
+
+    currentForm.variants.forEach((v) => {
+      activeAttributes.forEach((attr) => {
+        if (!String(v[attr.key] || "").trim()) {
+          newErrors[`variant_${v.id}_${attr.key}`] = "Không được để trống";
+        }
+      });
+
+      if (!String(v.price || "").trim())
+        newErrors[`variant_${v.id}_price`] = "Giá bán không được để trống";
+      else if (Number(v.price) < 1)
+        newErrors[`variant_${v.id}_price`] = "Giá bán phải từ 1đ trở lên";
+
+      if (!String(v.compareAtPrice || "").trim())
+        newErrors[`variant_${v.id}_compareAtPrice`] = "Giá gốc không được để trống";
+      else if (Number(v.compareAtPrice) <= 0)
+        newErrors[`variant_${v.id}_compareAtPrice`] = "Giá gốc phải lớn hơn 0";
+      else if (v.price && Number(v.compareAtPrice) < Number(v.price))
+        newErrors[`variant_${v.id}_compareAtPrice`] = "Giá gốc phải từ Giá bán trở lên";
+
+      if (Number(v.stock) < 0 || v.stock === "")
+        newErrors[`variant_${v.id}_stock`] = "Tồn kho không được âm";
+      if (v.imageFile && v.imageFile.size > 1024 * 1024)
+        newErrors[`variant_${v.id}_imageFile`] =
+          "Ảnh biến thể không vượt quá 1MB";
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // --- KIỂM TRA ĐIỀU KIỆN ĐỂ KHÓA NÚT LƯU ---
+  const isInvalid = useMemo(() => {
+    if (!form.name?.trim() || form.name.trim().length < 2) return true;
+    if (!form.categoryId) return true;
+    if (!form.brandId) return true;
+    if (!form.thumbnail && !form.thumbnailFile) return true;
+    if (!form.description?.trim()) return true;
+
+    if (!form.specsText?.trim()) return true;
+    const lines = form.specsText
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+    for (const line of lines) {
+      if (!line.includes(":") || line.split(":")[0].trim() === "") return true;
+    }
+
+    const hasVariantErrors = form.variants.some(
+      (v) => {
+        const hasAttrError = activeAttributes.some(attr => !String(v[attr.key] || "").trim());
+        return hasAttrError || !String(v.price || "").trim() || Number(v.price) < 1 ||
+          !String(v.compareAtPrice || "").trim() || Number(v.compareAtPrice) <= 0 ||
+          (v.price && Number(v.compareAtPrice) < Number(v.price)) || Number(v.stock) < 0 ||
+          v.stock === "" || (v.imageFile && v.imageFile.size > 1024 * 1024);
+      }
+    );
+    if (hasVariantErrors) return true;
+
+    return Object.values(errors).some((err) => !!err);
+  }, [form, errors]);
+
   const removeVariant = (variantId) => {
     setForm((prev) => ({
       ...prev,
@@ -148,6 +321,8 @@ function ProductFormModal({ isOpen, onClose, categories = [], initialProduct = n
     event.preventDefault();
     setSubmitting(true);
     try {
+      const generatedSlug = form.slug || form.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/([^0-9a-z-\s])/g, "").replace(/(\s+)/g, "-");
+      
       const specifications = form.specsText
         .split("\n")
         .map((line) => line.trim())
@@ -161,8 +336,31 @@ function ProductFormModal({ isOpen, onClose, categories = [], initialProduct = n
         }, {});
 
       const resolvedVariants = await Promise.all(
-        form.variants.map(async (variant) => {
-          const image = variant.imageFile ? await fileToDataUrl(variant.imageFile) : variant.image;
+        // FIX: Lấy thêm 'index' từ vòng lặp map
+        form.variants.map(async (v, index) => {
+          let variantImg = v.image;
+          if (v.imageFile) variantImg = await fileToDataUrl(v.imageFile);
+
+          // Tự động tạo SKU dựa theo 2 thuộc tính động đầu tiên
+          const firstAttrVal = String(v[activeAttributes[0]?.key] || "")
+            .toUpperCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[đĐ]/g, "d")
+            .trim()
+            .replace(/\s+/g, "");
+
+          const secondAttrVal = activeAttributes.length > 1 
+            ? String(v[activeAttributes[1]?.key] || "").toUpperCase().replace(/\s+/g, "")
+            : "";
+
+          const newSku = `${generatedSlug.toUpperCase()}-${firstAttrVal || "VAR"}${secondAttrVal ? `-${secondAttrVal}` : ""}-${index + 1}`;
+
+          // Gom tất cả thuộc tính động lại để lưu dạng JSON
+          const attrsToSave = {};
+          activeAttributes.forEach(attr => {
+            attrsToSave[attr.key] = v[attr.key] || "";
+          });
 
           return {
             sku: newSku,
@@ -170,12 +368,7 @@ function ProductFormModal({ isOpen, onClose, categories = [], initialProduct = n
             compareAtPrice: Number(v.compareAtPrice || v.price) || 0,
             stock: Number(v.stock) || 0,
             image: variantImg,
-            attributes: JSON.stringify({
-              color: v.color || "",
-              storage: v.storage || "",
-              ram: v.ram || "",
-              ssd: v.ssd || "",
-            }),
+            attributes: JSON.stringify(attrsToSave),
           };
         }),
       );
@@ -301,13 +494,24 @@ function ProductFormModal({ isOpen, onClose, categories = [], initialProduct = n
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  <Input label="Màu sắc" value={variant.color} onChange={(e) => updateVariant(variant.id, "color", e.target.value)} />
-                  <Input label="Dung lượng" value={variant.storage} onChange={(e) => updateVariant(variant.id, "storage", e.target.value)} />
-                  <Input label="RAM" value={variant.ram} onChange={(e) => updateVariant(variant.id, "ram", e.target.value)} />
-                  <Input label="SSD" value={variant.ssd} onChange={(e) => updateVariant(variant.id, "ssd", e.target.value)} />
-                  <Input label="Giá bán" type="number" value={variant.price} onChange={(e) => updateVariant(variant.id, "price", e.target.value)} />
-                  <Input label="Giá gốc" type="number" value={variant.compareAtPrice} onChange={(e) => updateVariant(variant.id, "compareAtPrice", e.target.value)} />
-                  <Input label="Tồn kho" type="number" value={variant.stock} onChange={(e) => updateVariant(variant.id, "stock", e.target.value)} />
+                  {activeAttributes.map((attr) => (
+                    <div key={attr.key}>
+                      <Input label={`${attr.label} *`} list={`${attr.key}-list`} value={variant[attr.key] || ""} onChange={(e) => updateVariant(variant.id, attr.key, e.target.value)} />
+                      {errors[`variant_${variant.id}_${attr.key}`] && <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">{errors[`variant_${variant.id}_${attr.key}`]}</p>}
+                    </div>
+                  ))}
+                  <div>
+                    <Input label="Giá bán *" type="number" value={variant.price} onChange={(e) => updateVariant(variant.id, "price", e.target.value)} />
+                    {errors[`variant_${variant.id}_price`] && <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">{errors[`variant_${variant.id}_price`]}</p>}
+                  </div>
+                  <div>
+                    <Input label="Giá gốc (Cũ) *" type="number" value={variant.compareAtPrice} placeholder="Gạch ngang..." onChange={(e) => updateVariant(variant.id, "compareAtPrice", e.target.value)} />
+                    {errors[`variant_${variant.id}_compareAtPrice`] && <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">{errors[`variant_${variant.id}_compareAtPrice`]}</p>}
+                  </div>
+                  <div>
+                    <Input label="Tồn kho *" type="number" value={variant.stock} onChange={(e) => updateVariant(variant.id, "stock", e.target.value)} />
+                    {errors[`variant_${variant.id}_stock`] && <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">{errors[`variant_${variant.id}_stock`]}</p>}
+                  </div>
                   <div className="space-y-2 md:col-span-2 xl:col-span-1">
                     <label className="text-sm font-medium text-slate-700">Ảnh variant</label>
                     <input
@@ -316,6 +520,7 @@ function ProductFormModal({ isOpen, onClose, categories = [], initialProduct = n
                       onChange={(e) => updateVariant(variant.id, "imageFile", e.target.files?.[0] || null)}
                       className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm"
                     />
+                    {errors[`variant_${variant.id}_imageFile`] && <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">{errors[`variant_${variant.id}_imageFile`]}</p>}
                   </div>
                 </div>
 
@@ -330,6 +535,15 @@ function ProductFormModal({ isOpen, onClose, categories = [], initialProduct = n
             ))}
           </div>
         </div>
+
+        {/* Các danh sách gợi ý (Datalist) TỰ ĐỘNG ĐƯỢC MAP TỪ CONFIG CHO TRÌNH DUYỆT */}
+        {Object.entries(ATTRIBUTE_OPTIONS).map(([key, attr]) => (
+          <datalist id={`${key}-list`} key={key}>
+            {attr.options.map((opt) => (
+              <option key={opt} value={opt} />
+            ))}
+          </datalist>
+        ))}
 
         <div className="flex justify-end gap-3">
           <Button type="button" variant="ghost" onClick={onClose}>Hủy</Button>

@@ -30,8 +30,13 @@ function CategoryManagementPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const data = await categoryService.getCategories();
-      setCategories(data);
+      // Gọi song song API lấy danh mục và toàn bộ sản phẩm để đếm số lượng
+      const [categoriesData, productsData] = await Promise.all([
+        categoryService.getCategories(),
+        productService.getAllProducts(),
+      ]);
+      setCategories(categoriesData);
+      setProducts(productsData || []);
     } catch (error) {
       console.error(error);
     } finally {
@@ -95,14 +100,12 @@ function CategoryManagementPage() {
     {
       key: "products",
       title: "Số sản phẩm",
-      render: (row) => (
-        <span className="font-semibold text-brand-700">
-          {/* Nếu ní chưa có API Product thật thì tạm thời để 0 hoặc filter list cũ */}
-          {products
-            ? products.filter((p) => p.categoryId === row.id).length
-            : 0}
-        </span>
-      ),
+      render: (row) => {
+        const count = products.filter(
+          (p) => p.categoryId === row.id || p.category?.id === row.id,
+        ).length;
+        return <span className="font-semibold text-brand-700">{count}</span>;
+      },
     },
     {
       key: "actions",
@@ -117,27 +120,53 @@ function CategoryManagementPage() {
           >
             <Pencil size={14} />
           </Button>
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={async () => {
-              const confirmed = window.confirm(`Xoá category "${row.name}"?`);
-              if (!confirmed) return;
-              try {
-                await categoryService.deleteCategory(row.id);
-                toast.success("Đã xoá category");
-                loadData();
-              } catch (error) {
-                toast.error(error.message);
-              }
-            }}
-          >
+          <Button variant="danger" size="sm" onClick={() => handleDelete(row)}>
             <Trash2 size={14} />
           </Button>
         </div>
       ),
     },
   ];
+
+  const handleDelete = async (row) => {
+    // 1. Kiểm tra xem có sản phẩm nào đang dùng Danh mục này không
+    const relatedProducts = products.filter(
+      (p) => p.categoryId === row.id || p.category?.id === row.id,
+    );
+
+    if (relatedProducts.length > 0) {
+      // 2. Nếu có, hiện cảnh báo đặc biệt
+      const confirmCascade = window.confirm(
+        `CẢNH BÁO: Đang có ${relatedProducts.length} sản phẩm sử dụng danh mục "${row.name}".\n\nBạn không thể xóa thông thường. Bạn có chắc chắn muốn XÓA LUÔN danh mục này VÀ TẤT CẢ ${relatedProducts.length} sản phẩm liên quan không?`,
+      );
+      if (!confirmCascade) return;
+
+      try {
+        // Xóa tất cả sản phẩm liên quan trước (để tránh lỗi khoá ngoại từ Backend)
+        await Promise.all(
+          relatedProducts.map((p) => productService.deleteProduct(p.id)),
+        );
+        // Sau đó mới xoá danh mục
+        await categoryService.deleteCategory(row.id);
+        toast.success(
+          `Đã xoá danh mục và ${relatedProducts.length} sản phẩm liên quan!`,
+        );
+        loadData();
+      } catch (e) {
+        toast.error("Lỗi khi xoá dữ liệu liên quan. Vui lòng thử lại.");
+      }
+    } else {
+      // 3. Nếu không có sản phẩm nào, xóa bình thường
+      if (!window.confirm(`Xoá danh mục "${row.name}"?`)) return;
+      try {
+        await categoryService.deleteCategory(row.id);
+        toast.success("Đã xoá thành công");
+        loadData();
+      } catch (e) {
+        toast.error("Không thể xoá danh mục này");
+      }
+    }
+  };
 
   const handleSave = async (payload) => {
     try {

@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import { Eye } from "lucide-react";
 import DataTable from "@/components/admin/DataTable";
 import PageHeader from "@/components/common/PageHeader";
 import Input from "@/components/common/Input";
-import orderService from "@/services/orderService";
+import Button from "@/components/common/Button";
+import OrderFormModal from "@/components/admin/OrderFormModal";
+import orderService from "@/services/user/orderService";
 import { ORDER_STATUS_OPTIONS } from "@/constants";
 import {
   formatCurrency,
@@ -13,11 +16,32 @@ import {
   getPaymentStatusColor,
 } from "@/utils/format";
 
+// Helper function để lấy class màu sắc cho trạng thái đơn hàng
+const getStatusColorClass = (status) => {
+  switch (status) {
+    case "PENDING":
+      return "bg-amber-100 text-amber-700";
+    case "CONFIRMED":
+      return "bg-blue-100 text-blue-700";
+    case "PROCESSING":
+      return "bg-indigo-100 text-indigo-700";
+    case "SHIPPED":
+      return "bg-purple-100 text-purple-700";
+    case "DELIVERED":
+      return "bg-emerald-100 text-emerald-700";
+    case "CANCELLED":
+      return "bg-rose-100 text-rose-700";
+    default:
+      return "bg-slate-100 text-slate-700";
+  }
+};
+
 function OrderManagementPage() {
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [keyword, setKeyword] = useState("");
+  const [modalState, setModalState] = useState({ open: false, order: null });
 
   const loadData = () => {
     setLoading(true);
@@ -40,9 +64,11 @@ function OrderManagementPage() {
         !search ||
         [
           order.id,
-          order.shippingAddress?.fullName,
-          order.shippingAddress?.phone,
-          ...(order.items || []).map((item) => item.name),
+          typeof order.shippingAddress === "string"
+            ? order.shippingAddress
+            : order.shippingAddress?.address,
+          order.phoneNumber,
+          ...(order.details || []).map((item) => item.name),
         ]
           .join(" ")
           .toLowerCase()
@@ -59,32 +85,51 @@ function OrderManagementPage() {
       render: (row) => (
         <div>
           <p className="font-semibold text-slate-900">{row.id}</p>
-          <p className="text-xs text-slate-500">{formatDate(row.createdAt)}</p>
+          <p className="text-xs text-slate-500">{row.createdAt ? formatDate(row.createdAt) : "Đang cập nhật"}</p>
         </div>
       ),
     },
     {
       key: "customer",
       title: "Khách hàng",
-      render: (row) => (
-        <div>
-          <p className="font-semibold text-slate-900">{row.shippingAddress?.fullName || row.user?.name}</p>
-          <p className="text-xs text-slate-500">{row.shippingAddress?.phone}</p>
-        </div>
-      ),
+      render: (row) => {
+        // Xử lý an toàn tránh lỗi Object khi render dữ liệu cũ/mock
+        const addressStr =
+          typeof row.shippingAddress === "string"
+            ? row.shippingAddress
+            : row.shippingAddress?.address
+              ? `${row.shippingAddress.address}, ${row.shippingAddress.city}`
+              : "Chưa cập nhật địa chỉ";
+
+        return (
+          <div>
+            <p className="font-semibold text-slate-900">
+              {row.phoneNumber || row.shippingAddress?.phone || "Không có SĐT"}
+            </p>
+            <p
+              className="text-xs text-slate-500 line-clamp-1 max-w-[200px]"
+              title={addressStr}
+            >
+              {addressStr}
+            </p>
+          </div>
+        );
+      },
     },
     {
-      key: "items",
+      key: "details",
       title: "Sản phẩm",
       render: (row) => (
         <div className="space-y-1">
-          {row.items.slice(0, 2).map((item) => (
-            <p key={`${row.id}-${item.variantId}`} className="text-sm">
+          {(row.details || []).slice(0, 2).map((item) => (
+            <p key={item.id} className="text-sm">
               {item.name} × {item.quantity}
             </p>
           ))}
-          {row.items.length > 2 ? (
-            <p className="text-xs text-slate-500">+ {row.items.length - 2} sản phẩm khác</p>
+          {(row.details || []).length > 2 ? (
+            <p className="text-xs text-slate-500">
+              + {(row.details || []).length - 2} sản phẩm khác
+            </p>
           ) : null}
         </div>
       ),
@@ -93,15 +138,15 @@ function OrderManagementPage() {
       key: "status",
       title: "Trạng thái",
       render: (row) => (
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{formatOrderStatus(row.status)}</p>
+        <div className="space-y-2 min-w-[120px]">
+          <p
+            className={`text-xs font-semibold uppercase tracking-wide px-2 py-1 rounded-full text-center ${getStatusColorClass(row.status)}`}
+          >
+            {formatOrderStatus(row.status)}
+          </p>
           <select
             value={row.status}
-            onChange={async (event) => {
-              await orderService.updateOrderStatus(row.id, event.target.value);
-              toast.success("Cập nhật trạng thái đơn hàng thành công");
-              loadData();
-            }}
+            onChange={(event) => handleUpdateStatus(row.id, event.target.value)}
             className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
           >
             {ORDER_STATUS_OPTIONS.map((item) => (
@@ -114,27 +159,58 @@ function OrderManagementPage() {
       ),
     },
     {
-      key: "payment",
-      title: "Thanh toán",
-      render: (row) => (
-        <div>
-          <p className="font-medium text-slate-900">{row.paymentMethod.toUpperCase()}</p>
-          <p 
-            className="text-xs font-semibold"
-            style={{ color: getPaymentStatusColor(row.paymentStatus) }}
-          >
-            {formatPaymentStatus(row.paymentStatus)}
-          </p>
-        </div>
-      ),
-    },
-    {
       key: "total",
       title: "Tổng tiền",
       align: "right",
-      render: (row) => <span className="font-semibold">{formatCurrency(row.total)}</span>,
+      render: (row) => (
+        <span className="font-semibold text-brand-700">
+          {formatCurrency(row.totalAmount)}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      title: "Thao tác",
+      align: "right",
+      render: (row) => (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setModalState({ open: true, order: row })}
+        >
+          <Eye size={14} className="mr-1" /> Chi tiết
+        </Button>
+      ),
     },
   ];
+
+  const handleUpdateStatus = async (id, newStatus) => {
+    try {
+      await orderService.updateOrderStatus(id, newStatus);
+      toast.success("Cập nhật trạng thái đơn hàng thành công");
+      setModalState({ open: false, order: null });
+      loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Lỗi cập nhật trạng thái");
+    }
+  };
+
+  const handleDelete = async (order) => {
+    if (
+      !window.confirm(
+        `Bạn có chắc chắn muốn xóa đơn hàng #${order.id} không? Hành động này không thể hoàn tác.`,
+      )
+    )
+      return;
+    try {
+      await orderService.deleteOrder(order.id);
+      toast.success("Xóa đơn hàng thành công");
+      setModalState({ open: false, order: null });
+      loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Lỗi khi xóa đơn hàng");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -166,10 +242,24 @@ function OrderManagementPage() {
       </div>
 
       {loading ? (
-        <div className="card p-8 text-center text-sm text-slate-500">Đang tải đơn hàng...</div>
+        <div className="card p-8 text-center text-sm text-slate-500">
+          Đang tải đơn hàng...
+        </div>
       ) : (
-        <DataTable columns={columns} data={filteredOrders} pagination={{ enabled: true, pageSize: 8, itemLabel: "đơn hàng" }} />
+        <DataTable
+          columns={columns}
+          data={filteredOrders}
+          pagination={{ enabled: true, pageSize: 8, itemLabel: "đơn hàng" }}
+        />
       )}
+
+      <OrderFormModal
+        isOpen={modalState.open}
+        onClose={() => setModalState({ open: false, order: null })}
+        order={modalState.order}
+        onUpdateStatus={handleUpdateStatus}
+        onDelete={handleDelete}
+      />
     </div>
   );
 }

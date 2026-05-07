@@ -10,6 +10,7 @@ import {
   UserCircle2,
   Users,
   BadgeCheck,
+  Ticket,
   Newspaper,
   BookOpenText,
   MessageSquareMore,
@@ -59,6 +60,12 @@ const items = [
     label: "Đơn hàng",
     icon: PackageCheck,
     permissions: ["ORDER_VIEW"],
+  },
+  {
+    to: "/admin/vouchers",
+    label: "Voucher",
+    icon: Ticket,
+    permissions: ["VOUCHER_VIEW"],
   },
   {
     to: "/admin/customers",
