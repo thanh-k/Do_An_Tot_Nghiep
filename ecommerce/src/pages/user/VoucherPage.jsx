@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import toast from "react-hot-toast";
-import { Ticket, Truck, Coins, Crown, Copy, Clock } from "lucide-react";
+import { Ticket, Truck, Coins, Crown, Copy, Clock, Lock } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import PageHeader from "@/components/common/PageHeader";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import EmptyState from "@/components/common/EmptyState";
@@ -9,7 +10,6 @@ import { formatCurrency, formatDate } from "@/utils/format";
 import userVoucherService from "@/services/user/voucherService";
 import useVoucherWallet from "@/hooks/useVoucherWallet";
 
-// Cấu hình UI Icon và Màu sắc cho từng loại Voucher
 const CATEGORY_MAP = {
   DISCOUNT: {
     label: "Giảm giá",
@@ -38,6 +38,7 @@ const CATEGORY_MAP = {
 };
 
 function VoucherPage() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [vouchers, setVouchers] = useState([]);
   const [activeTab, setActiveTab] = useState("ALL");
@@ -49,7 +50,7 @@ function VoucherPage() {
     userVoucherService
       .getActiveVouchers()
       .then((data) => {
-        setVouchers(data);
+        setVouchers(data || []);
       })
       .catch(() => {
         toast.error("Không thể tải danh sách ưu đãi lúc này.");
@@ -57,17 +58,35 @@ function VoucherPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Lọc voucher theo Tab được chọn
   const filteredVouchers = useMemo(() => {
     if (activeTab === "ALL") return vouchers;
     return vouchers.filter((v) => (v.category || "DISCOUNT") === activeTab);
   }, [vouchers, activeTab]);
 
-  // Hàm xử lý copy và lưu mã giảm giá vào Ví
-  const handleCopyAndSave = (code) => {
-    navigator.clipboard.writeText(code).catch(() => {});
-    saveVoucher(code);
-    toast.success(`Đã lưu mã: ${code} vào Ví Voucher!`);
+  const handleCopyCode = async (code) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      toast.success(`Đã sao chép mã: ${code}`);
+    } catch {
+      toast.error("Không thể sao chép mã");
+    }
+  };
+
+  const handleVoucherAction = (voucher) => {
+    const lockedVip = voucher.vipOnly && voucher.eligible === false;
+
+    if (lockedVip) {
+      navigate("/membership");
+      return;
+    }
+
+    if (isSaved(voucher.code)) {
+      toast("Voucher đã có trong ví của bạn");
+      return;
+    }
+
+    saveVoucher(voucher.code);
+    toast.success(`Đã lưu mã: ${voucher.code} vào Ví Voucher!`);
   };
 
   return (
@@ -81,7 +100,6 @@ function VoucherPage() {
         <LoadingSpinner label="Đang tìm kiếm ưu đãi cho bạn..." />
       ) : (
         <>
-          {/* TABS PHÂN LOẠI */}
           <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
             <button
               onClick={() => setActiveTab("ALL")}
@@ -93,6 +111,7 @@ function VoucherPage() {
             >
               Tất cả mã
             </button>
+
             {Object.entries(CATEGORY_MAP).map(([key, config]) => (
               <button
                 key={key}
@@ -109,7 +128,6 @@ function VoucherPage() {
             ))}
           </div>
 
-          {/* DANH SÁCH VOUCHER */}
           {filteredVouchers.length === 0 ? (
             <EmptyState
               title="Chưa có mã ưu đãi nào"
@@ -120,15 +138,21 @@ function VoucherPage() {
               {filteredVouchers.map((voucher) => {
                 const catConfig = CATEGORY_MAP[voucher.category || "DISCOUNT"];
                 const Icon = catConfig.icon;
+                const lockedVip = voucher.vipOnly && voucher.eligible === false;
 
                 return (
                   <div
-                    key={voucher.id}
-                    className="flex bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
+                    key={voucher.id || voucher.code}
+                    className={`flex rounded-2xl overflow-hidden border shadow-sm hover:shadow-md transition-shadow ${
+                      lockedVip
+                        ? "bg-fuchsia-50 border-fuchsia-200"
+                        : "bg-white border-slate-200"
+                    }`}
                   >
-                    {/* Left Section (Icon/Image) */}
                     <div
-                      className={`w-28 flex flex-col items-center justify-center p-4 border-r border-dashed border-slate-300 ${catConfig.bg}`}
+                      className={`w-28 flex flex-col items-center justify-center p-4 border-r border-dashed ${
+                        lockedVip ? "border-fuchsia-300" : "border-slate-300"
+                      } ${catConfig.bg}`}
                     >
                       {voucher.image ? (
                         <img
@@ -143,14 +167,20 @@ function VoucherPage() {
                           <Icon size={24} />
                         </div>
                       )}
+
                       <span
                         className={`mt-2 text-[10px] font-bold uppercase text-center ${catConfig.color}`}
                       >
                         {catConfig.label}
                       </span>
+
+                      {lockedVip ? (
+                        <span className="mt-2 rounded-full bg-white px-2 py-1 text-[10px] font-bold text-fuchsia-700 border border-fuchsia-200">
+                          Chỉ VIP
+                        </span>
+                      ) : null}
                     </div>
 
-                    {/* Right Section (Details) */}
                     <div className="flex-1 p-4 relative flex flex-col justify-between">
                       <div>
                         <div className="flex justify-between items-start gap-2">
@@ -160,13 +190,27 @@ function VoucherPage() {
                               ? `${voucher.discountValue}%`
                               : formatCurrency(voucher.discountValue)}
                           </h3>
-                          <span className="bg-brand-50 text-brand-700 text-xs font-bold px-2 py-1 rounded">
+
+                          <span
+                            className={`text-xs font-bold px-2 py-1 rounded ${
+                              lockedVip
+                                ? "bg-fuchsia-100 text-fuchsia-700"
+                                : "bg-brand-50 text-brand-700"
+                            }`}
+                          >
                             SL: {voucher.quantity}
                           </span>
                         </div>
+
                         <p className="text-sm text-slate-500 mt-1">
-                          Đơn tối thiểu {formatCurrency(voucher.minOrderValue)}
+                          Đơn tối thiểu {formatCurrency(voucher.minOrderValue || 0)}
                         </p>
+
+                        {voucher.monthlyReset ? (
+                          <p className="text-[11px] text-fuchsia-600 font-semibold mt-2">
+                            Quota tháng: {voucher.monthlyQuantity || voucher.quantity || 0}
+                          </p>
+                        ) : null}                      
                       </div>
 
                       <div className="mt-4 pt-4 border-t border-slate-100 flex items-end justify-between">
@@ -177,10 +221,12 @@ function VoucherPage() {
                               {voucher.code}
                             </span>
                           </p>
+
                           <p className="text-[11px] text-slate-500 flex items-center gap-1">
                             <Clock size={12} />
-                            HSD: {formatDate(voucher.expiryDate)}
+                            HSD: {voucher.expiryDate ? formatDate(voucher.expiryDate) : "Không xác định"}
                           </p>
+
                           <button
                             onClick={() => setSelectedVoucher(voucher)}
                             className="text-[11px] text-blue-600 font-semibold hover:underline mt-1 block text-left"
@@ -190,18 +236,36 @@ function VoucherPage() {
                         </div>
 
                         <button
-                          onClick={() => handleCopyAndSave(voucher.code)}
-                          disabled={isSaved(voucher.code)}
+                          onClick={() => handleVoucherAction(voucher)}
+                          disabled={!lockedVip && isSaved(voucher.code)}
                           className={`flex items-center gap-1.5 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
-                            isSaved(voucher.code) ? "bg-slate-400 cursor-not-allowed" : "bg-slate-900 hover:bg-slate-800"
+                            lockedVip
+                              ? "bg-fuchsia-600 hover:bg-fuchsia-700"
+                              : isSaved(voucher.code)
+                                ? "bg-slate-400 cursor-not-allowed"
+                                : "bg-slate-900 hover:bg-slate-800"
                           }`}
                         >
-                          {isSaved(voucher.code) ? "Đã lưu" : <><Copy size={14} /> Lưu mã</>}
+                          {lockedVip ? (
+                            "Đăng ký VIP"
+                          ) : isSaved(voucher.code) ? (
+                            "Đã lưu"
+                          ) : (
+                            <>
+                              <Copy size={14} />
+                              Lưu mã
+                            </>
+                          )}
                         </button>
                       </div>
 
-                      {/* CSS Cắt góc cho giống hình vé */}
-                      <div className="absolute top-1/2 -left-[6px] -translate-y-1/2 w-3 h-3 bg-slate-50 rounded-full border-r border-slate-200"></div>
+                      <div
+                        className={`absolute top-1/2 -left-[6px] -translate-y-1/2 w-3 h-3 rounded-full border-r ${
+                          lockedVip
+                            ? "bg-fuchsia-50 border-fuchsia-200"
+                            : "bg-slate-50 border-slate-200"
+                        }`}
+                      />
                     </div>
                   </div>
                 );
@@ -211,7 +275,6 @@ function VoucherPage() {
         </>
       )}
 
-      {/* MODAL CHI TIẾT VOUCHER */}
       <Modal
         isOpen={!!selectedVoucher}
         onClose={() => setSelectedVoucher(null)}
@@ -238,38 +301,77 @@ function VoucherPage() {
                     : formatCurrency(selectedVoucher.discountValue)}
                 </span>
               </li>
+
               <li className="flex justify-between border-b pb-2 border-slate-100">
                 <span className="text-slate-500">Đơn hàng tối thiểu:</span>
                 <span className="font-semibold text-slate-900">
                   {formatCurrency(selectedVoucher.minOrderValue)}
                 </span>
               </li>
+
               <li className="flex justify-between border-b pb-2 border-slate-100">
                 <span className="text-slate-500">Hạn sử dụng:</span>
                 <span className="font-semibold text-slate-900">
-                  {formatDate(selectedVoucher.expiryDate)}
+                  {selectedVoucher.expiryDate ? formatDate(selectedVoucher.expiryDate) : "Không xác định"}
                 </span>
               </li>
+
               <li className="flex justify-between border-b pb-2 border-slate-100">
                 <span className="text-slate-500">Phân loại:</span>
                 <span className="font-semibold text-slate-900">
                   {CATEGORY_MAP[selectedVoucher.category || "DISCOUNT"]?.label}
                 </span>
               </li>
+
+              {selectedVoucher.monthlyReset ? (
+                <li className="flex justify-between border-b pb-2 border-slate-100">
+                  <span className="text-slate-500">Quota tháng:</span>
+                  <span className="font-semibold text-slate-900">
+                    {selectedVoucher.monthlyQuantity || selectedVoucher.quantity || 0}
+                  </span>
+                </li>
+              ) : null}
             </ul>
 
-            <div className="pt-4">
-              <button
-                onClick={() => {
-                  handleCopyAndSave(selectedVoucher.code);
-                  setSelectedVoucher(null);
-                }}
-                className="w-full bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
-              >
-                <Copy size={18} />
-                Sao chép mã
-              </button>
-            </div>
+            {selectedVoucher.vipOnly && selectedVoucher.eligible === false ? (
+              <div className="rounded-2xl border border-fuchsia-200 bg-fuchsia-50 p-4">
+                <p className="font-semibold text-fuchsia-700">Voucher này đang bị khóa</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  {selectedVoucher.lockedReason || "Hãy đăng ký thành viên VIP để được nhận voucher này"}
+                </p>
+                <button
+                  onClick={() => {
+                    setSelectedVoucher(null);
+                    navigate("/membership");
+                  }}
+                  className="mt-4 w-full bg-fuchsia-600 text-white font-bold py-3 rounded-xl hover:bg-fuchsia-700 transition-colors"
+                >
+                  Đăng ký VIP ngay
+                </button>
+              </div>
+            ) : (
+              <div className="pt-4">
+                <button
+                  onClick={() => {
+                    handleCopyCode(selectedVoucher.code);
+                    if (!isSaved(selectedVoucher.code)) {
+                      saveVoucher(selectedVoucher.code);
+                      toast.success(`Đã lưu mã: ${selectedVoucher.code} vào Ví Voucher!`);
+                    }
+                    setSelectedVoucher(null);
+                  }}
+                  className={`w-full font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 ${
+                    isSaved(selectedVoucher.code)
+                      ? "bg-slate-400 text-white cursor-not-allowed"
+                      : "bg-slate-900 text-white hover:bg-slate-800"
+                  }`}
+                  disabled={isSaved(selectedVoucher.code)}
+                >
+                  <Copy size={18} />
+                  {isSaved(selectedVoucher.code) ? "Đã lưu voucher" : "Sao chép mã"}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </Modal>
