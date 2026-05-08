@@ -5,7 +5,7 @@ import Input from "@/components/common/Input";
 import Modal from "@/components/common/Modal";
 import PageHeader from "@/components/common/PageHeader";
 import DataTable from "@/components/admin/DataTable";
-import roleService from "@/services/roleService";
+import roleService from "@/services/admin/roleService";
 import { formatModuleLabel, formatPermissionLabel } from "@/utils/permissionLabels";
 
 function slugifyRoleCode(value = "") {

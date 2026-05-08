@@ -9,7 +9,7 @@ import PageHeader from "@/components/common/PageHeader";
 import { useDebounce } from "@/hooks/useDebounce";
 import useAuth from "@/hooks/useAuth";
 import { hasAnyPermission } from "@/utils/permission";
-import contactService from "@/services/contactService";
+import contactService from "@/services/admin/contactService";
 
 const STATUS_OPTIONS = [
   { value: "", label: "Tất cả trạng thái" },
@@ -44,7 +44,7 @@ function ContactManagementPage() {
   const loadContacts = async () => {
     setLoading(true);
     try {
-      const data = await contactService.getAdminContacts({
+      const data = await contactService.getContacts({
         keyword: debouncedKeyword,
         status: statusFilter,
       });

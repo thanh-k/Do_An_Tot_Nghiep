@@ -10,6 +10,8 @@ public interface VoucherService {
 
     List<VoucherResponse> getAllVouchers();
 
+    List<VoucherResponse> getMyVouchers();
+
     VoucherResponse updateVoucher(Long id, VoucherRequest request);
 
     void deleteVoucher(Long id);

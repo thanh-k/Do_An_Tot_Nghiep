@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -24,6 +25,12 @@ public class VoucherController {
     @GetMapping
     public ApiResponse<List<VoucherResponse>> getAll() {
         return ApiResponse.<List<VoucherResponse>>builder().result(voucherService.getAllVouchers()).build();
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/me")
+    public ApiResponse<List<VoucherResponse>> getMine() {
+        return ApiResponse.<List<VoucherResponse>>builder().result(voucherService.getMyVouchers()).build();
     }
 
     @PutMapping("/{id}")

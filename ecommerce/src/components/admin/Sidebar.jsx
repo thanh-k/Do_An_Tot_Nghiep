@@ -11,6 +11,7 @@ import {
   Users,
   BadgeCheck,
   Ticket,
+  Crown,
   Newspaper,
   BookOpenText,
   MessageSquareMore,
@@ -66,6 +67,12 @@ const items = [
     label: "Voucher",
     icon: Ticket,
     permissions: ["VOUCHER_VIEW"],
+  },
+  {
+    to: "/admin/memberships",
+    label: "Gói VIP",
+    icon: Crown,
+    permissions: ["MEMBERSHIP_MANAGE", "MEMBERSHIP_VIEW"],
   },
   {
     to: "/admin/customers",

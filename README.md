@@ -232,3 +232,38 @@ Nội dung thực hiện:
 - Kiểm tra lại luồng hoạt động sau khi fix
 - Hoàn thiện source FE trên branch `thanh` để tiếp tục cập nhật lên Git
 ✍️ Người thực hiện: Thanh
+
+📅 Ngày: 25/04/2026
+🧩 Nội dung công việc:
+
+1 FE:
+- Tối ưu giao diện điện thoại
+- Chỉnh sửa hiển thị trang sản phẩm theo hướng gọn hơn trên mobile
+- Tối ưu bộ lọc, danh sách sản phẩm và khung chat AI trên điện thoại
+
+2 BE:
+- Thêm API chat AI
+- Kết nối frontend với backend cho chức năng tư vấn sản phẩm 
+- Tối ưu phản hồi AI và hỗ trợ ngữ cảnh hội thoại
+✍️ Người thực hiện: Thanh
+
+📅 Ngày: 08/05/2026
+🧩 Nội dung công việc:
+
+1 FE:
+- Hoàn thiện giao diện voucher VIP cho người dùng
+- Hiển thị voucher VIP cho cả user thường nhưng ở trạng thái bị khóa
+- Thêm thông báo “Hãy đăng ký thành viên VIP để được nhận voucher này”
+- Điều chỉnh luồng hiển thị voucher để user VIP mới được nhận và sử dụng
+- Kiểm tra và sửa lỗi trang quản lý chủ đề tin tức và bài viết tin tức sau khi tách service
+- Rà soát lại phần gọi service admin news để đồng bộ tên hàm
+
+2 BE:
+- Hoàn thiện membership và voucher VIP
+- Xử lý rule chỉ user VIP mới được nhận và sử dụng voucher VIP
+- Bổ sung logic reset quota voucher VIP theo tháng
+- Bổ sung logic thu hồi voucher VIP khi user hết hạn thành viên
+- Kiểm tra và sửa lỗi trong VoucherServiceImpl
+- Hoàn thiện luồng tính giảm giá và trừ số lượng voucher VIP theo user
+
+✍️ Người thực hiện: Thanh

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Calendar, ChevronRight, Clock, MoveRight, Search, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
-import newsService from "@/services/newsService";
+import newsService from "@/services/user/newsService";
 import { formatDate } from "@/utils/format";
 
 function formatViews(value) {
