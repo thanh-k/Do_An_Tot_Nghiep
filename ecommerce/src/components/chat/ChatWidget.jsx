@@ -8,7 +8,7 @@ import {
   ExternalLink,
   Check,
 } from "lucide-react";
-import aiService from "@/services/aiService";
+import aiService from "@/services/user/aiService";
 import { productService } from "@/services/admin/productService";
 import useCart from "@/hooks/useCart";
 

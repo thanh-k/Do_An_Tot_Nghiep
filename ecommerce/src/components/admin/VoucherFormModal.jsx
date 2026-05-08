@@ -25,6 +25,9 @@ const getInitialState = (voucher) => ({
   discountValue: voucher?.discountValue || "",
   minOrderValue: voucher?.minOrderValue || 0,
   quantity: voucher?.quantity || "",
+  vipOnly: voucher?.vipOnly !== undefined ? voucher.vipOnly : voucher?.category === "VIP",
+  monthlyReset: voucher?.monthlyReset !== undefined ? voucher.monthlyReset : voucher?.category === "VIP",
+  monthlyQuantity: voucher?.monthlyQuantity || voucher?.quantity || "",
   expiryDate: formatDateTimeForInput(voucher?.expiryDate) || "",
   active: voucher?.active !== undefined ? voucher.active : true,
   image: voucher?.image || "",
@@ -59,7 +62,7 @@ function VoucherFormModal({ isOpen, onClose, initialVoucher, onSubmit }) {
       if (value === "" || Number(value) < 0)
         errMsg = "Giá trị đơn tối thiểu không hợp lệ";
     }
-    if (name === "quantity") {
+    if (name === "quantity" || name === "monthlyQuantity") {
       if (!value || Number(value) < 1) errMsg = "Số lượng phải từ 1 trở lên";
     }
     if (name === "expiryDate") {
@@ -138,7 +141,7 @@ function VoucherFormModal({ isOpen, onClose, initialVoucher, onSubmit }) {
       newErrors.minOrderValue = "Giá trị đơn tối thiểu không hợp lệ";
 
     if (!currentForm.quantity || Number(currentForm.quantity) < 1)
-      newErrors.quantity = "Số lượng phải từ 1 trở lên";
+      newErrors.quantity = currentForm.category === "VIP" ? "Quota voucher VIP mỗi tháng phải từ 1 trở lên" : "Số lượng phải từ 1 trở lên";
 
     if (!currentForm.expiryDate)
       newErrors.expiryDate = "Vui lòng chọn hạn sử dụng";
@@ -203,6 +206,9 @@ function VoucherFormModal({ isOpen, onClose, initialVoucher, onSubmit }) {
         discountValue: Number(form.discountValue),
         minOrderValue: Number(form.minOrderValue) || 0,
         quantity: Number(form.quantity),
+        vipOnly: form.category === "VIP" ? true : form.vipOnly,
+        monthlyReset: form.category === "VIP" ? true : form.monthlyReset,
+        monthlyQuantity: form.category === "VIP" ? Number(form.quantity) : Number(form.monthlyQuantity || form.quantity),
         // Chuyển đổi datetime-local sang chuẩn ISO của Backend
         expiryDate: new Date(form.expiryDate).toISOString(),
         active: form.active,
@@ -255,6 +261,11 @@ function VoucherFormModal({ isOpen, onClose, initialVoucher, onSubmit }) {
               <option value="CASHBACK">Hoàn xu / Tích điểm</option>
               <option value="VIP">Đặc quyền VIP</option>
             </select>
+            {form.category === "VIP" ? (
+              <p className="text-xs text-fuchsia-600 font-medium">
+                Voucher loại VIP chỉ cấp cho user đang có gói VIP còn hạn. Trường "Số lượng" sẽ được hiểu là quota sử dụng mỗi tháng và tự reset khi sang tháng mới.
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-2">

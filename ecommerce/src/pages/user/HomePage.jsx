@@ -17,7 +17,7 @@ import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ProductGrid from "@/components/product/ProductGrid";
 import { categoryService } from "@/services/admin/categoryService";
 import productService from "@/services/admin/productService";
-import newsService from "@/services/newsService";
+import newsService from "@/services/user/newsService";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },

@@ -15,6 +15,9 @@ public class VoucherRequest {
     private Double discountValue;
     private Double minOrderValue;
     private Integer quantity;
+    private Boolean vipOnly;
+    private Boolean monthlyReset;
+    private Integer monthlyQuantity;
     private LocalDateTime expiryDate;
     private Boolean active;
     private String image;

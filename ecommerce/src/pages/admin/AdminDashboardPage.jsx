@@ -4,7 +4,7 @@ import LoadingSpinner from "@/components/common/LoadingSpinner";
 import StatsCard from "@/components/admin/StatsCard";
 import DataTable from "@/components/admin/DataTable";
 import { formatCurrency, formatDate } from "@/utils/format";
-import adminService from "@/services/adminService";
+import adminService from "@/services/admin/dashboardService";
 
 function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);

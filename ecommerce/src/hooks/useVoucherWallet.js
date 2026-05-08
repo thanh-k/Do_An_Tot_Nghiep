@@ -11,7 +11,7 @@ export default function useVoucherWallet() {
       if (stored) {
         try {
           setSavedVoucherCodes(JSON.parse(stored));
-        } catch (e) {
+        } catch {
           setSavedVoucherCodes([]);
         }
       } else {
@@ -22,20 +22,27 @@ export default function useVoucherWallet() {
     }
   }, [currentUser]);
 
-  const saveVoucher = (code) => {
+  const persist = (codes) => {
     if (!currentUser) return;
-    if (savedVoucherCodes.includes(code)) return;
-    const updated = [...savedVoucherCodes, code];
-    setSavedVoucherCodes(updated);
-    localStorage.setItem(
-      `voucher_wallet_${currentUser.id}`,
-      JSON.stringify(updated),
-    );
+    setSavedVoucherCodes(codes);
+    localStorage.setItem(`voucher_wallet_${currentUser.id}`, JSON.stringify(codes));
   };
 
-  const isSaved = (code) => {
-    return savedVoucherCodes.includes(code);
+  const saveVoucher = (code) => {
+    if (!currentUser || savedVoucherCodes.includes(code)) return;
+    persist([...savedVoucherCodes, code]);
   };
 
-  return { savedVoucherCodes, saveVoucher, isSaved };
+  const isSaved = (code) => savedVoucherCodes.includes(code);
+
+  const syncAvailableCodes = (availableCodes = []) => {
+    if (!currentUser) return;
+    const allowed = new Set(availableCodes);
+    const next = savedVoucherCodes.filter((code) => allowed.has(code));
+    if (next.length !== savedVoucherCodes.length) {
+      persist(next);
+    }
+  };
+
+  return { savedVoucherCodes, saveVoucher, isSaved, syncAvailableCodes };
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Crown,
   Check,
@@ -9,85 +9,14 @@ import {
   BadgePercent,
   Star,
   Flame,
+  CalendarClock,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
-
-const MEMBERSHIP_PLANS = [
-  {
-    id: "regular",
-    name: "Thành viên thường",
-    price: 0,
-    originalPrice: 0,
-    duration: "Mặc định",
-    highlight: false,
-    badge: "Mặc định sau khi đăng ký",
-    description: "Dành cho mọi khách hàng sau khi tạo tài khoản thành công.",
-    benefits: [
-      "Mua sắm và theo dõi đơn hàng",
-      "Lưu địa chỉ và thông tin cá nhân",
-      "Nhận voucher cơ bản theo chương trình",
-      "Tích lũy điểm Nova Points",
-    ],
-  },
-  {
-    id: "vip-1m",
-    name: "VIP 1 tháng",
-    price: 20000,
-    originalPrice: 20000,
-    duration: "1 tháng",
-    highlight: false,
-    badge: "Gói linh hoạt",
-    description: "Phù hợp để trải nghiệm nhanh các quyền lợi VIP trong 1 tháng.",
-    benefits: [
-      "Ưu đãi voucher VIP riêng",
-      "Freeship ưu tiên cho đơn đủ điều kiện",
-      "Giảm giá độc quyền theo tháng",
-      "Tích điểm nhanh hơn thành viên thường",
-      "Ưu tiên nhận tin khuyến mãi sớm",
-    ],
-  },
-  {
-    id: "vip-6m",
-    name: "VIP 6 tháng",
-    price: 100000,
-    originalPrice: 120000,
-    duration: "6 tháng",
-    highlight: true,
-    badge: "Phổ biến nhất",
-    description:
-      "Tiết kiệm hơn khi đăng ký dài hạn. Giá gốc 120.000đ, ưu đãi lần đầu còn 100.000đ.",
-    benefits: [
-      "Toàn bộ quyền lợi VIP",
-      "Tiết kiệm chi phí hơn so với gói tháng",
-      "Voucher VIP định kỳ",
-      "Freeship ưu tiên",
-      "Giảm giá riêng cho hội viên",
-      "Tích điểm nhanh hơn thành viên thường",
-      "Ưu tiên hỗ trợ khách hàng",
-    ],
-  },
-  {
-    id: "vip-1y",
-    name: "VIP 1 năm",
-    price: 200000,
-    originalPrice: 240000,
-    duration: "1 năm",
-    highlight: false,
-    badge: "Ưu đãi năm đầu",
-    description:
-      "Gói tiết kiệm dài hạn dành cho khách hàng sử dụng thường xuyên. Giá ưu đãi năm đầu 200.000đ.",
-    benefits: [
-      "Toàn bộ quyền lợi VIP trong 12 tháng",
-      "Chi phí tối ưu nhất theo thời gian",
-      "Ưu đãi độc quyền theo mùa",
-      "Freeship và voucher ưu tiên",
-      "Tích điểm nhanh hơn",
-      "Ưu tiên thông báo sự kiện / sale lớn",
-      "Chăm sóc khách hàng ưu tiên",
-    ],
-  },
-];
+import { Link, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import Button from "@/components/common/Button";
+import useAuth from "@/hooks/useAuth";
+import membershipService from "@/services/user/membershipService";
 
 const BENEFIT_ROWS = [
   {
@@ -96,13 +25,6 @@ const BENEFIT_ROWS = [
     vip1m: "Nâng cấp thủ công",
     vip6m: "Nâng cấp thủ công",
     vip1y: "Nâng cấp thủ công",
-  },
-  {
-    label: "Phí gói",
-    regular: "Miễn phí",
-    vip1m: "20.000đ / 1 tháng",
-    vip6m: "100.000đ lần đầu",
-    vip1y: "200.000đ năm đầu",
   },
   {
     label: "Voucher cơ bản",
@@ -151,6 +73,13 @@ const BENEFIT_ROWS = [
 const formatCurrency = (value) =>
   Number(value || 0).toLocaleString("vi-VN") + " ₫";
 
+const formatDateTime = (value) => {
+  if (!value) return "Chưa có";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Chưa có";
+  return date.toLocaleDateString("vi-VN");
+};
+
 function BenefitCell({ value, positiveClass = "text-emerald-600" }) {
   if (value === true) {
     return (
@@ -168,14 +97,81 @@ function BenefitCell({ value, positiveClass = "text-emerald-600" }) {
   return <span className="font-semibold text-slate-700">{value}</span>;
 }
 
-function MembershipPage() {
-  const [selectedPlan, setSelectedPlan] = useState("vip-6m");
-  const currentMembership = "regular";
+function planToBenefitKey(planCode = "") {
+  const normalized = String(planCode).toUpperCase();
+  if (normalized.includes("6M")) return "vip6m";
+  if (normalized.includes("1Y") || normalized.includes("12M")) return "vip1y";
+  if (normalized.includes("1M")) return "vip1m";
+  return "regular";
+}
 
-  const selectedPlanData = useMemo(
-    () => MEMBERSHIP_PLANS.find((plan) => plan.id === selectedPlan) || MEMBERSHIP_PLANS[2],
-    [selectedPlan],
+function MembershipPage() {
+  const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const [plans, setPlans] = useState([]);
+  const [currentMembership, setCurrentMembership] = useState(null);
+  const [selectedPlanId, setSelectedPlanId] = useState(null);
+  const [loadingPlans, setLoadingPlans] = useState(true);
+  const [loadingMembership, setLoadingMembership] = useState(Boolean(currentUser));
+
+  useEffect(() => {
+    let mounted = true;
+    membershipService
+      .getPlans()
+      .then((data) => {
+        if (!mounted) return;
+        setPlans(data || []);
+        const highlighted = (data || []).find((plan) => plan.highlight) || data?.[0] || null;
+        setSelectedPlanId(highlighted?.id || null);
+      })
+      .catch((error) => toast.error(error.message || "Không tải được gói thành viên"))
+      .finally(() => mounted && setLoadingPlans(false));
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser) {
+      setCurrentMembership(null);
+      setLoadingMembership(false);
+      return;
+    }
+
+    let mounted = true;
+    setLoadingMembership(true);
+    membershipService
+      .getMyMembership()
+      .then((data) => mounted && setCurrentMembership(data))
+      .catch(() => mounted && setCurrentMembership(null))
+      .finally(() => mounted && setLoadingMembership(false));
+
+    return () => {
+      mounted = false;
+    };
+  }, [currentUser]);
+
+  const selectedPlan = useMemo(
+    () => plans.find((plan) => Number(plan.id) === Number(selectedPlanId)) || plans[0] || null,
+    [plans, selectedPlanId],
   );
+
+  const currentPlanKey = planToBenefitKey(currentMembership?.membershipCode);
+
+  const handleSelectPlan = (planId) => {
+    setSelectedPlanId(planId);
+  };
+
+  const handleRegisterMembership = () => {
+    if (!selectedPlan) return;
+    if (!currentUser) {
+      toast.error("Vui lòng đăng nhập để đăng ký thành viên VIP");
+      navigate("/login", { state: { from: { pathname: "/membership" } } });
+      return;
+    }
+    navigate(`/membership/checkout?planId=${selectedPlan.id}`);
+  };
 
   return (
     <div className="min-h-screen bg-[#f6f7fb]">
@@ -198,15 +194,15 @@ function MembershipPage() {
               </h1>
 
               <p className="mt-5 max-w-2xl text-base leading-7 text-slate-200 md:text-lg">
-                Sau khi đăng ký tài khoản, người dùng mặc định là <b>thành viên thường</b>.
-                Bạn có thể nâng cấp lên <b>VIP</b> theo từng gói thời gian để nhận thêm
-                voucher độc quyền, freeship ưu tiên, giảm giá riêng và nhiều đặc quyền khác.
+                Sau khi đăng ký tài khoản, người dùng mặc định là <b>thành viên thường</b>. Bạn có thể nâng cấp lên <b>VIP</b> theo từng gói thời gian để nhận thêm voucher độc quyền, freeship ưu tiên, giảm giá riêng và nhiều đặc quyền khác.
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">
                 <div className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 font-black text-slate-900">
                   <Crown size={18} className="text-amber-500" />
-                  Gói nổi bật: 6 tháng chỉ {formatCurrency(100000)}
+                  {loadingPlans || !selectedPlan
+                    ? "Đang tải gói thành viên"
+                    : `${selectedPlan.name} - ${formatCurrency(selectedPlan.price)}`}
                 </div>
 
                 <div className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-5 py-3 font-semibold text-white">
@@ -226,24 +222,38 @@ function MembershipPage() {
                   <div>
                     <p className="text-sm text-slate-200">Gói hiện tại</p>
                     <h2 className="mt-1 text-2xl font-black uppercase">
-                      {currentMembership === "vip" ? "VIP Member" : "Thành viên thường"}
+                      {loadingMembership
+                        ? "Đang tải..."
+                        : currentMembership?.vip
+                          ? currentMembership.membershipName
+                          : "Thành viên thường"}
                     </h2>
                   </div>
 
                   <div
                     className={`rounded-full px-4 py-2 text-xs font-black uppercase tracking-wider ${
-                      currentMembership === "vip"
+                      currentMembership?.vip
                         ? "bg-amber-400 text-slate-950"
                         : "bg-slate-200 text-slate-900"
                     }`}
                   >
-                    {currentMembership === "vip" ? "VIP" : "Regular"}
+                    {currentMembership?.vip ? "VIP" : "Regular"}
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-2 text-sm text-slate-200">
+                  <div className="flex items-center gap-2">
+                    <CalendarClock size={16} />
+                    <span>Bắt đầu: {formatDateTime(currentMembership?.startedAt)}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CalendarClock size={16} />
+                    <span>Hết hạn: {formatDateTime(currentMembership?.endedAt)}</span>
                   </div>
                 </div>
 
                 <p className="mt-4 text-sm leading-6 text-slate-200">
-                  Đây là giao diện FE mô phỏng. Sau khi nối backend, phần này sẽ hiển thị
-                  hạng hiện tại, gói đã mua, ngày kích hoạt và ngày hết hạn thật.
+                  Khi bấm đăng ký, hệ thống sẽ chuyển sang <b>trang thanh toán riêng cho hội viên</b>. Luồng này chỉ áp dụng cho membership, không dùng chung với checkout sản phẩm.
                 </p>
 
                 <Link
@@ -260,16 +270,16 @@ function MembershipPage() {
 
       <section className="container-padded py-4">
         <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-4">
-          {MEMBERSHIP_PLANS.map((plan, index) => (
+          {plans.map((plan, index) => (
             <motion.button
               key={plan.id}
               type="button"
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45, delay: index * 0.08 }}
-              onClick={() => setSelectedPlan(plan.id)}
+              onClick={() => handleSelectPlan(plan.id)}
               className={`text-left rounded-[28px] border bg-white p-6 shadow-sm transition-all ${
-                selectedPlan === plan.id
+                Number(selectedPlanId) === Number(plan.id)
                   ? "border-rose-500 ring-2 ring-rose-200"
                   : "border-slate-200 hover:-translate-y-1 hover:shadow-md"
               }`}
@@ -316,40 +326,23 @@ function MembershipPage() {
                     {plan.price === 0 ? "Miễn phí" : formatCurrency(plan.price)}
                   </span>
                   <span className="pb-1 text-sm font-semibold text-slate-500">
-                    {plan.price === 0 ? "" : ` / ${plan.duration}`}
+                    {plan.price === 0 ? "" : ` / ${plan.durationMonths} tháng`}
                   </span>
                 </div>
 
-                {plan.id === "vip-6m" && (
+                {String(plan.code).toUpperCase().includes("6M") && (
                   <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-rose-100 px-3 py-1 text-xs font-black uppercase tracking-wider text-rose-600">
                     <Flame size={14} />
                     Giảm giá lần đầu
                   </div>
                 )}
 
-                {plan.id === "vip-1y" && (
+                {String(plan.code).toUpperCase().includes("1Y") && (
                   <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-black uppercase tracking-wider text-emerald-600">
                     <BadgePercent size={14} />
                     Giá ưu đãi năm đầu
                   </div>
                 )}
-              </div>
-
-              <div className="mt-6 space-y-3">
-                {plan.benefits.map((benefit) => (
-                  <div key={benefit} className="flex items-start gap-3">
-                    <div
-                      className={`mt-0.5 rounded-full p-1 ${
-                        plan.highlight ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-600"
-                      }`}
-                    >
-                      <Check size={14} />
-                    </div>
-                    <span className="text-sm font-medium leading-6 text-slate-700">
-                      {benefit}
-                    </span>
-                  </div>
-                ))}
               </div>
             </motion.button>
           ))}
@@ -378,41 +371,21 @@ function MembershipPage() {
             <table className="min-w-full overflow-hidden rounded-2xl border border-slate-200">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-4 py-4 text-left text-sm font-black uppercase text-slate-700">
-                    Quyền lợi
-                  </th>
-                  <th className="px-4 py-4 text-left text-sm font-black uppercase text-slate-700">
-                    Thường
-                  </th>
-                  <th className="px-4 py-4 text-left text-sm font-black uppercase text-slate-700">
-                    VIP 1 tháng
-                  </th>
-                  <th className="px-4 py-4 text-left text-sm font-black uppercase text-slate-700">
-                    VIP 6 tháng
-                  </th>
-                  <th className="px-4 py-4 text-left text-sm font-black uppercase text-slate-700">
-                    VIP 1 năm
-                  </th>
+                  <th className="px-4 py-4 text-left text-sm font-black uppercase text-slate-700">Quyền lợi</th>
+                  <th className="px-4 py-4 text-left text-sm font-black uppercase text-slate-700">Thường</th>
+                  <th className="px-4 py-4 text-left text-sm font-black uppercase text-slate-700">VIP 1 tháng</th>
+                  <th className="px-4 py-4 text-left text-sm font-black uppercase text-slate-700">VIP 6 tháng</th>
+                  <th className="px-4 py-4 text-left text-sm font-black uppercase text-slate-700">VIP 1 năm</th>
                 </tr>
               </thead>
               <tbody>
                 {BENEFIT_ROWS.map((row) => (
                   <tr key={row.label} className="border-t border-slate-200">
-                    <td className="px-4 py-4 text-sm font-semibold text-slate-800">
-                      {row.label}
-                    </td>
-                    <td className="px-4 py-4 text-sm">
-                      <BenefitCell value={row.regular} />
-                    </td>
-                    <td className="px-4 py-4 text-sm">
-                      <BenefitCell value={row.vip1m} />
-                    </td>
-                    <td className="px-4 py-4 text-sm">
-                      <BenefitCell value={row.vip6m} />
-                    </td>
-                    <td className="px-4 py-4 text-sm">
-                      <BenefitCell value={row.vip1y} />
-                    </td>
+                    <td className="px-4 py-4 text-sm font-semibold text-slate-800">{row.label}</td>
+                    <td className="px-4 py-4 text-sm"><BenefitCell value={row.regular} positiveClass={currentPlanKey === "regular" ? "text-brand-700" : undefined} /></td>
+                    <td className="px-4 py-4 text-sm"><BenefitCell value={row.vip1m} positiveClass={currentPlanKey === "vip1m" ? "text-brand-700" : undefined} /></td>
+                    <td className="px-4 py-4 text-sm"><BenefitCell value={row.vip6m} positiveClass={currentPlanKey === "vip6m" ? "text-brand-700" : undefined} /></td>
+                    <td className="px-4 py-4 text-sm"><BenefitCell value={row.vip1y} positiveClass={currentPlanKey === "vip1y" ? "text-brand-700" : undefined} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -442,23 +415,17 @@ function MembershipPage() {
                 },
                 {
                   step: "Bước 3",
-                  title: "Thanh toán và kích hoạt",
-                  desc: "Sau này khi nối BE, thanh toán thành công sẽ cập nhật VIP và thời hạn sử dụng.",
+                  title: "Thanh toán offline",
+                  desc: "Hệ thống chuyển sang trang thanh toán riêng cho membership và ghi nhận đăng ký hội viên.",
                 },
               ].map((item) => (
                 <div
                   key={item.step}
                   className="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
                 >
-                  <p className="text-xs font-black uppercase tracking-widest text-rose-500">
-                    {item.step}
-                  </p>
-                  <h3 className="mt-3 text-lg font-black text-slate-900">
-                    {item.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
-                    {item.desc}
-                  </p>
+                  <p className="text-xs font-black uppercase tracking-widest text-rose-500">{item.step}</p>
+                  <h3 className="mt-3 text-lg font-black text-slate-900">{item.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-500">{item.desc}</p>
                 </div>
               ))}
             </div>
@@ -470,72 +437,75 @@ function MembershipPage() {
             </div>
 
             <h2 className="mt-4 text-3xl font-black uppercase text-slate-900">
-              {selectedPlanData.name}
+              {selectedPlan?.name || "Chưa chọn gói"}
             </h2>
 
             <p className="mt-3 text-sm leading-6 text-slate-500">
-              {selectedPlanData.description}
+              {selectedPlan?.description || "Vui lòng chọn một gói thành viên để tiếp tục."}
             </p>
 
             <div className="mt-6 rounded-[24px] bg-white p-5 shadow-sm">
               <p className="text-sm font-semibold text-slate-500">Thanh toán dự kiến</p>
 
-              {selectedPlanData.originalPrice > selectedPlanData.price &&
-                selectedPlanData.price > 0 && (
-                  <p className="mt-2 text-lg font-bold text-slate-400 line-through">
-                    {formatCurrency(selectedPlanData.originalPrice)}
-                  </p>
-                )}
+              {selectedPlan?.originalPrice > selectedPlan?.price && selectedPlan?.price > 0 && (
+                <p className="mt-2 text-lg font-bold text-slate-400 line-through">
+                  {formatCurrency(selectedPlan.originalPrice)}
+                </p>
+              )}
 
               <p className="mt-1 text-4xl font-black text-slate-900">
-                {selectedPlanData.price === 0
-                  ? "Miễn phí"
-                  : formatCurrency(selectedPlanData.price)}
+                {!selectedPlan
+                  ? "--"
+                  : selectedPlan.price === 0
+                    ? "Miễn phí"
+                    : formatCurrency(selectedPlan.price)}
               </p>
 
               <p className="mt-1 text-sm text-slate-500">
-                {selectedPlanData.price === 0
-                  ? "Áp dụng mặc định sau khi đăng ký"
-                  : `${selectedPlanData.duration}`}
+                {!selectedPlan
+                  ? ""
+                  : selectedPlan.price === 0
+                    ? "Áp dụng mặc định sau khi đăng ký"
+                    : `${selectedPlan.durationMonths} tháng`}
               </p>
             </div>
 
             <div className="mt-6 space-y-3">
               <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm">
                 <Truck size={18} className="text-rose-500" />
-                <span className="text-sm font-semibold text-slate-700">
-                  Freeship và voucher ưu tiên
-                </span>
+                <span className="text-sm font-semibold text-slate-700">Freeship và voucher ưu tiên</span>
               </div>
 
               <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm">
                 <BadgePercent size={18} className="text-rose-500" />
-                <span className="text-sm font-semibold text-slate-700">
-                  Giá tốt hơn cho chương trình hội viên
-                </span>
+                <span className="text-sm font-semibold text-slate-700">Giá tốt hơn cho chương trình hội viên</span>
               </div>
 
               <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm">
                 <Gift size={18} className="text-rose-500" />
-                <span className="text-sm font-semibold text-slate-700">
-                  Mở khóa ưu đãi độc quyền theo gói
-                </span>
+                <span className="text-sm font-semibold text-slate-700">Quyền lợi riêng cho thành viên VIP</span>
               </div>
             </div>
 
-            <button
-              type="button"
-              className="mt-6 w-full rounded-2xl bg-rose-600 px-5 py-4 text-sm font-black uppercase tracking-wider text-white transition hover:bg-rose-700"
-            >
-              {selectedPlanData.id === "regular"
-                ? "Đang là gói mặc định"
-                : "Nâng cấp gói này"}
-            </button>
-
-            <p className="mt-3 text-center text-xs leading-5 text-slate-500">
-              Giai đoạn này mới là giao diện FE. Bước tiếp theo sẽ nối API để xử lý
-              thanh toán, kích hoạt VIP và tính ngày hết hạn.
-            </p>
+            <div className="mt-6 space-y-3">
+              <Button
+                fullWidth
+                size="lg"
+                onClick={handleRegisterMembership}
+                disabled={!selectedPlan || loadingPlans}
+              >
+                Đăng ký gói thành viên
+              </Button>
+              {!currentUser ? (
+                <p className="text-center text-xs text-slate-500">
+                  Bạn cần đăng nhập trước khi đăng ký hội viên VIP.
+                </p>
+              ) : (
+                <p className="text-center text-xs text-slate-500">
+                  Hệ thống sẽ chuyển sang trang thanh toán riêng cho membership.
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </section>

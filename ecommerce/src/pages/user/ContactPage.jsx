@@ -13,7 +13,7 @@ import {
   Globe,
 } from "lucide-react";
 import useAuth from "@/hooks/useAuth";
-import contactService from "@/services/contactService";
+import contactService from "@/services/user/contactService";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
