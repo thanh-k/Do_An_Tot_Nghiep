@@ -8,6 +8,9 @@ import lombok.*;
 @AllArgsConstructor
 public class OrderDetailResponse {
     private Long id;
+    private Long productId;
+    private Long productVariantId;
+    private String productSlug;
     private String variantSku;
     private Integer quantity;
     private Double priceAtPurchase;

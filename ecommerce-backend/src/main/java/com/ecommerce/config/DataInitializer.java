@@ -190,7 +190,8 @@ public class DataInitializer implements CommandLineRunner {
                 permission("REVIEW_VIEW", "Xem bình luận", "REVIEW"),
                 permission("REVIEW_CREATE", "Thêm bình luận", "REVIEW"),
                 permission("REVIEW_UPDATE", "Sửa bình luận", "REVIEW"),
-                permission("REVIEW_DELETE", "Xóa bình luận", "REVIEW")
+                permission("REVIEW_DELETE", "Xóa bình luận", "REVIEW"),
+                permission("REVIEW_REPLY", "Phản hồi đánh giá", "REVIEW")
         );
 
         for (AccessPermission permission : permissions) {
@@ -281,7 +282,9 @@ public class DataInitializer implements CommandLineRunner {
                         "ORDER_UPDATE",
 
                         "REVIEW_VIEW",
-                        "REVIEW_DELETE"
+                        "REVIEW_UPDATE",
+                        "REVIEW_DELETE",
+                        "REVIEW_REPLY"
                 )
         );
 
@@ -379,7 +382,8 @@ public class DataInitializer implements CommandLineRunner {
                         "REVIEW_VIEW",
                         "REVIEW_CREATE",
                         "REVIEW_UPDATE",
-                        "REVIEW_DELETE"
+                        "REVIEW_DELETE",
+                        "REVIEW_REPLY"
                 )
         );
     }

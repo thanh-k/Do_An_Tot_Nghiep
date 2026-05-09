@@ -15,6 +15,7 @@ import {
   Newspaper,
   BookOpenText,
   MessageSquareMore,
+  Star,
 } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import logo from "@/assets/logo.svg";
@@ -33,6 +34,7 @@ const items = [
       "USER_VIEW",
       "PRODUCT_VIEW",
       "ORDER_VIEW",
+      "REVIEW_VIEW",
       "CATEGORY_VIEW",
       "BRAND_VIEW",
       "CONTACT_VIEW",
@@ -61,6 +63,12 @@ const items = [
     label: "Đơn hàng",
     icon: PackageCheck,
     permissions: ["ORDER_VIEW"],
+  },
+  {
+    to: "/admin/reviews",
+    label: "Đánh giá",
+    icon: Star,
+    permissions: ["REVIEW_VIEW"],
   },
   {
     to: "/admin/vouchers",

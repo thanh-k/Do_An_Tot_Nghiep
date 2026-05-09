@@ -53,7 +53,7 @@ function HomePage() {
             featured: [],
             latest: [],
             deals: [],
-          },
+          }
         );
 
         setCategories(Array.isArray(categoriesData) ? categoriesData : []);
@@ -61,8 +61,8 @@ function HomePage() {
         const posts = Array.isArray(newsData?.content)
           ? newsData.content
           : Array.isArray(newsData)
-            ? newsData
-            : [];
+          ? newsData
+          : [];
 
         setNews(posts);
         setTrendingNews(Array.isArray(trendingData) ? trendingData : []);
@@ -73,8 +73,35 @@ function HomePage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const normalizeProductsWithReview = (products = []) => {
+    return products.map((product) => {
+      const firstVariant = Array.isArray(product.variants)
+        ? product.variants[0]
+        : null;
+
+      return {
+        ...product,
+        image:
+          product.thumbnail ||
+          firstVariant?.images?.[0] ||
+          firstVariant?.image ||
+          "",
+        rating: Number(product.rating || product.averageRating || 0),
+        reviewCount: Number(product.reviewCount || product.totalReviews || 0),
+      };
+    });
+  };
+
+  const featuredProducts = useMemo(() => {
+    return normalizeProductsWithReview(collections.featured || []);
+  }, [collections.featured]);
+
+  const latestProducts = useMemo(() => {
+    return normalizeProductsWithReview(collections.latest || []);
+  }, [collections.latest]);
+
   const discountedProducts = useMemo(() => {
-    return (collections.featured || [])
+    return (featuredProducts || [])
       .map((product) => {
         const bestVariant = (product.variants || [])
           .filter((variant) => {
@@ -102,15 +129,15 @@ function HomePage() {
           original,
           sale,
           discountPercent,
-          image: bestVariant.images?.[0] || product.thumbnail,
-          reviewCount: product.reviewCount || 0,
-          rating: product.rating || 4.8,
+          image: bestVariant.images?.[0] || bestVariant.image || product.thumbnail,
+          reviewCount: Number(product.reviewCount || 0),
+          rating: Number(product.rating || 0),
         };
       })
       .filter(Boolean)
       .sort((a, b) => b.discountPercent - a.discountPercent)
       .slice(0, 5);
-  }, [collections.featured]);
+  }, [featuredProducts]);
 
   const highlightProduct =
     discountedProducts.length > 0
@@ -301,10 +328,25 @@ function HomePage() {
                         </div>
 
                         <div>
-                          <div className="mt-4 flex items-center gap-2 text-amber-400 min-h-[28px]">
-                            <span className="text-lg">★ ★ ★ ★ ★</span>
-                            <span className="text-slate-500 text-sm font-semibold">
-                              {highlightProduct.rating} ({highlightProduct.reviewCount} đánh giá)
+                          <div className="mt-4 flex items-center gap-2 min-h-[28px]">
+                            <div className="flex items-center gap-0.5 text-[16px] leading-none">
+                              {[1, 2, 3, 4, 5].map((star) => {
+                                const roundedRating = Math.round(Number(highlightProduct?.rating || 0));
+
+                                return (
+                                  <span
+                                    key={star}
+                                    className={star <= roundedRating ? "text-amber-400" : "text-slate-300"}
+                                  >
+                                    ★
+                                  </span>
+                                );
+                              })}
+                            </div>
+
+                            <span className="text-slate-500 text-sm font-medium">
+                              {Number(highlightProduct?.rating || 0).toFixed(1)} (
+                              {Number(highlightProduct?.reviewCount || 0)} đánh giá)
                             </span>
                           </div>
                         </div>
@@ -365,7 +407,7 @@ function HomePage() {
             </Link>
           </div>
 
-          <ProductGrid products={collections.featured?.slice(0, 5) || []} />
+          <ProductGrid products={featuredProducts.slice(0, 5)} />
         </div>
       </motion.section>
 
@@ -403,7 +445,7 @@ function HomePage() {
             actionLabel="Xem thêm"
           />
           <div className="mt-6">
-            <ProductGrid products={collections.latest?.slice(0, 6) || []} />
+            <ProductGrid products={latestProducts.slice(0, 6)} />
           </div>
         </div>
       </motion.section>
@@ -416,7 +458,7 @@ function HomePage() {
             actionLabel="Xem thêm"
           />
           <div className="mt-6">
-            <ProductGrid products={collections.featured?.slice(2, 8) || []} />
+            <ProductGrid products={featuredProducts.slice(2, 8)} />
           </div>
         </div>
       </motion.section>

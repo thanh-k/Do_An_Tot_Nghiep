@@ -102,6 +102,10 @@ public enum ErrorCode {
     MEMBERSHIP_PURCHASE_INVALID(1603, "Không thể đăng ký gói thành viên này", HttpStatus.BAD_REQUEST),
     MEMBERSHIP_PLAN_ALREADY_EXISTS(1604, "Mã gói thành viên đã tồn tại", HttpStatus.BAD_REQUEST),
     MEMBERSHIP_PLAN_IN_USE(1605, "Không thể xóa gói thành viên đã có người đăng ký", HttpStatus.BAD_REQUEST),
+    REVIEW_NOT_FOUND(1701, "Không tìm thấy đánh giá", HttpStatus.NOT_FOUND),
+    REVIEW_INVALID(1702, "Dữ liệu đánh giá không hợp lệ", HttpStatus.BAD_REQUEST),
+    REVIEW_NOT_ALLOWED(1703, "Bạn chỉ có thể đánh giá sau khi đã mua và nhận sản phẩm", HttpStatus.BAD_REQUEST),
+    REVIEW_ALREADY_EXISTS(1704, "Bạn đã đánh giá sản phẩm này rồi", HttpStatus.BAD_REQUEST),
     ;
 
     private final int code;
