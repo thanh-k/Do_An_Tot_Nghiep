@@ -14,7 +14,6 @@ import {
   formatPaymentStatus,
 } from "@/utils/format";
 
-// Helper function để lấy class màu sắc cho trạng thái đơn hàng
 const getStatusColorClass = (status) => {
   switch (status) {
     case "PENDING":
@@ -34,6 +33,12 @@ const getStatusColorClass = (status) => {
   }
 };
 
+const canReviewOrder = (status) => {
+  return ["DELIVERED", "COMPLETED", "PAID"].includes(
+    String(status || "").toUpperCase()
+  );
+};
+
 function OrderHistoryPage() {
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -49,27 +54,28 @@ function OrderHistoryPage() {
       .finally(() => setLoading(false));
   }, [currentUser]);
 
-  // Hàm Hủy Đơn Hàng cho Khách
   const handleCancelOrder = async (orderId) => {
     if (
       !window.confirm(
-        "Bạn có chắc chắn muốn hủy đơn hàng này không? Hành động này không thể hoàn tác.",
+        "Bạn có chắc chắn muốn hủy đơn hàng này không? Hành động này không thể hoàn tác."
       )
     )
       return;
+
     try {
       await axios.put(
         `http://localhost:8080/api/v1/orders/${orderId}/status`,
         null,
         {
           params: { status: "CANCELLED" },
-        },
+        }
       );
+
       toast.success("Đã hủy đơn hàng thành công!");
       setOrders((prevOrders) =>
         prevOrders.map((o) =>
-          o.id === orderId ? { ...o, status: "CANCELLED" } : o,
-        ),
+          o.id === orderId ? { ...o, status: "CANCELLED" } : o
+        )
       );
     } catch (error) {
       toast.error("Lỗi khi hủy đơn hàng. Vui lòng thử lại.");
@@ -108,6 +114,7 @@ function OrderHistoryPage() {
                     #{order.id}
                   </Link>
                 </div>
+
                 <div className="grid gap-2 sm:grid-cols-3">
                   <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm">
                     <p className="text-slate-500">Ngày đặt</p>
@@ -117,14 +124,18 @@ function OrderHistoryPage() {
                         : "Đang cập nhật"}
                     </p>
                   </div>
+
                   <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm">
                     <p className="text-slate-500 mb-2">Trạng thái</p>
                     <span
-                      className={`inline-block rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ${getStatusColorClass(order.status)}`}
+                      className={`inline-block rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ${getStatusColorClass(
+                        order.status
+                      )}`}
                     >
                       {formatOrderStatus(order.status)}
                     </span>
                   </div>
+
                   <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm">
                     <p className="text-slate-500">Thanh toán</p>
                     <p className="font-semibold text-emerald-700">
@@ -137,7 +148,6 @@ function OrderHistoryPage() {
               <div className="mt-5 space-y-4">
                 {(order.details || order.items || order.orderDetails || []).map(
                   (item, index) => {
-                    // Fallback thông tin nếu Backend trả về cấu trúc lồng nhau
                     const variant = item.productVariant || {};
                     const product = variant.product || {};
 
@@ -147,8 +157,9 @@ function OrderHistoryPage() {
                     const itemPrice =
                       item.price || item.priceAtPurchase || variant.price || 0;
                     const itemQuantity = item.quantity || 1;
+                    const productId = item.productId || product.id;
+                    const productSlug = item.productSlug || product.slug;
 
-                    // Xử lý hiển thị thuộc tính (Màu sắc, Dung lượng) an toàn
                     let variantAttrs = {};
                     try {
                       const attrsData = item.attributes || variant.attributes;
@@ -157,6 +168,7 @@ function OrderHistoryPage() {
                           ? JSON.parse(attrsData)
                           : attrsData || {};
                     } catch (e) {}
+
                     const variantLabel =
                       item.variantLabel ||
                       (variantAttrs.color
@@ -173,17 +185,39 @@ function OrderHistoryPage() {
                           alt={itemName}
                           className="h-24 w-24 rounded-xl object-cover border border-slate-100 bg-white"
                         />
+
                         <div className="flex-1">
                           <h3 className="font-semibold text-slate-900">
                             {itemName}
                           </h3>
+
                           <p className="mt-1 text-sm text-slate-500">
                             {variantLabel}
                           </p>
+
                           <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm">
-                            <span className="text-slate-500">
-                              Số lượng: {itemQuantity}
-                            </span>
+                            <div className="flex flex-col items-start gap-2">
+                              <span className="text-slate-500">
+                                Số lượng: {itemQuantity}
+                              </span>
+
+                              {canReviewOrder(order.status) ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!productSlug) {
+                                      toast.error("Không tìm thấy sản phẩm để đánh giá.");
+                                      return;
+                                    }
+                                    window.location.href = `/products/${productSlug}#review-section`;
+                                  }}
+                                  className="text-sm font-semibold text-amber-600 hover:underline"
+                                >
+                                  Đánh giá sản phẩm
+                                </button>
+                              ) : null}
+                            </div>
+
                             <span className="font-semibold text-slate-900">
                               {formatCurrency(itemPrice * itemQuantity)}
                             </span>
@@ -191,7 +225,7 @@ function OrderHistoryPage() {
                         </div>
                       </div>
                     );
-                  },
+                  }
                 )}
 
                 <div className="flex items-end justify-between pt-4">
@@ -202,6 +236,7 @@ function OrderHistoryPage() {
                     >
                       Xem chi tiết đơn hàng &rarr;
                     </Link>
+
                     {order.status === "PENDING" && (
                       <button
                         onClick={() => handleCancelOrder(order.id)}
@@ -211,6 +246,7 @@ function OrderHistoryPage() {
                       </button>
                     )}
                   </div>
+
                   <div className="text-right">
                     {order.voucherCode && (
                       <p className="text-xs text-rose-500 mb-1 font-medium italic">
@@ -220,6 +256,7 @@ function OrderHistoryPage() {
                         </span>
                       </p>
                     )}
+
                     <div className="text-lg font-bold text-brand-700">
                       Tổng thanh toán:{" "}
                       {formatCurrency(order.totalAmount || order.total || 0)}

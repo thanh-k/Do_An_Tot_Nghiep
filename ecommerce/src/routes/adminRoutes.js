@@ -13,6 +13,7 @@ import ContactManagementPage from "@/pages/admin/ContactManagementPage";
 import BrandManagementPage from "@/pages/admin/BrandManagementPage";
 import VoucherManagementPage from "@/pages/admin/VoucherManagementPage";
 import MembershipManagementPage from "@/pages/admin/MembershipManagementPage";
+import ReviewManagementPage from "@/pages/admin/ReviewManagementPage";
 
 export const adminRoutes = [
   {
@@ -39,6 +40,11 @@ export const adminRoutes = [
     path: "orders",
     component: OrderManagementPage,
     permissions: ["ORDER_VIEW"],
+  },
+  {
+    path: "reviews",
+    component: ReviewManagementPage,
+    permissions: ["REVIEW_VIEW"],
   },
   {
     path: "vouchers",

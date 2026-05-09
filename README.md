@@ -267,3 +267,27 @@ Nội dung thực hiện:
 - Hoàn thiện luồng tính giảm giá và trừ số lượng voucher VIP theo user
 
 ✍️ Người thực hiện: Thanh
+
+📅 Ngày: 09/05/2026
+🧩 Nội dung công việc:
+
+1 FE:
+- Làm trang quản lý đánh giá bên admin
+- Thêm tìm kiếm và bộ lọc đánh giá theo số sao, trạng thái hiển thị, đã mua hàng, đã phản hồi
+- Thêm modal xem chi tiết đánh giá
+- Thêm chức năng ẩn/hiện đánh giá
+- Thêm chức năng xóa đánh giá
+- Thêm giao diện phản hồi đánh giá từ shop
+- Hiển thị phản hồi của shop ở phía user
+- Điều chỉnh hiển thị rating và số lượng đánh giá ở trang chủ
+
+2 BE:
+- Làm API admin quản lý đánh giá
+- Thêm API lấy danh sách và chi tiết đánh giá
+- Thêm API ẩn/hiện đánh giá
+- Thêm API xóa đánh giá
+- Thêm API phản hồi đánh giá từ shop
+- Bổ sung dữ liệu rating và reviewCount vào sản phẩm để FE hiển thị
+- Cập nhật logic chỉ tính rating theo các đánh giá đang hiển thị
+
+✍️ Người thực hiện: Thanh

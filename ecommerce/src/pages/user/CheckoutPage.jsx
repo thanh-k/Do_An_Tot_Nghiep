@@ -38,7 +38,7 @@ function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState("cod");
 
   // --- VOUCHER STATES ---
-  const { syncAvailableCodes } = useVoucherWallet();
+  const { savedVoucherCodes, syncAvailableCodes } = useVoucherWallet();
   const [myVouchers, setMyVouchers] = useState([]);
   const [appliedVoucher, setAppliedVoucher] = useState(null);
   const [showVoucherModal, setShowVoucherModal] = useState(false);
@@ -54,12 +54,13 @@ function CheckoutPage() {
   userVoucherService
     .getActiveVouchers()
     .then((data) => {
+      const codes = savedVoucherCodes || [];
       setMyVouchers(
         (data || []).filter(
           (v) =>
-            savedVoucherCodes.includes(v.code) &&
-            (v.claimable !== false) &&
-            (v.eligible !== false)
+            codes.includes(v.code) &&
+            v.claimable !== false &&
+            v.eligible !== false
         )
       );
     })

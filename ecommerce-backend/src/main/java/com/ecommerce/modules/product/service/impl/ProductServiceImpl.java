@@ -12,16 +12,15 @@ import com.ecommerce.modules.product.dto.response.*;
 import com.ecommerce.modules.product.repository.*;
 import com.ecommerce.modules.product.service.ProductService;
 import com.ecommerce.modules.product.service.ProductValidatorService;
+import com.ecommerce.modules.review.repository.ProductReviewRepository;
 import com.ecommerce.modules.upload.service.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
-// import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,6 +35,7 @@ public class ProductServiceImpl implements ProductService {
         private final BrandRepository brandRepository;
         private final ProductValidatorService productValidator;
         private final CloudinaryService cloudinaryService;
+        private final ProductReviewRepository productReviewRepository;
 
         @Override
         @Transactional(readOnly = true)
@@ -73,38 +73,40 @@ public class ProductServiceImpl implements ProductService {
 
                 productValidator.validate(request, id);
 
-                // --- XỬ LÝ XÓA ẢNH CŨ TRÊN CLOUDINARY THÔNG MINH ---
-                // 1. Gom tất cả URL ảnh cũ đang có trên DB
                 Set<String> oldImageUrls = new HashSet<>();
-                if (existingProduct.getThumbnail() != null)
+                if (existingProduct.getThumbnail() != null) {
                         oldImageUrls.add(existingProduct.getThumbnail());
+                }
                 if (existingProduct.getImages() != null) {
                         existingProduct.getImages().forEach(img -> {
-                                if (img.getImageUrl() != null)
+                                if (img.getImageUrl() != null) {
                                         oldImageUrls.add(img.getImageUrl());
+                                }
                         });
                 }
                 if (existingProduct.getVariants() != null) {
                         existingProduct.getVariants().forEach(var -> {
-                                if (var.getImage() != null)
+                                if (var.getImage() != null) {
                                         oldImageUrls.add(var.getImage());
+                                }
                         });
                 }
 
-                // 2. Gom tất cả URL ảnh mới từ Request gửi lên
                 Set<String> newImageUrls = new HashSet<>();
-                if (request.getThumbnail() != null)
+                if (request.getThumbnail() != null) {
                         newImageUrls.add(request.getThumbnail());
-                if (request.getImages() != null)
+                }
+                if (request.getImages() != null) {
                         newImageUrls.addAll(request.getImages());
+                }
                 if (request.getVariants() != null) {
                         request.getVariants().forEach(var -> {
-                                if (var.getImage() != null)
+                                if (var.getImage() != null) {
                                         newImageUrls.add(var.getImage());
+                                }
                         });
                 }
 
-                // 3. Xóa những ảnh có ở Cũ nhưng KHÔNG CÓ ở Mới
                 for (String oldUrl : oldImageUrls) {
                         if (!newImageUrls.contains(oldUrl)) {
                                 String publicId = extractPublicId(oldUrl);
@@ -117,7 +119,6 @@ public class ProductServiceImpl implements ProductService {
                         }
                 }
 
-                // --- CẬP NHẬT DATABASE ---
                 mapRequestToEntity(request, existingProduct);
 
                 Category category = categoryRepository.findById(request.getCategoryId())
@@ -128,8 +129,6 @@ public class ProductServiceImpl implements ProductService {
                 existingProduct.setCategory(category);
                 existingProduct.setBrand(brand);
 
-                // FIX: Khi Entity Product có orphanRemoval = true, CHỈ CẦN gọi clear(), KHÔNG
-                // dùng deleteAll()
                 if (existingProduct.getVariants() != null) {
                         existingProduct.getVariants().clear();
                 }
@@ -149,9 +148,7 @@ public class ProductServiceImpl implements ProductService {
                 Product product = productRepository.findById(id)
                                 .orElseThrow(() -> new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION));
 
-                // Xóa tất cả ảnh liên quan trên Cloudinary
                 cleanOldResources(product);
-
                 productRepository.delete(product);
         }
 
@@ -164,14 +161,12 @@ public class ProductServiceImpl implements ProductService {
         }
 
         @Override
-        @Transactional(readOnly = true) // FIX: Thêm dòng này để tránh lỗi LazyInitialization
+        @Transactional(readOnly = true)
         public ProductResponse getProductById(Long id) {
                 Product product = productRepository.findById(id)
                                 .orElseThrow(() -> new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION));
                 return getProductResponse(product);
         }
-
-        // --- HELPER METHODS ---
 
         private void saveVariantsAndImages(ProductRequest request, Product product) {
                 if (request.getVariants() != null) {
@@ -188,8 +183,6 @@ public class ProductServiceImpl implements ProductService {
                                         .collect(Collectors.toList());
                         variants = variantRepository.saveAll(variants);
 
-                        // FIX: Cập nhật Collection an toàn cho Hibernate để tránh lỗi "collection no
-                        // longer referenced"
                         if (product.getVariants() == null) {
                                 product.setVariants(new HashSet<>(variants));
                         } else {
@@ -202,13 +195,14 @@ public class ProductServiceImpl implements ProductService {
                 }
 
                 if (request.getImages() != null) {
-                        List<ProductImage> images = request.getImages().stream().map(url -> ProductImage.builder()
-                                        .imageUrl(url)
-                                        .product(product)
-                                        .build()).collect(Collectors.toList());
+                        List<ProductImage> images = request.getImages().stream()
+                                        .map(url -> ProductImage.builder()
+                                                        .imageUrl(url)
+                                                        .product(product)
+                                                        .build())
+                                        .collect(Collectors.toList());
                         images = imageRepository.saveAll(images);
 
-                        // FIX: Tương tự với danh sách Images
                         if (product.getImages() == null) {
                                 product.setImages(new HashSet<>(images));
                         } else {
@@ -221,24 +215,20 @@ public class ProductServiceImpl implements ProductService {
                 }
         }
 
-        // Hàm helper để trích xuất publicId từ URL Cloudinary
         private String extractPublicId(String url) {
-                if (url == null || !url.contains("cloudinary.com") || !url.contains("upload/"))
+                if (url == null || !url.contains("cloudinary.com") || !url.contains("upload/")) {
                         return null;
+                }
                 try {
                         String[] parts = url.split("upload/");
-                        if (parts.length < 2)
+                        if (parts.length < 2) {
                                 return null;
+                        }
                         String afterUpload = parts[1];
 
-                        // Bỏ qua version (vd: v1712345678)
                         if (afterUpload.matches("^v\\d+/.*")) {
                                 afterUpload = afterUpload.substring(afterUpload.indexOf("/") + 1);
                         }
-
-                        // FIX: KHÔNG cắt phần đuôi mở rộng (.jpg, .png) ở đây nữa!
-                        // Vì hàm deleteFile trong CloudinaryService của bạn đã tự động cắt rồi.
-                        // Nếu cắt ở đây sẽ làm CloudinaryService bị lỗi "out of bounds".
 
                         return afterUpload;
                 } catch (Exception e) {
@@ -252,21 +242,24 @@ public class ProductServiceImpl implements ProductService {
 
                 if (product.getThumbnail() != null) {
                         String id = extractPublicId(product.getThumbnail());
-                        if (id != null)
+                        if (id != null) {
                                 publicIdsToDelete.add(id);
+                        }
                 }
                 if (product.getImages() != null) {
                         for (ProductImage img : product.getImages()) {
                                 String id = extractPublicId(img.getImageUrl());
-                                if (id != null)
+                                if (id != null) {
                                         publicIdsToDelete.add(id);
+                                }
                         }
                 }
                 if (product.getVariants() != null) {
                         for (ProductVariant var : product.getVariants()) {
                                 String id = extractPublicId(var.getImage());
-                                if (id != null)
+                                if (id != null) {
                                         publicIdsToDelete.add(id);
+                                }
                         }
                 }
 
@@ -293,17 +286,23 @@ public class ProductServiceImpl implements ProductService {
         }
 
         private ProductResponse getProductResponse(Product product) {
-                if (product == null)
+                if (product == null) {
                         return null;
+                }
 
                 try {
-                        // Lấy các dữ liệu an toàn, kiểm tra null trước khi gọi method
                         Category category = product.getCategory();
                         Brand brand = product.getBrand();
                         List<ProductVariant> variants = new ArrayList<>(
                                         product.getVariants() != null ? product.getVariants() : new HashSet<>());
                         List<ProductImage> images = new ArrayList<>(
                                         product.getImages() != null ? product.getImages() : new HashSet<>());
+
+                        List<ProductReview> reviews = productReviewRepository.findByProductIdAndIsVisibleTrueOrderByCreatedAtDesc(product.getId());
+                        double averageRating = reviews.isEmpty()
+                                        ? 0.0
+                                        : reviews.stream().mapToInt(ProductReview::getRating).average().orElse(0.0);
+                        long reviewCount = reviews.size();
 
                         return ProductResponse.builder()
                                         .id(product.getId())
@@ -316,36 +315,40 @@ public class ProductServiceImpl implements ProductService {
                                         .isFeatured(product.getIsFeatured())
                                         .isNew(product.getIsNew())
                                         .isSale(product.getIsSale())
-                                        // Dùng toán tử 3 ngôi an toàn
-                                        .category(category != null ? CategoryResponse.builder()
-                                                        .id(category.getId())
-                                                        .name(category.getName())
-                                                        .build() : null)
-                                        .brand(brand != null ? BrandResponse.builder()
-                                                        .id(brand.getId())
-                                                        .name(brand.getName())
-                                                        .build() : null)
-                                        // Stream an toàn
-                                        .variants(variants.stream().map(v -> VariantResponse.builder()
-                                                        .id(v.getId())
-                                                        .sku(v.getSku())
-                                                        .price(v.getPrice())
-                                                        .compareAtPrice(v.getCompareAtPrice())
-                                                        .stock(v.getStock())
-                                                        .attributes(v.getAttributes())
-                                                        .image(v.getImage())
-                                                        .build()).collect(Collectors.toList()))
+                                        .rating(Math.round(averageRating * 10.0) / 10.0)
+                                        .reviewCount(reviewCount)
+                                        .category(category != null
+                                                        ? CategoryResponse.builder()
+                                                                        .id(category.getId())
+                                                                        .name(category.getName())
+                                                                        .build()
+                                                        : null)
+                                        .brand(brand != null
+                                                        ? BrandResponse.builder()
+                                                                        .id(brand.getId())
+                                                                        .name(brand.getName())
+                                                                        .build()
+                                                        : null)
+                                        .variants(variants.stream()
+                                                        .map(v -> VariantResponse.builder()
+                                                                        .id(v.getId())
+                                                                        .sku(v.getSku())
+                                                                        .price(v.getPrice())
+                                                                        .compareAtPrice(v.getCompareAtPrice())
+                                                                        .stock(v.getStock())
+                                                                        .attributes(v.getAttributes())
+                                                                        .image(v.getImage())
+                                                                        .build())
+                                                        .collect(Collectors.toList()))
                                         .images(images.stream()
                                                         .map(ProductImage::getImageUrl)
                                                         .collect(Collectors.toList()))
                                         .build();
 
                 } catch (Exception e) {
-                        // NÍ NHÌN LOG NÀY Ở CONSOLE INTELLIJ KHI BỊ LỖI
                         System.err.println("LỖI XẢY RA TẠI GETPRODUCTRESPONSE: " + e.getMessage());
                         e.printStackTrace();
-                        throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION); // Trả về lỗi để Frontend xử lý
+                        throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
                 }
         }
-
 }
