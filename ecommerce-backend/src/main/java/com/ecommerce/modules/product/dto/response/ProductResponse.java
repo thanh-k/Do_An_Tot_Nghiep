@@ -3,6 +3,7 @@ package com.ecommerce.modules.product.dto.response;
 import com.ecommerce.modules.brand.dto.response.BrandResponse;
 import com.ecommerce.modules.category.dto.response.CategoryResponse;
 import lombok.*;
+
 import java.util.List;
 
 @Data
@@ -20,6 +21,9 @@ public class ProductResponse {
     private Boolean isFeatured;
     private Boolean isNew;
     private Boolean isSale;
+
+    private Double rating;
+    private Long reviewCount;
 
     // Trả về Object để FE hiển thị tên Category/Brand luôn, không chỉ mỗi ID
     private CategoryResponse category;

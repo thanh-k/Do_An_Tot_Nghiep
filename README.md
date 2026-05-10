@@ -232,3 +232,62 @@ Nội dung thực hiện:
 - Kiểm tra lại luồng hoạt động sau khi fix
 - Hoàn thiện source FE trên branch `thanh` để tiếp tục cập nhật lên Git
 ✍️ Người thực hiện: Thanh
+
+📅 Ngày: 25/04/2026
+🧩 Nội dung công việc:
+
+1 FE:
+- Tối ưu giao diện điện thoại
+- Chỉnh sửa hiển thị trang sản phẩm theo hướng gọn hơn trên mobile
+- Tối ưu bộ lọc, danh sách sản phẩm và khung chat AI trên điện thoại
+
+2 BE:
+- Thêm API chat AI
+- Kết nối frontend với backend cho chức năng tư vấn sản phẩm 
+- Tối ưu phản hồi AI và hỗ trợ ngữ cảnh hội thoại
+✍️ Người thực hiện: Thanh
+
+📅 Ngày: 08/05/2026
+🧩 Nội dung công việc:
+
+1 FE:
+- Hoàn thiện giao diện voucher VIP cho người dùng
+- Hiển thị voucher VIP cho cả user thường nhưng ở trạng thái bị khóa
+- Thêm thông báo “Hãy đăng ký thành viên VIP để được nhận voucher này”
+- Điều chỉnh luồng hiển thị voucher để user VIP mới được nhận và sử dụng
+- Kiểm tra và sửa lỗi trang quản lý chủ đề tin tức và bài viết tin tức sau khi tách service
+- Rà soát lại phần gọi service admin news để đồng bộ tên hàm
+
+2 BE:
+- Hoàn thiện membership và voucher VIP
+- Xử lý rule chỉ user VIP mới được nhận và sử dụng voucher VIP
+- Bổ sung logic reset quota voucher VIP theo tháng
+- Bổ sung logic thu hồi voucher VIP khi user hết hạn thành viên
+- Kiểm tra và sửa lỗi trong VoucherServiceImpl
+- Hoàn thiện luồng tính giảm giá và trừ số lượng voucher VIP theo user
+
+✍️ Người thực hiện: Thanh
+
+📅 Ngày: 09/05/2026
+🧩 Nội dung công việc:
+
+1 FE:
+- Làm trang quản lý đánh giá bên admin
+- Thêm tìm kiếm và bộ lọc đánh giá theo số sao, trạng thái hiển thị, đã mua hàng, đã phản hồi
+- Thêm modal xem chi tiết đánh giá
+- Thêm chức năng ẩn/hiện đánh giá
+- Thêm chức năng xóa đánh giá
+- Thêm giao diện phản hồi đánh giá từ shop
+- Hiển thị phản hồi của shop ở phía user
+- Điều chỉnh hiển thị rating và số lượng đánh giá ở trang chủ
+
+2 BE:
+- Làm API admin quản lý đánh giá
+- Thêm API lấy danh sách và chi tiết đánh giá
+- Thêm API ẩn/hiện đánh giá
+- Thêm API xóa đánh giá
+- Thêm API phản hồi đánh giá từ shop
+- Bổ sung dữ liệu rating và reviewCount vào sản phẩm để FE hiển thị
+- Cập nhật logic chỉ tính rating theo các đánh giá đang hiển thị
+
+✍️ Người thực hiện: Thanh

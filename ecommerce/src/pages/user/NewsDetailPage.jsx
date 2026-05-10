@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Calendar, ChevronLeft, Eye, Tag } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
-import newsService from "@/services/newsService";
+import newsService from "@/services/user/newsService";
 import { formatDate } from "@/utils/format";
 
 export default function NewsDetailPage() {

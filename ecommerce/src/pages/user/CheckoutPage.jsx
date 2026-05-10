@@ -38,7 +38,7 @@ function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState("cod");
 
   // --- VOUCHER STATES ---
-  const { savedVoucherCodes } = useVoucherWallet();
+  const { savedVoucherCodes, syncAvailableCodes } = useVoucherWallet();
   const [myVouchers, setMyVouchers] = useState([]);
   const [appliedVoucher, setAppliedVoucher] = useState(null);
   const [showVoucherModal, setShowVoucherModal] = useState(false);
@@ -51,13 +51,21 @@ function CheckoutPage() {
   });
 
   useEffect(() => {
-    userVoucherService
-      .getActiveVouchers()
-      .then((data) => {
-        setMyVouchers(data.filter((v) => savedVoucherCodes.includes(v.code)));
-      })
-      .catch(() => {});
-  }, [savedVoucherCodes]);
+  userVoucherService
+    .getActiveVouchers()
+    .then((data) => {
+      const codes = savedVoucherCodes || [];
+      setMyVouchers(
+        (data || []).filter(
+          (v) =>
+            codes.includes(v.code) &&
+            v.claimable !== false &&
+            v.eligible !== false
+        )
+      );
+    })
+    .catch(() => {});
+}, [savedVoucherCodes]);
 
   // Lấy ID các sản phẩm được chọn từ Giỏ hàng truyền sang
   const selectedIds = location.state?.selectedIds || [];

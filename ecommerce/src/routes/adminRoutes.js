@@ -12,6 +12,8 @@ import NewsPostManagementPage from "@/pages/admin/NewsPostManagementPage";
 import ContactManagementPage from "@/pages/admin/ContactManagementPage";
 import BrandManagementPage from "@/pages/admin/BrandManagementPage";
 import VoucherManagementPage from "@/pages/admin/VoucherManagementPage";
+import MembershipManagementPage from "@/pages/admin/MembershipManagementPage";
+import ReviewManagementPage from "@/pages/admin/ReviewManagementPage";
 
 export const adminRoutes = [
   {
@@ -40,9 +42,19 @@ export const adminRoutes = [
     permissions: ["ORDER_VIEW"],
   },
   {
+    path: "reviews",
+    component: ReviewManagementPage,
+    permissions: ["REVIEW_VIEW"],
+  },
+  {
     path: "vouchers",
     component: VoucherManagementPage,
-    permissions: ["VOUCHER_VIEW"], // Thêm quyền xem voucher
+    permissions: ["VOUCHER_VIEW"],
+  },
+  {
+    path: "memberships",
+    component: MembershipManagementPage,
+    permissions: ["MEMBERSHIP_MANAGE", "MEMBERSHIP_VIEW"],
   },
   {
     path: "customers",

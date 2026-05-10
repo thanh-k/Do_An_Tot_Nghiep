@@ -20,6 +20,12 @@ public class UserResponse {
     private List<String> permissions;
     private Boolean active;
     private String authProvider;
+    private Boolean vip;
+    private String membershipCode;
+    private String membershipName;
+    private String membershipStatus;
+    private LocalDateTime membershipStartedAt;
+    private LocalDateTime membershipEndedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<UserAddressResponse> addresses;

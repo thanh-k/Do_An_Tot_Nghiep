@@ -15,6 +15,8 @@ import NewsDetailPage from "@/pages/user/NewsDetailPage";
 import VoucherPage from "@/pages/user/VoucherPage";
 import ComparePage from "@/pages/user/ComparePage";
 import UserDashboard from "@/pages/user/UserDashboard";
+import MembershipPage from "@/pages/user/MembershipPage";
+import MembershipCheckoutPage from "@/pages/user/MembershipCheckoutPage";
 
 import FAQPage from "@/pages/user/FAQPage";
 import OrderDetailPage from "@/pages/user/OrderDetailPage";
@@ -37,6 +39,8 @@ export const userRoutes = [
   { path: "news/:slug", component: NewsDetailPage },
   { path: "vouchers", component: VoucherPage },
   { path: "compare", component: ComparePage },
+  { path: "membership", component: MembershipPage },
+  { path: "membership/checkout", component: MembershipCheckoutPage, roles: ["user", "admin"] },
   { path: "orders/:id", component: OrderDetailPage, roles: ["user", "admin"] },
   { path: "faq", component: FAQPage },
 ];

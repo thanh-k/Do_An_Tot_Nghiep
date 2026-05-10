@@ -467,7 +467,7 @@ function ProductDetailPage() {
         <h2 className="text-3xl font-black italic uppercase text-slate-900 border-l-8 border-rose-600 pl-6 mb-12">
           Khách hàng nói về siêu phẩm này
         </h2>
-        <ProductReviews />
+        <ProductReviews productId={productData.id} />
       </section>
 
       {productData.relatedProducts &&

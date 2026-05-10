@@ -6,7 +6,7 @@ import Button from "@/components/common/Button";
 import Input from "@/components/common/Input";
 import PageHeader from "@/components/common/PageHeader";
 import { useDebounce } from "@/hooks/useDebounce";
-import userService from "@/services/userService";
+import phonePrefixService from "@/services/admin/phonePrefixService";
 
 const initialForm = { prefix: "", providerName: "", active: true };
 
@@ -20,7 +20,7 @@ function PhonePrefixManagementPage() {
   const loadPrefixes = async () => {
     setLoading(true);
     try {
-      const data = await userService.getPhonePrefixes();
+      const data = await phonePrefixService.getPhonePrefixes();
       setPrefixes(data);
     } finally {
       setLoading(false);
@@ -58,10 +58,10 @@ function PhonePrefixManagementPage() {
     };
 
     if (prefixForm.id) {
-      await userService.updatePhonePrefix(prefixForm.id, payload);
+      await phonePrefixService.updatePhonePrefix(prefixForm.id, payload);
       toast.success("Đã cập nhật đầu số");
     } else {
-      await userService.createPhonePrefix(payload);
+      await phonePrefixService.createPhonePrefix(payload);
       toast.success("Đã thêm đầu số");
     }
 
@@ -99,7 +99,7 @@ function PhonePrefixManagementPage() {
             variant="danger"
             onClick={async () => {
               if (!window.confirm(`Xóa đầu số ${row.prefix}?`)) return;
-              await userService.deletePhonePrefix(row.id);
+              await phonePrefixService.deletePhonePrefix(row.id);
               toast.success("Đã xóa đầu số");
               if (prefixForm.id === row.id) resetForm();
               loadPrefixes();

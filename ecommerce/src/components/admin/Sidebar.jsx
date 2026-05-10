@@ -11,9 +11,11 @@ import {
   Users,
   BadgeCheck,
   Ticket,
+  Crown,
   Newspaper,
   BookOpenText,
   MessageSquareMore,
+  Star,
 } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import logo from "@/assets/logo.svg";
@@ -32,6 +34,7 @@ const items = [
       "USER_VIEW",
       "PRODUCT_VIEW",
       "ORDER_VIEW",
+      "REVIEW_VIEW",
       "CATEGORY_VIEW",
       "BRAND_VIEW",
       "CONTACT_VIEW",
@@ -62,10 +65,22 @@ const items = [
     permissions: ["ORDER_VIEW"],
   },
   {
+    to: "/admin/reviews",
+    label: "Đánh giá",
+    icon: Star,
+    permissions: ["REVIEW_VIEW"],
+  },
+  {
     to: "/admin/vouchers",
     label: "Voucher",
     icon: Ticket,
     permissions: ["VOUCHER_VIEW"],
+  },
+  {
+    to: "/admin/memberships",
+    label: "Gói VIP",
+    icon: Crown,
+    permissions: ["MEMBERSHIP_MANAGE", "MEMBERSHIP_VIEW"],
   },
   {
     to: "/admin/customers",

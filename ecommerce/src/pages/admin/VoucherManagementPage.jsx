@@ -240,7 +240,7 @@ function VoucherManagementPage() {
           <option value="DISCOUNT">Giảm giá đơn hàng</option>
           <option value="SHIPPING">Miễn phí vận chuyển</option>
           <option value="CASHBACK">Hoàn xu / Điểm</option>
-          <option value="VIP">Đặc quyền VIP</option>
+          <option value="VIP">Đặc quyền VIP (reset hàng tháng)</option>
         </select>
       </div>
       {loading ? (

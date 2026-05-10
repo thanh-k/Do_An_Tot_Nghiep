@@ -6,17 +6,8 @@ const mapContact = (item) => ({
   repliedAtLabel: item.repliedAt ? new Date(item.repliedAt).toLocaleString("vi-VN") : "",
 });
 
-export const contactService = {
-  async create(payload) {
-    return mapContact(
-      await apiClient.request("/contacts", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      })
-    );
-  },
-
-  async getAdminContacts(params = {}) {
+const adminContactService = {
+  async getContacts(params = {}) {
     const query = new URLSearchParams();
     if (params.keyword) query.set("keyword", params.keyword);
     if (params.status) query.set("status", params.status);
@@ -43,4 +34,4 @@ export const contactService = {
   },
 };
 
-export default contactService;
+export default adminContactService;

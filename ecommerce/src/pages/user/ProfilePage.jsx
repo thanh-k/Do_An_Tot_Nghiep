@@ -5,7 +5,7 @@ import Button from "@/components/common/Button";
 import Input from "@/components/common/Input";
 import PageHeader from "@/components/common/PageHeader";
 import useAuth from "@/hooks/useAuth";
-import userService from "@/services/userService";
+import userService from "@/services/user/profileService";
 import { validateEmail, validateFullName, validatePhone } from "@/utils/validators";
 
 const emptyAddress = { recipientName: "", phone: "", addressLine: "", isDefault: false };

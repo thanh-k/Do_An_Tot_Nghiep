@@ -23,7 +23,19 @@ public class Voucher {
     private String discountType; // "PERCENT" hoặc "FIXED"
     private Double discountValue; // Giá trị: ví dụ 10 (cho 10%) hoặc 50000 (cho 50k)
     private Double minOrderValue; // Đơn tối thiểu phải đạt để dùng voucher
-    private Integer quantity; // Số lượng còn lại
+    private Integer quantity; // Số lượng còn lại hoặc quota/tháng cho VIP
+
+    @Column(name = "vip_only", nullable = false)
+    @Builder.Default
+    private Boolean vipOnly = false;
+
+    @Column(name = "monthly_reset", nullable = false)
+    @Builder.Default
+    private Boolean monthlyReset = false;
+
+    @Column(name = "monthly_quantity")
+    private Integer monthlyQuantity;
+
     private LocalDateTime expiryDate;
     private String image;
     private Boolean active;

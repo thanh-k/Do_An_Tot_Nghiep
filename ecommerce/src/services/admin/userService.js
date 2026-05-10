@@ -9,9 +9,15 @@ const mapUser = (user) => ({
   roles: user.roles || [],
   permissions: user.permissions || [],
   addresses: user.addresses || [],
+  vip: Boolean(user.vip),
+  membershipCode: user.membershipCode || "REGULAR",
+  membershipName: user.membershipName || "Thành viên thường",
+  membershipStatus: user.membershipStatus || "REGULAR",
+  membershipStartedAt: user.membershipStartedAt || null,
+  membershipEndedAt: user.membershipEndedAt || null,
 });
 
-export const userService = {
+const adminUserService = {
   async getUsers() {
     return (await apiClient.request("/admin/users")).map(mapUser);
   },
@@ -33,40 +39,9 @@ export const userService = {
   async deleteUser(userId) {
     return apiClient.request(`/admin/users/${userId}`, { method: "DELETE" });
   },
-
   async toggleUserStatus(userId) {
     return mapUser(await apiClient.request(`/admin/users/${userId}/toggle-status`, { method: "PUT" }));
   },
-  async getProfileAddresses() {
-    return apiClient.request("/users/me/addresses");
-  },
-  async createAddress(payload) {
-    return apiClient.request("/users/me/addresses", { method: "POST", body: JSON.stringify(payload) });
-  },
-  async updateAddress(id, payload) {
-    return apiClient.request(`/users/me/addresses/${id}`, { method: "PUT", body: JSON.stringify(payload) });
-  },
-  async deleteAddress(id) {
-    return apiClient.request(`/users/me/addresses/${id}`, { method: "DELETE" });
-  },
-  async setDefaultAddress(id) {
-    return apiClient.request(`/users/me/addresses/${id}/default`, { method: "PATCH" });
-  },
-  async getPhonePrefixes() {
-    return apiClient.request("/admin/phone-prefixes");
-  },
-  async getPublicPhonePrefixes() {
-    return apiClient.request("/public/phone-prefixes");
-  },
-  async createPhonePrefix(payload) {
-    return apiClient.request("/admin/phone-prefixes", { method: "POST", body: JSON.stringify(payload) });
-  },
-  async updatePhonePrefix(id, payload) {
-    return apiClient.request(`/admin/phone-prefixes/${id}`, { method: "PUT", body: JSON.stringify(payload) });
-  },
-  async deletePhonePrefix(id) {
-    return apiClient.request(`/admin/phone-prefixes/${id}`, { method: "DELETE" });
-  },
 };
 
-export default userService;
+export default adminUserService;
