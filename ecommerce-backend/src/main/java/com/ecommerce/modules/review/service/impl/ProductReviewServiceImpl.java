@@ -7,6 +7,7 @@ import com.ecommerce.entity.Product;
 import com.ecommerce.entity.ProductReview;
 import com.ecommerce.entity.User;
 import com.ecommerce.modules.order.repository.OrderRepository;
+import com.ecommerce.modules.coin.service.CoinTaskService;
 import com.ecommerce.modules.product.repository.ProductRepository;
 import com.ecommerce.modules.review.dto.request.AdminReviewReplyRequest;
 import com.ecommerce.modules.review.dto.request.AdminReviewVisibilityRequest;
@@ -46,6 +47,7 @@ public class ProductReviewServiceImpl implements ProductReviewService {
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
     private final CloudinaryService cloudinaryService;
+    private final CoinTaskService coinTaskService;
 
     @Override
     @Transactional(readOnly = true)
@@ -95,7 +97,8 @@ public class ProductReviewServiceImpl implements ProductReviewService {
                 .isVisible(true)
                 .build();
 
-        productReviewRepository.save(review);
+        review = productReviewRepository.save(review);
+        coinTaskService.rewardReviewCreated(currentUser, review, !uploadedImageUrls.isEmpty());
 
         List<ProductReview> reviews =
                 productReviewRepository.findByProductIdAndIsVisibleTrueOrderByCreatedAtDesc(productId);

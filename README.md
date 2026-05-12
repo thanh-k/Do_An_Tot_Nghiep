@@ -291,3 +291,23 @@ Nội dung thực hiện:
 - Cập nhật logic chỉ tính rating theo các đánh giá đang hiển thị
 
 ✍️ Người thực hiện: Thanh
+
+📅 Ngày: 12/05/2026
+🧩 Nội dung công việc:
+
+1. FE:
+- Hoàn thiện giao diện Xu thưởng cho phía user
+- Thêm trang Xu thưởng gồm: tổng xu hiện có, nhiệm vụ nhận xu, đổi quà
+- Sửa giao diện và luồng nhận xu hằng ngày
+- Bổ sung bộ đếm cho nhiệm vụ online đủ 5 phút
+- Sửa modal quản lý nhiệm vụ xu ở trang admin để hiển thị đúng giao diện và cuộn tốt trên màn hình nhỏ
+- Hoàn thiện trang admin quản lý nhiệm vụ nhận xu: thêm, sửa, xóa, lọc theo loại nhiệm vụ
+
+2. BE:
+- Làm API cho phần Xu thưởng
+- Thêm xử lý lấy tổng quan ví xu
+- Thêm xử lý nhận xu nhiệm vụ hằng ngày
+- Thêm xử lý cộng xu khi đánh giá sản phẩm
+- Sửa lỗi overview bị 500 do transaction read-only nhưng lại tạo ví xu
+
+✍️ Người thực hiện: Thanh

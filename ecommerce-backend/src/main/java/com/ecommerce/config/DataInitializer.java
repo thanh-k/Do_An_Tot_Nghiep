@@ -191,7 +191,12 @@ public class DataInitializer implements CommandLineRunner {
                 permission("REVIEW_CREATE", "Thêm bình luận", "REVIEW"),
                 permission("REVIEW_UPDATE", "Sửa bình luận", "REVIEW"),
                 permission("REVIEW_DELETE", "Xóa bình luận", "REVIEW"),
-                permission("REVIEW_REPLY", "Phản hồi đánh giá", "REVIEW")
+                permission("REVIEW_REPLY", "Phản hồi đánh giá", "REVIEW"),
+
+                permission("COIN_TASK_VIEW", "Xem nhiệm vụ xu", "COIN"),
+                permission("COIN_TASK_CREATE", "Thêm nhiệm vụ xu", "COIN"),
+                permission("COIN_TASK_UPDATE", "Sửa nhiệm vụ xu", "COIN"),
+                permission("COIN_TASK_DELETE", "Xóa nhiệm vụ xu", "COIN")
         );
 
         for (AccessPermission permission : permissions) {
@@ -284,7 +289,11 @@ public class DataInitializer implements CommandLineRunner {
                         "REVIEW_VIEW",
                         "REVIEW_UPDATE",
                         "REVIEW_DELETE",
-                        "REVIEW_REPLY"
+                        "REVIEW_REPLY",
+                        "COIN_TASK_VIEW",
+                        "COIN_TASK_CREATE",
+                        "COIN_TASK_UPDATE",
+                        "COIN_TASK_DELETE"
                 )
         );
 
@@ -383,7 +392,11 @@ public class DataInitializer implements CommandLineRunner {
                         "REVIEW_CREATE",
                         "REVIEW_UPDATE",
                         "REVIEW_DELETE",
-                        "REVIEW_REPLY"
+                        "REVIEW_REPLY",
+                        "COIN_TASK_VIEW",
+                        "COIN_TASK_CREATE",
+                        "COIN_TASK_UPDATE",
+                        "COIN_TASK_DELETE"
                 )
         );
     }
