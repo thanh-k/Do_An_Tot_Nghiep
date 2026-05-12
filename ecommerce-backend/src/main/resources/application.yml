@@ -58,10 +58,12 @@ app:
     expiration: 86400000
 
   upload-dir: uploads
-  frontend-url: http://localhost:5173
+  # frontend-url: http://localhost:5173
+  frontend-url: https://hitcinsight.id.vn
 
   oauth2:
-    authorized-redirect-uri: http://localhost:5173/auth/oauth2/callback
+    # authorized-redirect-uri: http://localhost:5173/auth/oauth2/callback
+    authorized-redirect-uri: https://hitcinsight.id.vn/auth/oauth2/callback
 
   mail:
     from: kieuxuanthanh999@gmail.com
