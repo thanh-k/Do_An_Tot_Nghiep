@@ -56,7 +56,8 @@ const getInitialState = (product) => ({
           stock: v.stock || 0,
           image: v.image || "",
           imageFile: null,
-          ...attrs
+          hasOrders: Boolean(v.hasOrders),
+          ...attrs,
         };
       })
     : [createVariantState()],
@@ -76,15 +77,28 @@ function ProductFormModal({
 
   // LOGIC ĐỘNG: Lấy danh sách các thuộc tính cần hiển thị dựa theo Danh mục
   const activeAttributes = useMemo(() => {
-    if (!form.categoryId || !categories?.length) return [{ key: "color", ...ATTRIBUTE_OPTIONS["color"] }];
-    
-    const category = categories.find((c) => String(c.id) === String(form.categoryId));
+    if (!form.categoryId || !categories?.length)
+      return [{ key: "color", ...ATTRIBUTE_OPTIONS["color"] }];
+
+    const category = categories.find(
+      (c) => String(c.id) === String(form.categoryId),
+    );
     if (!category) return [{ key: "color", ...ATTRIBUTE_OPTIONS["color"] }];
 
-    const catSlug = category.slug || category.name.toLowerCase().replace(/ /g, '-').normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const attributeKeys = CATEGORY_VARIANT_CONFIG[catSlug] || CATEGORY_VARIANT_CONFIG["default"] || ["color"];
-    
-    return attributeKeys.map(key => ({ key: key, ...ATTRIBUTE_OPTIONS[key] }));
+    const catSlug =
+      category.slug ||
+      category.name
+        .toLowerCase()
+        .replace(/ /g, "-")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    const attributeKeys = CATEGORY_VARIANT_CONFIG[catSlug] ||
+      CATEGORY_VARIANT_CONFIG["default"] || ["color"];
+
+    return attributeKeys.map((key) => ({
+      key: key,
+      ...ATTRIBUTE_OPTIONS[key],
+    }));
   }, [form.categoryId, categories]);
 
   // LOG 1: Kiểm tra xem khi Modal mở, biến categories nhận được gì từ Page cha
@@ -189,8 +203,9 @@ function ProductFormModal({
     // Chuyển đổi an toàn sang chuỗi để kiểm tra dấu âm
     const valStr = value !== null && value !== undefined ? String(value) : "";
 
-    const attrKeys = activeAttributes.map(a => a.key);
-    if (attrKeys.includes(field) && !valStr.trim()) errMsg = "Không được để trống";
+    const attrKeys = activeAttributes.map((a) => a.key);
+    if (attrKeys.includes(field) && !valStr.trim())
+      errMsg = "Không được để trống";
 
     if (field === "price") {
       if (!valStr.trim()) errMsg = "Giá bán không được để trống";
@@ -203,7 +218,10 @@ function ProductFormModal({
         errMsg = "Giá gốc phải lớn hơn 0";
       } else {
         const currentVariant = form.variants.find((v) => v.id === variantId);
-        if (currentVariant?.price && Number(valStr) < Number(currentVariant.price)) {
+        if (
+          currentVariant?.price &&
+          Number(valStr) < Number(currentVariant.price)
+        ) {
           errMsg = "Giá gốc phải lớn hơn Giá bán";
         }
       }
@@ -268,11 +286,13 @@ function ProductFormModal({
         newErrors[`variant_${v.id}_price`] = "Giá bán phải từ 1đ trở lên";
 
       if (!String(v.compareAtPrice || "").trim())
-        newErrors[`variant_${v.id}_compareAtPrice`] = "Giá gốc không được để trống";
+        newErrors[`variant_${v.id}_compareAtPrice`] =
+          "Giá gốc không được để trống";
       else if (Number(v.compareAtPrice) <= 0)
         newErrors[`variant_${v.id}_compareAtPrice`] = "Giá gốc phải lớn hơn 0";
       else if (v.price && Number(v.compareAtPrice) < Number(v.price))
-        newErrors[`variant_${v.id}_compareAtPrice`] = "Giá gốc phải từ Giá bán trở lên";
+        newErrors[`variant_${v.id}_compareAtPrice`] =
+          "Giá gốc phải từ Giá bán trở lên";
 
       if (Number(v.stock) < 0 || v.stock === "")
         newErrors[`variant_${v.id}_stock`] = "Tồn kho không được âm";
@@ -302,15 +322,22 @@ function ProductFormModal({
       if (!line.includes(":") || line.split(":")[0].trim() === "") return true;
     }
 
-    const hasVariantErrors = form.variants.some(
-      (v) => {
-        const hasAttrError = activeAttributes.some(attr => !String(v[attr.key] || "").trim());
-        return hasAttrError || !String(v.price || "").trim() || Number(v.price) < 1 ||
-          !String(v.compareAtPrice || "").trim() || Number(v.compareAtPrice) <= 0 ||
-          (v.price && Number(v.compareAtPrice) < Number(v.price)) || Number(v.stock) < 0 ||
-          v.stock === "" || (v.imageFile && v.imageFile.size > 1024 * 1024);
-      }
-    );
+    const hasVariantErrors = form.variants.some((v) => {
+      const hasAttrError = activeAttributes.some(
+        (attr) => !String(v[attr.key] || "").trim(),
+      );
+      return (
+        hasAttrError ||
+        !String(v.price || "").trim() ||
+        Number(v.price) < 1 ||
+        !String(v.compareAtPrice || "").trim() ||
+        Number(v.compareAtPrice) <= 0 ||
+        (v.price && Number(v.compareAtPrice) < Number(v.price)) ||
+        Number(v.stock) < 0 ||
+        v.stock === "" ||
+        (v.imageFile && v.imageFile.size > 1024 * 1024)
+      );
+    });
     if (hasVariantErrors) return true;
 
     return Object.values(errors).some((err) => !!err);
@@ -323,6 +350,50 @@ function ProductFormModal({
     if (!validateAll()) {
       toast.error("Vui lòng điền đầy đủ các thông tin bị lỗi màu đỏ!");
       return;
+    }
+
+    // Cảnh báo quy tắc cập nhật biến thể (TH1, TH2, TH3) khi đang ở chế độ Sửa (Có initialProduct)
+    if (initialProduct) {
+      let hasOrdersWarnings = [];
+      const getVarLabel = (v) => {
+        const vAttrs = typeof v.attributes === "string" ? JSON.parse(v.attributes || "{}") : v.attributes || {};
+        const labels = activeAttributes.map((a) => vAttrs[a.key]).filter(Boolean);
+        return labels.length > 0 ? labels.join(" - ") : v.sku || "Mặc định";
+      };
+
+      // Kiểm tra biến thể BỊ XÓA
+      initialProduct.variants.forEach((oldVar) => {
+        if (oldVar.hasOrders && !form.variants.find((v) => v.id === oldVar.id)) {
+          hasOrdersWarnings.push(`- XÓA: Biến thể [${getVarLabel(oldVar)}] sẽ được chuyển thành Hết hàng để giữ lịch sử.`);
+        }
+      });
+
+      // Kiểm tra biến thể BỊ SỬA
+      form.variants.forEach((currentVar) => {
+        if (String(currentVar.id).startsWith("temp-")) return; // Bỏ qua biến thể mới tinh
+        const oldVar = initialProduct.variants.find((v) => v.id === currentVar.id);
+
+        if (oldVar && oldVar.hasOrders) {
+          let isAttributeChanged = false;
+          const oldAttrs = typeof oldVar.attributes === "string" ? JSON.parse(oldVar.attributes || "{}") : oldVar.attributes || {};
+
+          activeAttributes.forEach((attr) => {
+            if (String(currentVar[attr.key] || "") !== String(oldAttrs[attr.key] || "")) isAttributeChanged = true;
+          });
+          const isSkuChanged = currentVar.sku !== oldVar.sku && currentVar.sku.trim() !== "";
+
+          if (isAttributeChanged || isSkuChanged) {
+            hasOrdersWarnings.push(`- SỬA THÔNG SỐ: Biến thể [${getVarLabel(oldVar)}] sẽ được giữ lại lịch sử và tạo tự động 1 bản mới.`);
+          } else if (Number(currentVar.price) !== Number(oldVar.price) || currentVar.imageFile !== null || currentVar.image !== oldVar.image) {
+            hasOrdersWarnings.push(`- SỬA ẢNH/GIÁ: Biến thể [${getVarLabel(oldVar)}] sẽ cập nhật trực tiếp (Ảnh trong lịch sử đơn hàng cũng bị đổi, giá cũ giữ nguyên).`);
+          }
+        }
+      });
+
+      if (hasOrdersWarnings.length > 0) {
+        const msg = "HỆ THỐNG PHÁT HIỆN THAY ĐỔI TRÊN CÁC BIẾN THỂ ĐÃ CÓ NGƯỜI MUA:\n\n" + hasOrdersWarnings.join("\n") + "\n\nBạn có chắc chắn muốn tiếp tục lưu?";
+        if (!window.confirm(msg)) return;
+      }
     }
 
     setSubmitting(true);
@@ -371,19 +442,26 @@ function ProductFormModal({
             .trim()
             .replace(/\s+/g, "");
 
-          const secondAttrVal = activeAttributes.length > 1 
-            ? String(v[activeAttributes[1]?.key] || "").toUpperCase().replace(/\s+/g, "")
-            : "";
+          const secondAttrVal =
+            activeAttributes.length > 1
+              ? String(v[activeAttributes[1]?.key] || "")
+                  .toUpperCase()
+                  .replace(/\s+/g, "")
+              : "";
 
           const newSku = `${generatedSlug.toUpperCase()}-${firstAttrVal || "VAR"}${secondAttrVal ? `-${secondAttrVal}` : ""}-${index + 1}`;
 
           // Gom tất cả thuộc tính động lại để lưu dạng JSON
           const attrsToSave = {};
-          activeAttributes.forEach(attr => {
+          activeAttributes.forEach((attr) => {
             attrsToSave[attr.key] = v[attr.key] || "";
           });
 
+          // Nếu ID bắt đầu bằng "temp-" (biến thể mới tạo) thì truyền null để BE biết là tạo mới
+          const isNew = String(v.id).startsWith("temp-");
+
           return {
+            id: isNew ? null : v.id,
             sku: newSku,
             price: Number(v.price) || 0,
             compareAtPrice: Number(v.compareAtPrice || v.price) || 0,
@@ -663,7 +741,9 @@ function ProductFormModal({
                     label={`${attr.label} *`}
                     list={`${attr.key}-list`}
                     value={variant[attr.key] || ""}
-                    onChange={(e) => updateVariant(variant.id, attr.key, e.target.value)}
+                    onChange={(e) =>
+                      updateVariant(variant.id, attr.key, e.target.value)
+                    }
                   />
                   {errors[`variant_${variant.id}_${attr.key}`] && (
                     <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">

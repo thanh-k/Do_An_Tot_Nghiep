@@ -12,13 +12,17 @@ import {
   formatPaymentStatus,
 } from "@/utils/format";
 import useAuth from "@/hooks/useAuth";
+import useCart from "@/hooks/useCart";
 import {
   ArrowLeft,
   MapPin,
   Phone,
   Calendar,
   CreditCard,
+  ShoppingCart,
 } from "lucide-react";
+import { ATTRIBUTE_OPTIONS } from "@/utils/categoryConfig";
+import userProductService from "@/services/user/productService";
 
 const getStatusColorClass = (status) => {
   switch (status) {
@@ -45,10 +49,31 @@ const canReviewOrder = (status) => {
   );
 };
 
+const formatOrderVariantLabel = (attributesData, fallbackLabel) => {
+  if (!attributesData || attributesData === "null") return fallbackLabel || "Mặc định";
+
+  let attrs = attributesData;
+  if (typeof attributesData === "string") {
+    try {
+      attrs = JSON.parse(attributesData);
+    } catch (e) {
+      return fallbackLabel || "Mặc định";
+    }
+  }
+
+  if (!attrs || Object.keys(attrs).length === 0) return fallbackLabel || "Mặc định";
+  const parts = [];
+  Object.entries(attrs).forEach(([key, value]) => {
+    if (value) parts.push(`${ATTRIBUTE_OPTIONS[key]?.label || key}: ${value}`);
+  });
+  return parts.join(" - ") || fallbackLabel || "Mặc định";
+};
+
 function OrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const { addToCart } = useCart();
   const [loading, setLoading] = useState(true);
   const [order, setOrder] = useState(null);
 
@@ -135,12 +160,13 @@ function OrderDetailPage() {
             <div className="space-y-4">
               {(order.details || order.items || order.orderDetails || []).map(
                 (item, index) => {
-                  const variant = item.productVariant || {};
-                  const product = variant.product || {};
+                  const variant = item.productVariant || item.variant || {};
+                  const product = item.product || variant.product || {};
 
-                  const itemName = item.name || product.name || "Sản phẩm";
+                  const itemName = item.name || item.productName || product.name || "Sản phẩm";
                   const itemImage =
                     item.image ||
+                    item.thumbnail ||
                     variant.image ||
                     product.thumbnail ||
                     "https://placehold.co/150x150?text=No+Image";
@@ -148,22 +174,11 @@ function OrderDetailPage() {
                     item.price || item.priceAtPurchase || variant.price || 0;
                   const itemQuantity = item.quantity || 1;
                   const productId = item.productId || product.id;
-                  const productSlug = item.productSlug || product.slug;
+                  const productSlug = item.productSlug || item.slug || product.slug;
+                  const variantId = item.variantId || item.productVariantId || variant.id;
 
-                  let variantAttrs = {};
-                  try {
-                    const attrsData = item.attributes || variant.attributes;
-                    variantAttrs =
-                      typeof attrsData === "string"
-                        ? JSON.parse(attrsData)
-                        : attrsData || {};
-                  } catch (e) {}
-
-                  const variantLabel =
-                    item.variantLabel ||
-                    (variantAttrs.color
-                      ? `${variantAttrs.color} - ${variantAttrs.storage || ""}`
-                      : "Phân loại mặc định");
+                  const attrsData = item.attributes || variant.attributes;
+                  const variantLabel = formatOrderVariantLabel(attrsData, item.variantLabel);
 
                   return (
                     <div
@@ -191,21 +206,64 @@ function OrderDetailPage() {
                               Số lượng: {itemQuantity}
                             </span>
 
-                            {canReviewOrder(order.status) ? (
+                            <div className="flex flex-wrap items-center gap-4">
                               <button
                                 type="button"
-                                onClick={() => {
-                                  if (!productSlug) {
-                                    toast.error("Không tìm thấy sản phẩm để đánh giá.");
+                                onClick={async () => {
+                                  if (!productSlug || !variantId) {
+                                    console.log("Dữ liệu item bị thiếu từ API:", item);
+                                    toast.error(`Lỗi API: Thiếu dữ liệu (Slug: ${productSlug ? 'OK' : 'Lỗi'}, ID: ${variantId ? 'OK' : 'Lỗi'})`);
                                     return;
                                   }
-                                  navigate(`/products/${productSlug}#review-section`);
+                                  
+                                  const loadingToast = toast.loading("Đang kiểm tra sản phẩm...");
+                                  try {
+                                    const fullProduct = await userProductService.getProductBySlug(productSlug);
+                                    // Ép kiểu về String để so sánh an toàn, tránh lỗi lệch kiểu Number/String
+                                    const fullVariant = fullProduct.variants?.find((v) => String(v.id) === String(variantId));
+                                    
+                                    if (!fullVariant) {
+                                      toast.dismiss(loadingToast);
+                                      toast.error("Sản phẩm này hiện không còn tồn tại.");
+                                      return;
+                                    }
+                                    if (fullVariant.stock <= 0) {
+                                      toast.dismiss(loadingToast);
+                                      toast.error("Sản phẩm này hiện đã hết hàng.");
+                                      return;
+                                    }
+                                    
+                                    addToCart(fullProduct, fullVariant, itemQuantity);
+                                    toast.dismiss(loadingToast);
+                                    toast.success("Đã thêm vào giỏ hàng!");
+                                    navigate("/cart");
+                                  } catch (error) {
+                                    toast.dismiss(loadingToast);
+                                    toast.error("Sản phẩm này hiện không còn tồn tại.");
+                                  }
                                 }}
-                                className="text-sm font-semibold text-amber-600 hover:underline"
+                                className="flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-sm font-bold text-white transition-all hover:bg-brand-700 hover:shadow-md"
                               >
-                                Đánh giá sản phẩm
+                                <ShoppingCart size={16} />
+                                Mua lại
                               </button>
-                            ) : null}
+
+                              {canReviewOrder(order.status) ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!productSlug) {
+                                      toast.error("Không tìm thấy sản phẩm để đánh giá.");
+                                      return;
+                                    }
+                                    navigate(`/products/${productSlug}#review-section`);
+                                  }}
+                                  className="text-sm font-semibold text-amber-600 hover:underline"
+                                >
+                                  Đánh giá sản phẩm
+                                </button>
+                              ) : null}
+                            </div>
                           </div>
 
                           <span className="font-semibold text-brand-700">
