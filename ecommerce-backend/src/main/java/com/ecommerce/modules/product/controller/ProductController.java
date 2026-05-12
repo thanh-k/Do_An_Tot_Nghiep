@@ -68,4 +68,20 @@ public class ProductController {
                 .build();
     }
 
+    // 6. API Đồng bộ dữ liệu cũ sang hệ thống AI Python
+    @PostMapping("/sync-vision")
+    public ApiResponse<String> syncVision() {
+        productService.syncAllProductsToVision();
+        return ApiResponse.<String>builder()
+                .result("Đã gửi yêu cầu đồng bộ toàn bộ sản phẩm sang Vision Service thành công!")
+                .build();
+    }
+
+    // 7. Lấy danh sách sản phẩm theo danh sách ID (Dùng cho Tìm kiếm hình ảnh)
+    @PostMapping("/batch")
+    public ApiResponse<List<ProductResponse>> getProductsByIds(@RequestBody List<Long> ids) {
+        return ApiResponse.<List<ProductResponse>>builder()
+                .result(productService.getProductsByIds(ids))
+                .build();
+    }
 }

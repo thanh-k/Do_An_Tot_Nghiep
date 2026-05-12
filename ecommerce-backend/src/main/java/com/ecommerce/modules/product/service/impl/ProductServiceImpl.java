@@ -15,6 +15,7 @@ import com.ecommerce.modules.product.service.ProductService;
 import com.ecommerce.modules.product.service.ProductValidatorService;
 import com.ecommerce.modules.review.repository.ProductReviewRepository;
 import com.ecommerce.modules.upload.service.CloudinaryService;
+import com.ecommerce.service.VisionServiceClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +41,7 @@ public class ProductServiceImpl implements ProductService {
         private final CloudinaryService cloudinaryService;
         private final ProductReviewRepository productReviewRepository;
         private final OrderDetailRepository orderDetailRepository;
+        private final VisionServiceClient visionServiceClient;
 
         @Override
         @Transactional(readOnly = true)
@@ -65,6 +67,9 @@ public class ProductServiceImpl implements ProductService {
 
                 Product savedProduct = productRepository.save(product);
                 saveVariantsAndImages(request, savedProduct);
+
+                // Gọi Vision Service để trích xuất và lưu vector hình ảnh
+                visionServiceClient.indexProduct(savedProduct.getId(), savedProduct.getThumbnail());
 
                 return getProductResponse(savedProduct);
         }
@@ -143,6 +148,9 @@ public class ProductServiceImpl implements ProductService {
                 updateProductVariantsSmart(request, existingProduct);
                 saveOnlyImages(request, existingProduct);
 
+                // Gọi Vision Service để cập nhật lại vector ảnh
+                visionServiceClient.indexProduct(existingProduct.getId(), existingProduct.getThumbnail());
+
                 return getProductResponse(existingProduct);
         }
 
@@ -154,6 +162,9 @@ public class ProductServiceImpl implements ProductService {
 
                 cleanOldResources(product);
                 productRepository.delete(product);
+
+                // Xóa vector ảnh khỏi hệ thống AI (FAISS)
+                visionServiceClient.removeProduct(id);
         }
 
         @Override
@@ -170,6 +181,36 @@ public class ProductServiceImpl implements ProductService {
                 Product product = productRepository.findById(id)
                                 .orElseThrow(() -> new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION));
                 return getProductResponse(product);
+        }
+
+        @Override
+        public void syncAllProductsToVision() {
+                List<Product> products = productRepository.findAll();
+                int count = 0;
+                for (Product product : products) {
+                        if (product.getThumbnail() != null && !product.getThumbnail().trim().isEmpty()) {
+                                visionServiceClient.indexProduct(product.getId(), product.getThumbnail());
+                                count++;
+                        }
+                }
+                System.out.println("✅ Đã gửi yêu cầu đồng bộ " + count + " sản phẩm sang Vision Service.");
+        }
+
+        @Override
+        @Transactional(readOnly = true)
+        public List<ProductResponse> getProductsByIds(List<Long> ids) {
+                // 1. Lấy dữ liệu từ DB (MySQL sẽ xáo trộn thứ tự)
+                List<Product> products = productRepository.findAllById(ids);
+                
+                // 2. Chuyển thành Map để tra cứu nhanh
+                Map<Long, Product> productMap = products.stream()
+                                .collect(Collectors.toMap(Product::getId, Function.identity()));
+                
+                // 3. Ép Java phải giữ nguyên thứ tự ID mà AI Python đã trả về
+                return ids.stream()
+                                .filter(productMap::containsKey)
+                                .map(id -> getProductResponse(productMap.get(id)))
+                                .collect(Collectors.toList());
         }
 
         // --- LOGIC MỚI: CẬP NHẬT BIẾN THỂ THÔNG MINH ---

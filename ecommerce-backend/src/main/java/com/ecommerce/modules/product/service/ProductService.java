@@ -16,4 +16,8 @@ public interface ProductService {
     void deleteProduct(Long id);
 
     ProductResponse getProductBySlug(String slug);
+
+    void syncAllProductsToVision();
+
+    List<ProductResponse> getProductsByIds(List<Long> ids);
 }
