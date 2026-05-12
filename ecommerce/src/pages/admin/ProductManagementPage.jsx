@@ -9,6 +9,7 @@ import PageHeader from "@/components/common/PageHeader";
 import Pagination from "@/components/common/Pagination";
 import { categoryService } from "@/services/admin/categoryService";
 import productService from "@/services/admin/productService";
+import { brandService } from "@/services/admin/brandService";
 import { formatCurrency } from "@/utils/format";
 import { getProductStock, getStartingPrice } from "@/utils/product";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -17,6 +18,7 @@ function ProductManagementPage() {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
   const [keyword, setKeyword] = useState("");
   const debouncedKeyword = useDebounce(keyword, 300);
   const [modalState, setModalState] = useState({
@@ -32,11 +34,13 @@ function ProductManagementPage() {
     Promise.all([
       productService.getAllProducts(),
       categoryService.getCategories(),
+      brandService.getBrands(),
     ])
-      .then(([productsData, categoriesData]) => {
+      .then(([productsData, categoriesData, brandsData]) => {
         console.log("LOG TẠI PAGE CHA - Danh mục từ API:", categoriesData); // THÊM DÒNG NÀY
         setProducts(productsData);
         setCategories(categoriesData);
+        setBrands(brandsData);
       })
       .catch((error) => {
         console.error("Lỗi API tại Page cha:", error);
@@ -238,6 +242,7 @@ function ProductManagementPage() {
         onClose={() => setModalState({ open: false, product: null })}
         initialProduct={modalState.product}
         categories={categories} // Nhớ truyền danh sách categories để form con hiển thị
+        brands={brands} // Bổ sung truyền danh sách brands
         onSubmit={handleSaveProduct} // Bắt buộc truyền hàm async handleSaveProduct vào đây
       />
     </div>

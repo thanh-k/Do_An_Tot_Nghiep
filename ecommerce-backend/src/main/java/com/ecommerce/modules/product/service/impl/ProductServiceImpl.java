@@ -10,6 +10,7 @@ import com.ecommerce.modules.category.repository.CategoryRepository;
 import com.ecommerce.modules.product.dto.request.ProductRequest;
 import com.ecommerce.modules.product.dto.response.*;
 import com.ecommerce.modules.product.repository.*;
+import com.ecommerce.modules.order.repository.OrderDetailRepository;
 import com.ecommerce.modules.product.service.ProductService;
 import com.ecommerce.modules.product.service.ProductValidatorService;
 import com.ecommerce.modules.review.repository.ProductReviewRepository;
@@ -22,6 +23,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,6 +39,7 @@ public class ProductServiceImpl implements ProductService {
         private final ProductValidatorService productValidator;
         private final CloudinaryService cloudinaryService;
         private final ProductReviewRepository productReviewRepository;
+        private final OrderDetailRepository orderDetailRepository;
 
         @Override
         @Transactional(readOnly = true)
@@ -129,16 +133,16 @@ public class ProductServiceImpl implements ProductService {
                 existingProduct.setCategory(category);
                 existingProduct.setBrand(brand);
 
-                if (existingProduct.getVariants() != null) {
-                        existingProduct.getVariants().clear();
-                }
                 if (existingProduct.getImages() != null) {
                         existingProduct.getImages().clear();
                 }
 
                 productRepository.saveAndFlush(existingProduct);
 
-                saveVariantsAndImages(request, existingProduct);
+                // Cập nhật biến thể thông minh và chỉ lưu lại ảnh chung của sản phẩm
+                updateProductVariantsSmart(request, existingProduct);
+                saveOnlyImages(request, existingProduct);
+
                 return getProductResponse(existingProduct);
         }
 
@@ -166,6 +170,122 @@ public class ProductServiceImpl implements ProductService {
                 Product product = productRepository.findById(id)
                                 .orElseThrow(() -> new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION));
                 return getProductResponse(product);
+        }
+
+        // --- LOGIC MỚI: CẬP NHẬT BIẾN THỂ THÔNG MINH ---
+        private void updateProductVariantsSmart(ProductRequest request, Product product) {
+                if (request.getVariants() == null)
+                        return;
+
+                // 1. Tạo Map tra cứu nhanh các biến thể cũ theo ID
+                Map<Long, ProductVariant> existingVariantsMap = product.getVariants().stream()
+                                .collect(Collectors.toMap(ProductVariant::getId, Function.identity()));
+
+                Set<Long> incomingVariantIds = new HashSet<>();
+                List<ProductVariant> variantsToSave = new ArrayList<>();
+                List<ProductVariant> onlyNewVariants = new ArrayList<>(); // Chỉ chứa biến thể mới tinh
+
+                // 2. Xử lý Update biến thể cũ và Insert biến thể mới
+                for (var vReq : request.getVariants()) {
+                        // Giả định VariantRequest của bạn đã có hàm getId() (kiểu Long)
+                        if (vReq.getId() != null && existingVariantsMap.containsKey(vReq.getId())) {
+                                ProductVariant existingVariant = existingVariantsMap.get(vReq.getId());
+                                incomingVariantIds.add(vReq.getId());
+                                
+                                boolean isUsedInOrder = orderDetailRepository.existsByProductVariant_Id(existingVariant.getId());
+                                
+                                // Kiểm tra xem thông số nhận diện (Thuộc tính) hoặc SKU có bị thay đổi không
+                                boolean isAttributeChanged = !java.util.Objects.equals(existingVariant.getAttributes(), vReq.getAttributes());
+                                boolean isSkuChanged = !java.util.Objects.equals(existingVariant.getSku(), vReq.getSku());
+
+                                if (isUsedInOrder && (isAttributeChanged || isSkuChanged)) {
+                                        // TH2: Biến thể đã có người mua VÀ bị thay đổi thông số/SKU
+                                        // 1. Giữ nguyên thông số cũ, chuyển stock = 0 để làm lịch sử
+                                        existingVariant.setStock(0);
+                                        variantsToSave.add(existingVariant);
+                                        
+                                        // 2. Tạo một biến thể mới hoàn toàn với thông số mới
+                                        ProductVariant newVariant = ProductVariant.builder()
+                                                        .sku(vReq.getSku())
+                                                        .price(vReq.getPrice())
+                                                        .compareAtPrice(vReq.getCompareAtPrice())
+                                                        .stock(vReq.getStock())
+                                                        .attributes(vReq.getAttributes())
+                                                        .image(vReq.getImage())
+                                                        .product(product)
+                                                        .build();
+                                        variantsToSave.add(newVariant);
+                                        onlyNewVariants.add(newVariant);
+                                } else {
+                                        // TH1 & TH3: Chỉ thay đổi giá, kho, hình ảnh HOẶC chưa từng có người mua
+                                        // -> Cập nhật trực tiếp đè lên biến thể cũ
+                                        existingVariant.setSku(vReq.getSku());
+                                        existingVariant.setPrice(vReq.getPrice());
+                                        existingVariant.setCompareAtPrice(vReq.getCompareAtPrice());
+                                        existingVariant.setStock(vReq.getStock());
+                                        existingVariant.setAttributes(vReq.getAttributes());
+                                        existingVariant.setImage(vReq.getImage());
+                                        variantsToSave.add(existingVariant);
+                                }
+                        } else {
+                                // INSERT MỚI
+                                ProductVariant newVariant = ProductVariant.builder()
+                                                .sku(vReq.getSku())
+                                                .price(vReq.getPrice())
+                                                .compareAtPrice(vReq.getCompareAtPrice())
+                                                .stock(vReq.getStock())
+                                                .attributes(vReq.getAttributes())
+                                                .image(vReq.getImage())
+                                                .product(product)
+                                                .build();
+                                variantsToSave.add(newVariant);
+                                onlyNewVariants.add(newVariant); // Đánh dấu đây là biến thể mới
+                        }
+                }
+
+                // 3. Xử lý XÓA / VÔ HIỆU HÓA các biến thể bị bỏ đi trên UI
+                List<ProductVariant> variantsToRemove = new ArrayList<>();
+                for (ProductVariant existingVariant : product.getVariants()) {
+                        if (!incomingVariantIds.contains(existingVariant.getId())) {
+                                boolean isUsedInOrder = orderDetailRepository
+                                                .existsByProductVariant_Id(existingVariant.getId());
+                                if (isUsedInOrder) {
+                                        // Có đơn hàng -> Chuyển tồn kho = 0 (Hoặc nếu có trường isActive thì isActive =
+                                        // false)
+                                        existingVariant.setStock(0);
+                                        variantsToSave.add(existingVariant);
+                                } else {
+                                        // Chưa ai mua -> Xóa hoàn toàn
+                                        variantsToRemove.add(existingVariant);
+                                }
+                        }
+                }
+
+                product.getVariants().removeAll(variantsToRemove);
+                variantRepository.saveAll(variantsToSave);
+
+                if (product.getVariants() == null) {
+                        product.setVariants(new HashSet<>(onlyNewVariants));
+                } else {
+                        // CHỈ add thêm các biến thể mới vào Product (tránh lỗi duplicate entity của
+                        // Hibernate)
+                        product.getVariants().addAll(onlyNewVariants);
+                }
+        }
+
+        // Hàm phụ trợ để lưu ảnh khi Update (tách ra từ saveVariantsAndImages cũ)
+        private void saveOnlyImages(ProductRequest request, Product product) {
+                if (request.getImages() != null) {
+                        List<ProductImage> images = request.getImages().stream()
+                                        .map(url -> ProductImage.builder().imageUrl(url).product(product).build())
+                                        .collect(Collectors.toList());
+                        images = imageRepository.saveAll(images);
+                        if (product.getImages() == null) {
+                                product.setImages(new HashSet<>(images));
+                        } else {
+                                product.getImages().addAll(images);
+                        }
+                }
         }
 
         private void saveVariantsAndImages(ProductRequest request, Product product) {
@@ -298,7 +418,8 @@ public class ProductServiceImpl implements ProductService {
                         List<ProductImage> images = new ArrayList<>(
                                         product.getImages() != null ? product.getImages() : new HashSet<>());
 
-                        List<ProductReview> reviews = productReviewRepository.findByProductIdAndIsVisibleTrueOrderByCreatedAtDesc(product.getId());
+                        List<ProductReview> reviews = productReviewRepository
+                                        .findByProductIdAndIsVisibleTrueOrderByCreatedAtDesc(product.getId());
                         double averageRating = reviews.isEmpty()
                                         ? 0.0
                                         : reviews.stream().mapToInt(ProductReview::getRating).average().orElse(0.0);
@@ -338,6 +459,7 @@ public class ProductServiceImpl implements ProductService {
                                                                         .stock(v.getStock())
                                                                         .attributes(v.getAttributes())
                                                                         .image(v.getImage())
+                                                                        .hasOrders(orderDetailRepository.existsByProductVariant_Id(v.getId()))
                                                                         .build())
                                                         .collect(Collectors.toList()))
                                         .images(images.stream()

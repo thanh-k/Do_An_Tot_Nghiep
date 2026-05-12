@@ -14,4 +14,5 @@ public class VariantResponse {
     private Integer stock;
     private String attributes; // Chuỗi JSON {color, ram...}
     private String image;
+    private Boolean hasOrders;
 }
