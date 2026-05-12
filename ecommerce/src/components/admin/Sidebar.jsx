@@ -16,6 +16,7 @@ import {
   BookOpenText,
   MessageSquareMore,
   Star,
+  Coins,
 } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import logo from "@/assets/logo.svg";
@@ -69,6 +70,12 @@ const items = [
     label: "Đánh giá",
     icon: Star,
     permissions: ["REVIEW_VIEW"],
+  },
+  {
+    to: "/admin/coin-tasks",
+    label: "Nhiệm vụ xu",
+    icon: Coins,
+    permissions: ["COIN_TASK_VIEW"],
   },
   {
     to: "/admin/vouchers",

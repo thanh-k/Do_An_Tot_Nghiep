@@ -7,6 +7,7 @@ import {
   ShoppingCart,
   User,
   X,
+  Coins,
 } from "lucide-react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import logo from "@/assets/logo.svg";
@@ -36,6 +37,7 @@ function Header() {
         { label: "Hồ sơ", to: "/dashboard" },
         { label: "Đơn hàng", to: "/orders" },
         { label: "Kho Vouchers", to: "/vouchers" },
+        { label: "Xu thưởng", to: "/coins" },
         { label: "Hỗ trợ", to: "/faq" },
       ]
     : [
@@ -48,6 +50,7 @@ function Header() {
     { label: "Sản phẩm", to: "/products", hasDropdown: true },
     { label: "Tin tức", to: "/news" },
     { label: "Liên hệ", to: "/contact" },
+    { label: "Xu thưởng", to: "/coins" },
     { label: "giới thiệu", to: "/about" },
     { label: "so sánh sản phẩm ", to: "/compare" },
   ];

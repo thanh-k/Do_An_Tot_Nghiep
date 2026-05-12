@@ -14,6 +14,7 @@ import BrandManagementPage from "@/pages/admin/BrandManagementPage";
 import VoucherManagementPage from "@/pages/admin/VoucherManagementPage";
 import MembershipManagementPage from "@/pages/admin/MembershipManagementPage";
 import ReviewManagementPage from "@/pages/admin/ReviewManagementPage";
+import CoinTaskManagementPage from "@/pages/admin/CoinTaskManagementPage";
 
 export const adminRoutes = [
   {
@@ -45,6 +46,11 @@ export const adminRoutes = [
     path: "reviews",
     component: ReviewManagementPage,
     permissions: ["REVIEW_VIEW"],
+  },
+  {
+    path: "coin-tasks",
+    component: CoinTaskManagementPage,
+    permissions: ["COIN_TASK_VIEW"],
   },
   {
     path: "vouchers",
