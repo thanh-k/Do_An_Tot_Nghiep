@@ -27,6 +27,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.LinkedHashMap;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +46,7 @@ public class ProductServiceImpl implements ProductService {
         private final ProductReviewRepository productReviewRepository;
         private final OrderDetailRepository orderDetailRepository;
         private final VisionServiceClient visionServiceClient;
+        private final ObjectMapper objectMapper = new ObjectMapper();
 
         @Override
         @Transactional(readOnly = true)
@@ -215,102 +220,198 @@ public class ProductServiceImpl implements ProductService {
 
         // --- LOGIC MỚI: CẬP NHẬT BIẾN THỂ THÔNG MINH ---
         private void updateProductVariantsSmart(ProductRequest request, Product product) {
-                if (request.getVariants() == null)
+                if (request.getVariants() == null) {
                         return;
+                }
 
-                // 1. Tạo Map tra cứu nhanh các biến thể cũ theo ID
-                Map<Long, ProductVariant> existingVariantsMap = product.getVariants().stream()
+                List<ProductVariant> existingVariants = product.getVariants() == null
+                                ? new ArrayList<>()
+                                : new ArrayList<>(product.getVariants());
+
+                Map<Long, ProductVariant> existingVariantsById = existingVariants.stream()
+                                .filter(v -> v.getId() != null)
                                 .collect(Collectors.toMap(ProductVariant::getId, Function.identity()));
 
-                Set<Long> incomingVariantIds = new HashSet<>();
-                List<ProductVariant> variantsToSave = new ArrayList<>();
-                List<ProductVariant> onlyNewVariants = new ArrayList<>(); // Chỉ chứa biến thể mới tinh
+                Map<String, ProductVariant> existingVariantsBySku = existingVariants.stream()
+                                .filter(v -> normalizeSku(v.getSku()) != null)
+                                .collect(Collectors.toMap(
+                                                v -> normalizeSku(v.getSku()),
+                                                Function.identity(),
+                                                (a, b) -> a));
 
-                // 2. Xử lý Update biến thể cũ và Insert biến thể mới
+                Set<Long> incomingVariantIds = new HashSet<>();
+                Set<String> requestSkus = new HashSet<>();
+                List<ProductVariant> variantsToSave = new ArrayList<>();
+                List<ProductVariant> variantsToRemove = new ArrayList<>();
+                List<ProductVariant> onlyNewVariants = new ArrayList<>();
+
                 for (var vReq : request.getVariants()) {
-                        // Giả định VariantRequest của bạn đã có hàm getId() (kiểu Long)
-                        if (vReq.getId() != null && existingVariantsMap.containsKey(vReq.getId())) {
-                                ProductVariant existingVariant = existingVariantsMap.get(vReq.getId());
+                        String reqSku = normalizeSku(vReq.getSku());
+                        if (reqSku == null || reqSku.isBlank()) {
+                                throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
+                        }
+
+                        if (!requestSkus.add(reqSku)) {
+                                throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
+                        }
+
+                        ProductVariant targetVariant = null;
+                        if (vReq.getId() != null && existingVariantsById.containsKey(vReq.getId())) {
+                                targetVariant = existingVariantsById.get(vReq.getId());
                                 incomingVariantIds.add(vReq.getId());
-                                
-                                boolean isUsedInOrder = orderDetailRepository.existsByProductVariant_Id(existingVariant.getId());
-                                
-                                // Kiểm tra xem thông số nhận diện (Thuộc tính) hoặc SKU có bị thay đổi không
-                                boolean isAttributeChanged = !java.util.Objects.equals(existingVariant.getAttributes(), vReq.getAttributes());
-                                boolean isSkuChanged = !java.util.Objects.equals(existingVariant.getSku(), vReq.getSku());
+                        } else if (existingVariantsBySku.containsKey(reqSku)) {
+                                targetVariant = existingVariantsBySku.get(reqSku);
+                                if (targetVariant.getId() != null) {
+                                        incomingVariantIds.add(targetVariant.getId());
+                                }
+                        }
+
+                        if (targetVariant != null) {
+                                boolean isUsedInOrder = orderDetailRepository.existsByProductVariant_Id(targetVariant.getId());
+                                boolean isAttributeChanged = !areAttributesEquivalent(targetVariant.getAttributes(), vReq.getAttributes());
+                                boolean isSkuChanged = !Objects.equals(normalizeSku(targetVariant.getSku()), reqSku);
 
                                 if (isUsedInOrder && (isAttributeChanged || isSkuChanged)) {
-                                        // TH2: Biến thể đã có người mua VÀ bị thay đổi thông số/SKU
-                                        // 1. Giữ nguyên thông số cũ, chuyển stock = 0 để làm lịch sử
-                                        existingVariant.setStock(0);
-                                        variantsToSave.add(existingVariant);
-                                        
-                                        // 2. Tạo một biến thể mới hoàn toàn với thông số mới
+                                        targetVariant.setStock(0);
+                                        variantsToSave.add(targetVariant);
+
+                                        String baseSkuForNewVariant = reqSku;
+                                        if (Objects.equals(normalizeSku(targetVariant.getSku()), reqSku)) {
+                                        baseSkuForNewVariant = reqSku + "-NEW";
+                                        }
+                                        String newVariantSku = buildUniqueVariantSku(baseSkuForNewVariant);
+
                                         ProductVariant newVariant = ProductVariant.builder()
-                                                        .sku(vReq.getSku())
+                                                        .sku(newVariantSku)
                                                         .price(vReq.getPrice())
                                                         .compareAtPrice(vReq.getCompareAtPrice())
                                                         .stock(vReq.getStock())
-                                                        .attributes(vReq.getAttributes())
+                                                        .attributes(normalizeAttributesJson(vReq.getAttributes()))
                                                         .image(vReq.getImage())
                                                         .product(product)
                                                         .build();
                                         variantsToSave.add(newVariant);
                                         onlyNewVariants.add(newVariant);
                                 } else {
-                                        // TH1 & TH3: Chỉ thay đổi giá, kho, hình ảnh HOẶC chưa từng có người mua
-                                        // -> Cập nhật trực tiếp đè lên biến thể cũ
-                                        existingVariant.setSku(vReq.getSku());
-                                        existingVariant.setPrice(vReq.getPrice());
-                                        existingVariant.setCompareAtPrice(vReq.getCompareAtPrice());
-                                        existingVariant.setStock(vReq.getStock());
-                                        existingVariant.setAttributes(vReq.getAttributes());
-                                        existingVariant.setImage(vReq.getImage());
-                                        variantsToSave.add(existingVariant);
+                                        if (!Objects.equals(normalizeSku(targetVariant.getSku()), reqSku)
+                                                        && variantRepository.existsBySkuAndIdNot(reqSku, targetVariant.getId())) {
+                                                throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
+                                        }
+
+                                        targetVariant.setSku(reqSku);
+                                        targetVariant.setPrice(vReq.getPrice());
+                                        targetVariant.setCompareAtPrice(vReq.getCompareAtPrice());
+                                        targetVariant.setStock(vReq.getStock());
+                                        targetVariant.setAttributes(normalizeAttributesJson(vReq.getAttributes()));
+                                        targetVariant.setImage(vReq.getImage());
+                                        variantsToSave.add(targetVariant);
                                 }
                         } else {
-                                // INSERT MỚI
+                                if (variantRepository.existsBySku(reqSku)) {
+                                        throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
+                                }
+
                                 ProductVariant newVariant = ProductVariant.builder()
-                                                .sku(vReq.getSku())
+                                                .sku(reqSku)
                                                 .price(vReq.getPrice())
                                                 .compareAtPrice(vReq.getCompareAtPrice())
                                                 .stock(vReq.getStock())
-                                                .attributes(vReq.getAttributes())
+                                                .attributes(normalizeAttributesJson(vReq.getAttributes()))
                                                 .image(vReq.getImage())
                                                 .product(product)
                                                 .build();
                                 variantsToSave.add(newVariant);
-                                onlyNewVariants.add(newVariant); // Đánh dấu đây là biến thể mới
+                                onlyNewVariants.add(newVariant);
                         }
                 }
 
-                // 3. Xử lý XÓA / VÔ HIỆU HÓA các biến thể bị bỏ đi trên UI
-                List<ProductVariant> variantsToRemove = new ArrayList<>();
-                for (ProductVariant existingVariant : product.getVariants()) {
+                for (ProductVariant existingVariant : existingVariants) {
+                        if (existingVariant.getId() == null) {
+                                continue;
+                        }
                         if (!incomingVariantIds.contains(existingVariant.getId())) {
-                                boolean isUsedInOrder = orderDetailRepository
-                                                .existsByProductVariant_Id(existingVariant.getId());
+                                boolean isUsedInOrder = orderDetailRepository.existsByProductVariant_Id(existingVariant.getId());
                                 if (isUsedInOrder) {
-                                        // Có đơn hàng -> Chuyển tồn kho = 0 (Hoặc nếu có trường isActive thì isActive =
-                                        // false)
                                         existingVariant.setStock(0);
                                         variantsToSave.add(existingVariant);
                                 } else {
-                                        // Chưa ai mua -> Xóa hoàn toàn
                                         variantsToRemove.add(existingVariant);
                                 }
                         }
                 }
 
-                product.getVariants().removeAll(variantsToRemove);
+                if (!variantsToRemove.isEmpty()) {
+                        if (product.getVariants() != null) {
+                                product.getVariants().removeAll(variantsToRemove);
+                        }
+                        variantRepository.deleteAll(variantsToRemove);
+                        variantRepository.flush();
+                }
+
                 variantRepository.saveAll(variantsToSave);
+                variantRepository.flush();
 
                 if (product.getVariants() == null) {
-                        product.setVariants(new HashSet<>(onlyNewVariants));
-                } else {
-                        // CHỈ add thêm các biến thể mới vào Product (tránh lỗi duplicate entity của
-                        // Hibernate)
-                        product.getVariants().addAll(onlyNewVariants);
+                        product.setVariants(new HashSet<>());
+                }
+                product.getVariants().addAll(onlyNewVariants);
+        }
+
+        private String normalizeSku(String sku) {
+                return sku == null ? null : sku.trim().toUpperCase();
+        }
+
+        private String buildUniqueVariantSku(String desiredSku) {
+                String normalized = normalizeSku(desiredSku);
+                if (normalized == null || normalized.isBlank()) {
+                        throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
+                }
+
+                if (!variantRepository.existsBySku(normalized)) {
+                        return normalized;
+                }
+
+                int counter = 1;
+                String candidate;
+                do {
+                        candidate = normalized + "-V" + counter;
+                        counter++;
+                } while (variantRepository.existsBySku(candidate));
+
+                return candidate;
+        }
+        private boolean areAttributesEquivalent(String oldAttributes, String newAttributes) {
+                return normalizeAttributeMap(oldAttributes).equals(normalizeAttributeMap(newAttributes));
+        }
+
+        private String normalizeAttributesJson(String rawAttributes) {
+                try {
+                        Map<String, String> normalized = normalizeAttributeMap(rawAttributes);
+                        return objectMapper.writeValueAsString(normalized);
+                } catch (Exception e) {
+                        return rawAttributes == null ? "{}" : rawAttributes;
+                }
+        }
+
+        private Map<String, String> normalizeAttributeMap(String rawAttributes) {
+                try {
+                        if (rawAttributes == null || rawAttributes.isBlank()) {
+                                return new LinkedHashMap<>();
+                        }
+                        Map<String, Object> parsed = objectMapper.readValue(rawAttributes,
+                                        new TypeReference<LinkedHashMap<String, Object>>() {
+                                        });
+                        Map<String, String> normalized = new LinkedHashMap<>();
+                        for (Map.Entry<String, Object> entry : parsed.entrySet()) {
+                                String key = entry.getKey() == null ? "" : entry.getKey().trim().toLowerCase();
+                                String value = entry.getValue() == null ? "" : String.valueOf(entry.getValue()).trim();
+                                normalized.put(key, value);
+                        }
+                        return normalized;
+                } catch (Exception e) {
+                        Map<String, String> fallback = new LinkedHashMap<>();
+                        fallback.put("raw", rawAttributes == null ? "" : rawAttributes.trim());
+                        return fallback;
                 }
         }
 

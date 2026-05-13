@@ -311,3 +311,25 @@ Nội dung thực hiện:
 - Sửa lỗi overview bị 500 do transaction read-only nhưng lại tạo ví xu
 
 ✍️ Người thực hiện: Thanh
+
+📅 Ngày: 13/05/2026
+🧩 Nội dung công việc:
+
+1. FE:
+- Sửa form cập nhật sản phẩm ở trang admin
+- Sửa hiển thị phần Thông số (Tên: Giá trị) về đúng dạng nhiều dòng
+- Sửa validate khiến nút Lưu bị khóa sai
+- Sửa logic giữ SKU cũ cho variant cũ, chỉ tạo SKU mới cho variant mới hoặc variant tách lịch sử
+- Sửa trang chi tiết sản phẩm để ưu tiên chọn variant còn hàng
+- Sửa hiển thị các option biến thể như màu sắc, dung lượng, RAM
+
+2. BE:
+- Sửa logic cập nhật variant sản phẩm
+- Giữ đúng nghiệp vụ:
+  + chỉ sửa hình -> cập nhật trực tiếp
+  + chỉ sửa giá -> cập nhật trực tiếp
+  + sửa thông số nhận diện variant đã có người mua -> giữ bản cũ stock = 0, tạo bản mới
+- Sửa lỗi trùng SKU khi tạo variant mới từ variant cũ đã có đơn hàng
+- Chuẩn hóa so sánh attributes để tránh tạo duplicate variant sai
+
+✍️ Người thực hiện: Thanh
