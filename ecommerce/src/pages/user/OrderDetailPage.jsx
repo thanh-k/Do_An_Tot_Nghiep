@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, Navigate, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import axios from "axios";
+import apiClient from "@/services/apiClient";
 import PageHeader from "@/components/common/PageHeader";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { orderService } from "@/services/user/orderService";
@@ -71,9 +71,12 @@ function OrderDetailPage() {
       return;
 
     try {
-      await axios.put(`http://localhost:8080/api/v1/orders/${order.id}/status`, null, {
-        params: { status: "CANCELLED" },
-      });
+      await apiClient.request(
+        `/orders/${order.id}/status?status=CANCELLED`,
+        {
+          method: "PUT",
+        },
+      );
       toast.success("Đã hủy đơn hàng thành công!");
       setOrder({ ...order, status: "CANCELLED" });
     } catch (error) {
@@ -157,7 +160,7 @@ function OrderDetailPage() {
                       typeof attrsData === "string"
                         ? JSON.parse(attrsData)
                         : attrsData || {};
-                  } catch (e) {}
+                  } catch (e) { }
 
                   const variantLabel =
                     item.variantLabel ||
@@ -231,15 +234,15 @@ function OrderDetailPage() {
 
               {(order.voucherCode ||
                 (order.discountAmount && order.discountAmount > 0)) && (
-                <div className="flex justify-between items-center text-rose-600">
-                  <span>
-                    Voucher ưu đãi {order.voucherCode ? `(${order.voucherCode})` : ""}:
-                  </span>
-                  <span className="font-semibold">
-                    -{formatCurrency(order.discountAmount || 0)}
-                  </span>
-                </div>
-              )}
+                  <div className="flex justify-between items-center text-rose-600">
+                    <span>
+                      Voucher ưu đãi {order.voucherCode ? `(${order.voucherCode})` : ""}:
+                    </span>
+                    <span className="font-semibold">
+                      -{formatCurrency(order.discountAmount || 0)}
+                    </span>
+                  </div>
+                )}
 
               <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-lg font-bold text-slate-900">
                 <span>Tổng thanh toán:</span>

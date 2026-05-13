@@ -1,12 +1,11 @@
-import axios from "axios";
+import apiClient from "@/services/apiClient";
 
-const API_URL = "http://localhost:8080/api/v1/brands";
+const API_URL = "/brands";
 
 export const brandService = {
   // Lấy danh sách thương hiệu thật
   async getBrands() {
-    const response = await axios.get(API_URL);
-    return response.data.result;
+    return apiClient.request(API_URL);
   },
 
   // Lưu thương hiệu (Thêm mới/Cập nhật kèm ảnh)
@@ -32,21 +31,24 @@ export const brandService = {
 
     if (payload.id) {
       // Gọi API updateWithImage ní vừa viết ở Backend
-      const response = await axios.put(
-        `${API_URL}/with-image/${payload.id}`,
-        formData,
-      );
-      return response.data.result;
+      return apiClient.request(`${API_URL}/with-image/${payload.id}`, {
+        method: "PUT",
+        body: formData,
+      });
     } else {
       // Tạo mới kèm ảnh
-      const response = await axios.post(`${API_URL}/with-image`, formData);
-      return response.data.result;
+      return apiClient.request(`${API_URL}/with-image`, {
+        method: "POST",
+        body: formData,
+      });
     }
   },
 
   // Xóa thương hiệu
   async deleteBrand(brandId) {
-    await axios.delete(`${API_URL}/${brandId}`);
+    await apiClient.request(`${API_URL}/${brandId}`, {
+      method: "DELETE",
+    });
     return true;
   },
 };

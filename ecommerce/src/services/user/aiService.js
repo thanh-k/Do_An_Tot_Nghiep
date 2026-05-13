@@ -1,6 +1,6 @@
-import axios from "axios";
+import apiClient from "@/services/apiClient";
 
-const AI_API_URL = "http://localhost:8080/api/v1/ai/chat";
+const AI_API_URL = "/ai/chat";
 
 function normalizeAction(action) {
   if (!action) return null;
@@ -18,12 +18,13 @@ function normalizeAction(action) {
 
 export const aiService = {
   async chat(message, context = null) {
-    const response = await axios.post(AI_API_URL, {
-      message,
-      context,
+    const payload = await apiClient.request(AI_API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        message,
+        context,
+      }),
     });
-
-    const payload = response?.data?.result || response?.data || {};
 
     return {
       reply: payload.reply || "Xin lỗi, tôi chưa thể trả lời lúc này.",

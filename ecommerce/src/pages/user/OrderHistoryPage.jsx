@@ -1,7 +1,7 @@
 import { Navigate, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import axios from "axios";
+import apiClient from "@/services/apiClient";
 import PageHeader from "@/components/common/PageHeader";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import EmptyState from "@/components/common/EmptyState";
@@ -63,14 +63,12 @@ function OrderHistoryPage() {
       return;
 
     try {
-      await axios.put(
-        `http://localhost:8080/api/v1/orders/${orderId}/status`,
-        null,
+      await apiClient.request(
+        `/orders/${order.id}/status?status=CANCELLED`,
         {
-          params: { status: "CANCELLED" },
-        }
+          method: "PUT",
+        },
       );
-
       toast.success("Đã hủy đơn hàng thành công!");
       setOrders((prevOrders) =>
         prevOrders.map((o) =>
@@ -167,7 +165,7 @@ function OrderHistoryPage() {
                         typeof attrsData === "string"
                           ? JSON.parse(attrsData)
                           : attrsData || {};
-                    } catch (e) {}
+                    } catch (e) { }
 
                     const variantLabel =
                       item.variantLabel ||

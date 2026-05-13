@@ -1,13 +1,13 @@
-import axios from "axios";
+import apiClient from "@/services/apiClient";
 
-const API_URL = "http://localhost:8080/api/v1/vouchers";
+const API_URL = "/vouchers";
 
 export const voucherService = {
   // 1. Lấy danh sách Voucher
   async getVouchers() {
     try {
-      const response = await axios.get(API_URL);
-      return response.data.result || [];
+      const response = await apiClient.request(API_URL);
+      return response || [];
     } catch (error) {
       console.error("Lỗi khi lấy danh sách Voucher:", error);
       throw error;
@@ -18,11 +18,20 @@ export const voucherService = {
   async saveVoucher(payload) {
     try {
       if (payload.id) {
-        const response = await axios.put(`${API_URL}/${payload.id}`, payload);
-        return response.data.result;
+        const response = await apiClient.request(
+          `${API_URL}/${payload.id}`,
+          {
+            method: "PUT",
+            body: JSON.stringify(payload),
+          },
+        );
+        return response;
       } else {
-        const response = await axios.post(API_URL, payload);
-        return response.data.result;
+        const response = await apiClient.request(API_URL, {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        return response;
       }
     } catch (error) {
       console.error(
@@ -35,7 +44,9 @@ export const voucherService = {
 
   // 3. Xoá Voucher
   async deleteVoucher(id) {
-    await axios.delete(`${API_URL}/${id}`);
+    await apiClient.request(`${API_URL}/${id}`, {
+      method: "DELETE",
+    });
     return true;
   },
 };

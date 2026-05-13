@@ -1,18 +1,17 @@
-import axios from "axios";
+import apiClient from "@/services/apiClient";
 
-const API_URL = "http://localhost:8080/api/v1/products";
+const API_URL = "/products";
 
 const getVariantPrice = (product) => Number(product?.variants?.[0]?.price || 0);
-const getCompareAtPrice = (product) =>
-  Number(product?.variants?.[0]?.compareAtPrice || 0);
+const getCompareAtPrice = (product) => Number(product?.variants?.[0]?.compareAtPrice || 0);
 
 export const productService = {
   async getAllProducts() {
     console.log("--- Gọi API: Lấy tất cả sản phẩm ---");
     try {
-      const response = await axios.get(API_URL);
-      console.log("Kết quả lấy danh sách sản phẩm:", response.data.result);
-      return response.data.result;
+      const response = await apiClient.request(API_URL);
+      console.log("Kết quả lấy danh sách sản phẩm:", response);
+      return response || [];
     } catch (error) {
       console.error(
         "Lỗi khi lấy tất cả sản phẩm:",
@@ -25,11 +24,12 @@ export const productService = {
   async getProducts(filters = {}) {
     console.log("--- Gọi API: Lấy sản phẩm kèm Filter ---", filters);
     try {
-      const response = await axios.get(API_URL, { params: filters });
-      console.log("Kết quả Filter:", response.data.result);
+      const query = new URLSearchParams(filters).toString();
+      const response = await apiClient.request(`${API_URL}?${query}`);
+      console.log("Kết quả Filter:", response);
       return {
-        items: response.data.result || [],
-        total: response.data.result?.length || 0,
+        items: response || [],
+        total: response?.length || 0,
       };
     } catch (error) {
       console.error(
@@ -43,9 +43,9 @@ export const productService = {
   async getProductById(id) {
     console.log(`--- Gọi API: Lấy chi tiết sản phẩm ID: ${id} ---`);
     try {
-      const response = await axios.get(`${API_URL}/${id}`);
-      console.log("Dữ liệu chi tiết:", response.data.result);
-      return response.data.result;
+      const response = await apiClient.request(`${API_URL}/${id}`);
+      console.log("Dữ liệu chi tiết:", response);
+      return response;
     } catch (error) {
       console.error(
         "Lỗi khi lấy chi tiết sản phẩm:",
@@ -62,18 +62,22 @@ export const productService = {
     try {
       if (payload.id) {
         console.log(`Đang thực hiện cập nhật (PUT) cho ID: ${payload.id}`);
-        const response = await axios.put(`${API_URL}/${payload.id}`, payload, {
-          timeout: 15000,
-        });
-        console.log("Cập nhật thành công:", response.data.result);
-        return response.data.result;
+        const response = await apiClient.request(
+          `${API_URL}/${payload.id}`,
+          {
+            method: "PUT",
+            body: JSON.stringify(payload),
+          },
+        );
+        console.log("Cập nhật thành công:", response);
+        return response;
       } else {
-        console.log("Đang thực hiện tạo mới (POST)");
-        const response = await axios.post(API_URL, payload, {
-          timeout: 15000,
+        const response = await apiClient.request(API_URL, {
+          method: "POST",
+          body: JSON.stringify(payload),
         });
-        console.log("Tạo mới thành công:", response.data.result);
-        return response.data.result;
+        console.log("Tạo mới thành công:", response);
+        return response;
       }
     } catch (error) {
       console.error(
@@ -87,9 +91,11 @@ export const productService = {
   async deleteProduct(id) {
     console.log(`--- Gọi API: Xóa sản phẩm ID: ${id} ---`);
     try {
-      const response = await axios.delete(`${API_URL}/${id}`);
-      console.log("Kết quả xóa:", response.data);
-      return response.data.result;
+      const response = await apiClient.request(`${API_URL}/${id}`, {
+        method: "DELETE",
+      });
+      console.log("Kết quả xóa:", response);
+      return response;
     } catch (error) {
       console.error(
         "Lỗi khi xóa sản phẩm:",
@@ -101,12 +107,8 @@ export const productService = {
 
   async getHomeCollections() {
     try {
-      const res = await axios.get(API_URL);
-      const products = Array.isArray(res.data?.result)
-        ? res.data.result
-        : Array.isArray(res.data)
-          ? res.data
-          : [];
+      const res = await apiClient.request(API_URL);
+      const products = Array.isArray(res) ? res : [];
 
       const featured = products
         .filter((p) => p?.isFeatured === true || Number(p?.featured) === 1)

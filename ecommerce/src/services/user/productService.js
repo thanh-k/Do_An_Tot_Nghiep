@@ -1,5 +1,5 @@
-import axios from "axios";
-const API_URL = "http://localhost:8080/api/v1/products";
+import apiClient from "@/services/apiClient";
+const API_URL = "/products";
 
 export const userProductService = {
   // Hàm lấy danh sách sản phẩm có xử lý Lọc, Sắp xếp và Phân trang
@@ -7,8 +7,8 @@ export const userProductService = {
     try {
       // BƯỚC 1: Gọi API lấy toàn bộ sản phẩm từ Backend
       // (Vì Backend chưa có API Query Params chuẩn, ta sẽ lấy hết và xử lý tại Frontend cho mượt)
-      const response = await axios.get(API_URL);
-      let products = response.data.result || [];
+      const response = await apiClient.request(API_URL);
+      let products = Array.isArray(response) ? response : [];
 
       // BƯỚC 2: Xử lý LỌC (Filter) Danh mục, Thương hiệu & Khoảng giá
       if (filters.category) {
@@ -146,8 +146,7 @@ export const userProductService = {
   // Hàm lấy chi tiết một sản phẩm theo Slug
   async getProductBySlug(slug) {
     try {
-      const response = await axios.get(`${API_URL}/slug/${slug}`);
-      let product = response.data.result;
+      const product = await apiClient.request(`${API_URL}/slug/${slug}`);
 
       // Ép kiểu chuỗi JSON specifications thành Object để UI render được
       if (
@@ -203,8 +202,7 @@ export const userProductService = {
   // Hàm lấy dữ liệu cho Trang Chủ (HomePage)
   async getHomeCollections() {
     try {
-      const response = await axios.get(API_URL);
-      const allProducts = response.data.result || [];
+      const allProducts = await apiClient.request(API_URL);
 
       // Lọc ra các danh sách tương ứng (lấy tối đa 8 sản phẩm mỗi bộ sưu tập cho đẹp)
       const featured = allProducts.filter((p) => p.isFeatured).slice(0, 8);
@@ -230,9 +228,9 @@ export const userProductService = {
   async getAvailableFilters() {
     try {
       // Lấy danh sách thương hiệu THẬT từ Backend
-      const brandRes = await axios.get("http://localhost:8080/api/v1/brands");
-      const brandNames = brandRes.data.result
-        ? brandRes.data.result.map((b) => b.name)
+      const brandRes = await apiClient.request("/brands");
+      const brandNames = Array.isArray(brandRes)
+        ? brandRes.map((b) => b.name)
         : [];
 
       // Trả về dạng mảng String trơn để FilterSidebar của bạn map() không bị lỗi Object

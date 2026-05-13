@@ -1,14 +1,13 @@
-import axios from "axios";
+import apiClient from "@/services/apiClient";
 
-const API_URL = "http://localhost:8080/api/v1/categories";
+const API_URL = "/categories";
 
 export const categoryService = {
   // Lấy danh sách danh mục thật từ DB
   async getCategories() {
     try {
-      const response = await axios.get(API_URL);
       // Ní lưu ý: Nếu API của ní bọc kết quả trong .result thì dùng response.data.result
-      return response.data.result || response.data;
+      return await apiClient.request(API_URL);
     } catch (error) {
       console.error("Lỗi lấy danh mục:", error);
       return [];
@@ -40,21 +39,26 @@ export const categoryService = {
 
     if (payload.id) {
       // Nếu có ID thì gọi API Update (Sử dụng API with-image ní vừa thêm ở bước trước)
-      const response = await axios.put(
-        `${API_URL}/with-image/${payload.id}`,
-        formData,
-      );
-      return response.data.result;
+      const response = await apiClient.request(`${API_URL}/with-image/${payload.id}`, {
+        method: "PUT",
+        body: formData,
+      });
+      return response;
     } else {
       // Nếu không có ID thì gọi API Create with image
-      const response = await axios.post(`${API_URL}/with-image`, formData);
-      return response.data.result;
+      const response = await apiClient.request(`${API_URL}/with-image`, {
+        method: "POST",
+        body: formData,
+      });
+      return response;
     }
   },
 
   // Xóa danh mục thật
   async deleteCategory(categoryId) {
-    await axios.delete(`${API_URL}/${categoryId}`);
+    await apiClient.request(`${API_URL}/${categoryId}`, {
+      method: "DELETE",
+    });
     return true;
   },
 };
