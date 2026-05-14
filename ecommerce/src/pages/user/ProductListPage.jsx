@@ -9,6 +9,7 @@ import FilterSidebar from "@/components/product/FilterSidebar";
 import ProductGrid from "@/components/product/ProductGrid";
 import { categoryService } from "@/services/admin/categoryService";
 import userProductService from "@/services/user/productService";
+import behaviorService from "@/services/user/behaviorService";
 
 const getArrayFromParam = (value) => value ? value.split(",").filter(Boolean) : [];
 
@@ -107,7 +108,23 @@ function ProductListPage() {
     setLoading(true);
     userProductService
       .getProducts({ ...filters, pageSize: 12 })
-      .then(setResponse)
+      .then((data) => {
+        setResponse(data);
+        if (filters.category) {
+          behaviorService.track({
+            eventType: "VIEW_CATEGORY",
+            categoryId: Number(filters.category),
+            productIds: (data.items || []).slice(0, 8).map((item) => item.id),
+          });
+        }
+        if (filters.brands?.length) {
+          behaviorService.track({
+            eventType: "VIEW_BRAND",
+            keyword: filters.brands.join(", "),
+            productIds: (data.items || []).slice(0, 8).map((item) => item.id),
+          });
+        }
+      })
       .catch((err) => console.error("Lỗi tải sản phẩm:", err))
       .finally(() => setLoading(false));
   }, [filters]);

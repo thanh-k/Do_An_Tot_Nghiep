@@ -14,6 +14,7 @@ const ONLINE_5M_STORAGE_KEY = "coin_online_5m_start_at";
 function CoinRewardsPage() {
   const [loading, setLoading] = useState(true);
   const [actionTaskCode, setActionTaskCode] = useState(null);
+  const [redeemLoadingId, setRedeemLoadingId] = useState(null);
   const [overview, setOverview] = useState({
     balance: 0,
     todayEarned: 0,
@@ -133,6 +134,21 @@ function CoinRewardsPage() {
     }
   };
 
+
+  const handleRedeemVoucher = async (item) => {
+    if (!item?.id) return;
+    try {
+      setRedeemLoadingId(item.id);
+      const result = await coinRewardService.redeemVoucher(item.id);
+      toast.success(result?.message || "Đổi voucher thành công");
+      await loadData();
+    } catch (error) {
+      toast.error(error.message || "Không thể đổi voucher lúc này");
+    } finally {
+      setRedeemLoadingId(null);
+    }
+  };
+
   if (loading) return <LoadingSpinner label="Đang tải Xu thưởng..." />;
 
   return (
@@ -242,7 +258,7 @@ function CoinRewardsPage() {
                 Đổi voucher bằng xu
               </div>
               <p className="mt-2 text-sm text-slate-600">
-                Trước mắt trang này hiển thị trước phần đổi quà. Giai đoạn sau có thể nối sang đổi voucher và ưu đãi.
+                Dùng xu để đổi voucher giảm giá. Voucher sau khi đổi sẽ nằm trong kho mã của bạn và có thể dùng khi đặt hàng.
               </p>
             </div>
 
@@ -252,7 +268,7 @@ function CoinRewardsPage() {
                 Lưu ý
               </div>
               <p className="mt-2 text-sm text-slate-600">
-                Các nhiệm vụ hằng ngày đã có thể nhận xu thật. Nhiệm vụ đánh giá sẽ cộng xu tự động sau khi đánh giá thành công.
+                Nhiệm vụ hằng ngày và đánh giá đã cộng xu thật. Đơn hàng hoàn thành sẽ tự động hoàn 15 xu, không cần bấm nhận.
               </p>
             </div>
           </div>
@@ -323,12 +339,18 @@ function CoinRewardsPage() {
         <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
           <h3 className="text-xl font-black text-slate-900">Đổi quà</h3>
           <p className="mt-1 text-sm text-slate-500">
-            Trước mắt chốt giao diện đổi quà, sau có thể nối logic đổi voucher bằng xu.
+            Dùng xu hiện có để đổi voucher giảm giá cho đơn hàng tiếp theo.
           </p>
 
           <div className="mt-6 grid gap-4">
             {redeems.map((item) => (
-              <RewardRedeemCard key={item.id} item={item} currentBalance={overview.balance || 0} />
+              <RewardRedeemCard
+                key={item.id}
+                item={item}
+                currentBalance={overview.balance || 0}
+                onRedeem={handleRedeemVoucher}
+                loading={redeemLoadingId === item.id}
+              />
             ))}
           </div>
         </div>

@@ -31,6 +31,7 @@ const getInitialState = (voucher) => ({
   expiryDate: formatDateTimeForInput(voucher?.expiryDate) || "",
   active: voucher?.active !== undefined ? voucher.active : true,
   image: voucher?.image || "",
+  coinCost: voucher?.coinCost || "",
   imageFile: null,
 });
 
@@ -64,6 +65,9 @@ function VoucherFormModal({ isOpen, onClose, initialVoucher, onSubmit }) {
     }
     if (name === "quantity" || name === "monthlyQuantity") {
       if (!value || Number(value) < 1) errMsg = "Số lượng phải từ 1 trở lên";
+    }
+    if (name === "coinCost" && currentForm.category === "COIN_REWARD") {
+      if (!value || Number(value) <= 0) errMsg = "Giá xu đổi voucher phải lớn hơn 0";
     }
     if (name === "expiryDate") {
       if (!value) errMsg = "Vui lòng chọn hạn sử dụng";
@@ -104,6 +108,11 @@ function VoucherFormModal({ isOpen, onClose, initialVoucher, onSubmit }) {
       newForm.discountType = "FIXED";
     }
 
+    // Voucher đổi bằng xu phải có giá xu. Gợi ý mặc định để admin dễ nhập.
+    if (field === "category" && value === "COIN_REWARD" && !newForm.coinCost) {
+      newForm.coinCost = 200;
+    }
+
     // Validate chéo giữa discountType và discountValue
     if (field === "discountType") {
       validate("discountValue", newForm.discountValue, newForm);
@@ -142,6 +151,9 @@ function VoucherFormModal({ isOpen, onClose, initialVoucher, onSubmit }) {
 
     if (!currentForm.quantity || Number(currentForm.quantity) < 1)
       newErrors.quantity = currentForm.category === "VIP" ? "Quota voucher VIP mỗi tháng phải từ 1 trở lên" : "Số lượng phải từ 1 trở lên";
+
+    if (currentForm.category === "COIN_REWARD" && (!currentForm.coinCost || Number(currentForm.coinCost) <= 0))
+      newErrors.coinCost = "Giá xu đổi voucher phải lớn hơn 0";
 
     if (!currentForm.expiryDate)
       newErrors.expiryDate = "Vui lòng chọn hạn sử dụng";
@@ -213,6 +225,7 @@ function VoucherFormModal({ isOpen, onClose, initialVoucher, onSubmit }) {
         expiryDate: new Date(form.expiryDate).toISOString(),
         active: form.active,
         image: imageUrl,
+        coinCost: form.category === "COIN_REWARD" ? Number(form.coinCost) : null,
       };
 
       await onSubmit(payload);
@@ -260,10 +273,16 @@ function VoucherFormModal({ isOpen, onClose, initialVoucher, onSubmit }) {
               <option value="SHIPPING">Miễn phí vận chuyển</option>
               <option value="CASHBACK">Hoàn xu / Tích điểm</option>
               <option value="VIP">Đặc quyền VIP</option>
+              <option value="COIN_REWARD">Đổi voucher bằng xu</option>
             </select>
             {form.category === "VIP" ? (
               <p className="text-xs text-fuchsia-600 font-medium">
                 Voucher loại VIP chỉ cấp cho user đang có gói VIP còn hạn. Trường "Số lượng" sẽ được hiểu là quota sử dụng mỗi tháng và tự reset khi sang tháng mới.
+              </p>
+            ) : null}
+            {form.category === "COIN_REWARD" ? (
+              <p className="text-xs text-emerald-600 font-medium">
+                Voucher này sẽ xuất hiện ở mục Đổi quà trong trang Xu thưởng. User phải dùng xu để đổi mới nhận được mã.
               </p>
             ) : null}
           </div>
@@ -327,6 +346,24 @@ function VoucherFormModal({ isOpen, onClose, initialVoucher, onSubmit }) {
               </p>
             )}
           </div>
+
+          {form.category === "COIN_REWARD" ? (
+            <div>
+              <Input
+                label="Giá xu cần đổi *"
+                type="number"
+                value={form.coinCost}
+                onChange={(e) => updateField("coinCost", e.target.value)}
+                placeholder="VD: 200"
+                required
+              />
+              {errors.coinCost && (
+                <p className="mt-1 text-xs text-red-500 font-medium">
+                  {errors.coinCost}
+                </p>
+              )}
+            </div>
+          ) : null}
 
           <div>
             <Input

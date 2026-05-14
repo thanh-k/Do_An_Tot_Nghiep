@@ -15,6 +15,8 @@ import VoucherManagementPage from "@/pages/admin/VoucherManagementPage";
 import MembershipManagementPage from "@/pages/admin/MembershipManagementPage";
 import ReviewManagementPage from "@/pages/admin/ReviewManagementPage";
 import CoinTaskManagementPage from "@/pages/admin/CoinTaskManagementPage";
+import BehaviorManagementPage from "@/pages/admin/BehaviorManagementPage";
+import AnnouncementBarManagementPage from "@/pages/admin/AnnouncementBarManagementPage";
 
 export const adminRoutes = [
   {
@@ -51,6 +53,16 @@ export const adminRoutes = [
     path: "coin-tasks",
     component: CoinTaskManagementPage,
     permissions: ["COIN_TASK_VIEW"],
+  },
+  {
+    path: "behaviors",
+    component: BehaviorManagementPage,
+    permissions: ["BEHAVIOR_VIEW", "RECOMMENDATION_VIEW", "RECOMMENDATION_MANAGE"],
+  },
+  {
+    path: "announcement-bars",
+    component: AnnouncementBarManagementPage,
+    permissions: ["ANNOUNCEMENT_VIEW", "ANNOUNCEMENT_MANAGE"],
   },
   {
     path: "vouchers",

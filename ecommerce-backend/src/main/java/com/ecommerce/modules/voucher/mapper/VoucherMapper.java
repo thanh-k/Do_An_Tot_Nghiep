@@ -20,6 +20,7 @@ public class VoucherMapper {
                 .monthlyQuantity(request.getMonthlyQuantity() != null ? request.getMonthlyQuantity() : request.getQuantity())
                 .expiryDate(request.getExpiryDate())
                 .image(request.getImage())
+                .coinCost(request.getCoinCost())
                 .active(true)
                 .build();
     }
@@ -38,6 +39,7 @@ public class VoucherMapper {
                 .monthlyQuantity(v.getMonthlyQuantity())
                 .expiryDate(v.getExpiryDate())
                 .image(v.getImage())
+                .coinCost(v.getCoinCost())
                 .active(v.getActive())
                 .build();
     }

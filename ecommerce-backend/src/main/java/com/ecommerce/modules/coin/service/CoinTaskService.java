@@ -20,5 +20,7 @@ public interface CoinTaskService {
     List<CoinTaskResponse> getUserTasks();
     List<CoinRedeemOptionResponse> getRedeemOptions();
     CoinClaimResponse claimTask(String taskCode);
+    CoinClaimResponse redeemVoucher(Long voucherId);
     void rewardReviewCreated(User user, ProductReview review, boolean hasImages);
+    void rewardOrderCompleted(String userId, Long orderId);
 }

@@ -21,4 +21,7 @@ public class VoucherRequest {
     private LocalDateTime expiryDate;
     private Boolean active;
     private String image;
+
+    // Giá xu để đổi voucher, chỉ dùng khi category = COIN_REWARD
+    private Long coinCost;
 }

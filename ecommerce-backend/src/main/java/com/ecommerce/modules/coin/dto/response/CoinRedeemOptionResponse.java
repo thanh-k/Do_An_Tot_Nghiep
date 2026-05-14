@@ -11,4 +11,10 @@ public class CoinRedeemOptionResponse {
     private String title;
     private String description;
     private Long coinCost;
+    private String voucherCode;
+    private String discountType;
+    private Double discountValue;
+    private Double minOrderValue;
+    private Integer quantity;
+    private Boolean redeemed;
 }

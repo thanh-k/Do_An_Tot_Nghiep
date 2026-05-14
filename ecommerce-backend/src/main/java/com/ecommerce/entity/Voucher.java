@@ -19,7 +19,7 @@ public class Voucher {
     @Column(unique = true, nullable = false)
     private String code; // Ví dụ: SALE10, FREESHIP
 
-    private String category; // "DISCOUNT", "SHIPPING", "CASHBACK", "VIP"
+    private String category; // "DISCOUNT", "SHIPPING", "CASHBACK", "VIP", "COIN_REWARD"
     private String discountType; // "PERCENT" hoặc "FIXED"
     private Double discountValue; // Giá trị: ví dụ 10 (cho 10%) hoặc 50000 (cho 50k)
     private Double minOrderValue; // Đơn tối thiểu phải đạt để dùng voucher
@@ -38,5 +38,13 @@ public class Voucher {
 
     private LocalDateTime expiryDate;
     private String image;
+
+    /**
+     * Số xu cần dùng để đổi voucher.
+     * Chỉ áp dụng cho voucher có category = COIN_REWARD.
+     */
+    @Column(name = "coin_cost")
+    private Long coinCost;
+
     private Boolean active;
 }

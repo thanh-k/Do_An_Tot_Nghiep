@@ -7,6 +7,7 @@ import PageHeader from "@/components/common/PageHeader";
 import ProductGrid from "@/components/product/ProductGrid";
 import { useDebounce } from "@/hooks/useDebounce";
 import productService from "@/services/admin/productService";
+import behaviorService from "@/services/user/behaviorService";
 
 function SearchResultPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -27,7 +28,16 @@ function SearchResultPage() {
         search: debouncedKeyword,
         pageSize: 12,
       })
-      .then((response) => setProducts(response.items))
+      .then((response) => {
+        setProducts(response.items);
+        if (debouncedKeyword?.trim()) {
+          behaviorService.track({
+            eventType: "SEARCH_PRODUCT",
+            keyword: debouncedKeyword.trim(),
+            productIds: (response.items || []).slice(0, 8).map((item) => item.id),
+          });
+        }
+      })
       .finally(() => setLoading(false));
   }, [debouncedKeyword]);
 

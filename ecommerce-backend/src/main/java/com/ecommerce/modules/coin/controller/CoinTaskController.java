@@ -82,4 +82,12 @@ public class CoinTaskController {
                 .result(coinTaskService.getRedeemOptions())
                 .build();
     }
+
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/coins/redeems/{voucherId}/redeem")
+    public ApiResponse<CoinClaimResponse> redeemVoucher(@PathVariable Long voucherId) {
+        return ApiResponse.<CoinClaimResponse>builder()
+                .result(coinTaskService.redeemVoucher(voucherId))
+                .build();
+    }
 }

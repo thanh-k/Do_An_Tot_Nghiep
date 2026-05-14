@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import SectionHeader from "@/components/common/SectionHeader";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ProductGrid from "@/components/product/ProductGrid";
+import RecommendedProducts from "@/components/product/RecommendedProducts";
 import { categoryService } from "@/services/admin/categoryService";
 import productService from "@/services/admin/productService";
 import newsService from "@/services/user/newsService";
@@ -377,6 +378,14 @@ function HomePage() {
             </div>
           </div>
         </div>
+      </motion.section>
+
+      <motion.section className="container-padded py-8" {...fadeInUp}>
+        <RecommendedProducts
+          title="Gợi ý dành riêng cho bạn"
+          description="Dựa trên sản phẩm bạn đã xem, tìm kiếm, thêm vào giỏ hàng hoặc bỏ dở thanh toán."
+          limit={8}
+        />
       </motion.section>
 
       <motion.section className="container-padded py-4" {...fadeInUp}>

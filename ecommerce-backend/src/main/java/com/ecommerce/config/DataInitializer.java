@@ -134,6 +134,10 @@ public class DataInitializer implements CommandLineRunner {
 
                 permission("RECOMMENDATION_VIEW", "Xem gợi ý sản phẩm", "RECOMMENDATION"),
                 permission("RECOMMENDATION_MANAGE", "Quản lý gợi ý sản phẩm", "RECOMMENDATION"),
+                permission("BEHAVIOR_VIEW", "Xem hành vi người dùng", "BEHAVIOR"),
+
+                permission("ANNOUNCEMENT_VIEW", "Xem thông báo chạy đầu trang", "ANNOUNCEMENT"),
+                permission("ANNOUNCEMENT_MANAGE", "Quản lý thông báo chạy đầu trang", "ANNOUNCEMENT"),
 
                 permission("WALLET_VIEW", "Xem ví thành viên", "WALLET"),
                 permission("WALLET_TOPUP", "Nạp tiền vào ví", "WALLET"),
@@ -240,6 +244,9 @@ public class DataInitializer implements CommandLineRunner {
 
                         "RECOMMENDATION_VIEW",
                         "RECOMMENDATION_MANAGE",
+                        "BEHAVIOR_VIEW",
+                        "ANNOUNCEMENT_VIEW",
+                        "ANNOUNCEMENT_MANAGE",
 
                         "WALLET_VIEW",
                         "WALLET_TOPUP",
@@ -335,6 +342,9 @@ public class DataInitializer implements CommandLineRunner {
 
                         "RECOMMENDATION_VIEW",
                         "RECOMMENDATION_MANAGE",
+                        "BEHAVIOR_VIEW",
+                        "ANNOUNCEMENT_VIEW",
+                        "ANNOUNCEMENT_MANAGE",
 
                         "WALLET_VIEW",
                         "WALLET_TOPUP",

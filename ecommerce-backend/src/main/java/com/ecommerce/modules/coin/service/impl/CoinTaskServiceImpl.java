@@ -4,6 +4,8 @@ import com.ecommerce.common.exception.AppException;
 import com.ecommerce.common.exception.ErrorCode;
 import com.ecommerce.entity.ProductReview;
 import com.ecommerce.entity.User;
+import com.ecommerce.entity.UserVoucher;
+import com.ecommerce.entity.Voucher;
 import com.ecommerce.modules.coin.dto.request.CoinTaskUpsertRequest;
 import com.ecommerce.modules.coin.dto.response.CoinClaimResponse;
 import com.ecommerce.modules.coin.dto.response.CoinOverviewResponse;
@@ -20,6 +22,8 @@ import com.ecommerce.modules.coin.service.CoinTaskService;
 import com.ecommerce.modules.membership.entity.MembershipSubscriptionStatus;
 import com.ecommerce.modules.membership.repository.MembershipSubscriptionRepository;
 import com.ecommerce.modules.user.repository.UserRepository;
+import com.ecommerce.modules.voucher.repository.UserVoucherRepository;
+import com.ecommerce.modules.voucher.repository.VoucherRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -29,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.List;
 
 @Service
@@ -40,6 +45,11 @@ public class CoinTaskServiceImpl implements CoinTaskService {
     private final CoinTransactionRepository coinTransactionRepository;
     private final UserRepository userRepository;
     private final MembershipSubscriptionRepository membershipSubscriptionRepository;
+    private final VoucherRepository voucherRepository;
+    private final UserVoucherRepository userVoucherRepository;
+
+    private static final String COIN_VOUCHER_CATEGORY = "COIN_REWARD";
+    private static final String ORDER_CASHBACK_TASK_CODE = "ORDER_CASHBACK";
 
     @Override
     @Transactional(readOnly = true)
@@ -109,6 +119,7 @@ public class CoinTaskServiceImpl implements CoinTaskService {
         LocalDate today = LocalDate.now();
 
         return coinTaskRepository.findByIsActiveTrueOrderByCategoryAscSortOrderAscIdAsc().stream()
+                .filter(task -> !ORDER_CASHBACK_TASK_CODE.equalsIgnoreCase(task.getTaskCode()))
                 .map(task -> toResponse(task, user.getId(), today))
                 .toList();
     }
@@ -116,20 +127,70 @@ public class CoinTaskServiceImpl implements CoinTaskService {
     @Override
     @Transactional(readOnly = true)
     public List<CoinRedeemOptionResponse> getRedeemOptions() {
-        return List.of(
-                CoinRedeemOptionResponse.builder()
-                        .id(1L).type("voucher").title("Voucher giảm 20.000đ")
-                        .description("Dùng xu để đổi mã giảm giá cho đơn hàng tiếp theo.")
-                        .coinCost(200L).build(),
-                CoinRedeemOptionResponse.builder()
-                        .id(2L).type("voucher").title("Voucher freeship")
-                        .description("Miễn phí vận chuyển cho đơn hàng đủ điều kiện.")
-                        .coinCost(300L).build(),
-                CoinRedeemOptionResponse.builder()
-                        .id(3L).type("gift").title("Quà bí mật tháng này")
-                        .description("Phần quà sự kiện, sẽ bàn thêm logic đổi sau.")
-                        .coinCost(800L).build()
-        );
+        User user = getCurrentAuthenticatedUser();
+        return voucherRepository.findByCategoryIgnoreCaseAndActiveTrueOrderByIdDesc(COIN_VOUCHER_CATEGORY).stream()
+                .filter(voucher -> voucher.getExpiryDate() == null || voucher.getExpiryDate().isAfter(LocalDateTime.now()))
+                .map(voucher -> toRedeemOption(voucher, user.getId()))
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public CoinClaimResponse redeemVoucher(Long voucherId) {
+        User user = getCurrentAuthenticatedUser();
+        Voucher voucher = voucherRepository.findById(voucherId)
+                .orElseThrow(() -> new AppException(ErrorCode.VOUCHER_NOT_FOUND));
+
+        if (!COIN_VOUCHER_CATEGORY.equalsIgnoreCase(voucher.getCategory())
+                || !Boolean.TRUE.equals(voucher.getActive())
+                || voucher.getExpiryDate() == null
+                || voucher.getExpiryDate().isBefore(LocalDateTime.now())) {
+            throw new AppException(ErrorCode.VOUCHER_INVALID);
+        }
+
+        long cost = resolveCoinVoucherCost(voucher);
+        UserCoinWallet wallet = getOrCreateWallet(user);
+        if (nvl(wallet.getBalance()) < cost) {
+            throw new AppException(ErrorCode.COIN_TASK_INVALID);
+        }
+
+        UserVoucher userVoucher = userVoucherRepository.findByUserIdAndVoucherId(user.getId(), voucher.getId())
+                .orElseGet(() -> UserVoucher.builder()
+                        .user(user)
+                        .voucher(voucher)
+                        .remainingQuantity(0)
+                        .lastResetMonth(YearMonth.now().toString())
+                        .validUntil(voucher.getExpiryDate())
+                        .active(true)
+                        .build());
+
+        userVoucher.setVoucher(voucher);
+        userVoucher.setActive(true);
+        userVoucher.setValidUntil(voucher.getExpiryDate());
+        userVoucher.setLastResetMonth(YearMonth.now().toString());
+        userVoucher.setRemainingQuantity((userVoucher.getRemainingQuantity() == null ? 0 : userVoucher.getRemainingQuantity()) + 1);
+        userVoucherRepository.save(userVoucher);
+
+        wallet.setBalance(nvl(wallet.getBalance()) - cost);
+        wallet.setTotalSpent(nvl(wallet.getTotalSpent()) + cost);
+        userCoinWalletRepository.save(wallet);
+
+        coinTransactionRepository.save(CoinTransaction.builder()
+                .user(user)
+                .changeAmount(-cost)
+                .balanceAfter(wallet.getBalance())
+                .transactionType("VOUCHER_REDEEM")
+                .note("Đổi voucher bằng xu: " + voucher.getCode())
+                .sourceRef("VOUCHER:" + voucher.getId() + ":" + System.currentTimeMillis())
+                .build());
+
+        return CoinClaimResponse.builder()
+                .taskCode("VOUCHER_REDEEM")
+                .claimedAmount(-cost)
+                .balance(wallet.getBalance())
+                .alreadyClaimed(false)
+                .message("Đổi voucher thành công")
+                .build();
     }
 
     @Override
@@ -139,7 +200,7 @@ public class CoinTaskServiceImpl implements CoinTaskService {
         CoinTask task = coinTaskRepository.findByTaskCodeIgnoreCase(taskCode)
                 .orElseThrow(() -> new AppException(ErrorCode.COIN_TASK_NOT_FOUND));
 
-        if (!Boolean.TRUE.equals(task.getIsActive())) {
+        if (!Boolean.TRUE.equals(task.getIsActive()) || ORDER_CASHBACK_TASK_CODE.equalsIgnoreCase(task.getTaskCode())) {
             throw new AppException(ErrorCode.COIN_TASK_INVALID);
         }
         if (task.getCategory() != CoinTaskCategory.DAILY) {
@@ -189,6 +250,46 @@ public class CoinTaskServiceImpl implements CoinTaskService {
 
     @Override
     @Transactional
+    public void rewardOrderCompleted(String userId, Long orderId) {
+        if (userId == null || userId.isBlank() || orderId == null) return;
+
+        CoinTask task = coinTaskRepository.findByTaskCodeIgnoreCase(ORDER_CASHBACK_TASK_CODE).orElse(null);
+        if (task == null || !Boolean.TRUE.equals(task.getIsActive())) return;
+
+        Long parsedUserId;
+        try {
+            parsedUserId = Long.parseLong(userId);
+        } catch (NumberFormatException ex) {
+            return;
+        }
+
+        User user = userRepository.findById(parsedUserId).orElse(null);
+        if (user == null) return;
+
+        String sourceRef = "ORDER:" + orderId;
+        if (coinTransactionRepository.existsByUserIdAndTaskTaskCodeIgnoreCaseAndSourceRef(user.getId(), ORDER_CASHBACK_TASK_CODE, sourceRef)) {
+            return;
+        }
+
+        long reward = task.getCoinReward() == null ? 15L : task.getCoinReward();
+        UserCoinWallet wallet = getOrCreateWallet(user);
+        wallet.setBalance(nvl(wallet.getBalance()) + reward);
+        wallet.setTotalEarned(nvl(wallet.getTotalEarned()) + reward);
+        userCoinWalletRepository.save(wallet);
+
+        coinTransactionRepository.save(CoinTransaction.builder()
+                .user(user)
+                .task(task)
+                .changeAmount(reward)
+                .balanceAfter(wallet.getBalance())
+                .transactionType("ORDER_CASHBACK")
+                .note("Hoàn xu khi đơn hàng #" + orderId + " hoàn thành")
+                .sourceRef(sourceRef)
+                .build());
+    }
+
+    @Override
+    @Transactional
     public void rewardReviewCreated(User user, ProductReview review, boolean hasImages) {
         if (user == null || review == null || review.getId() == null) return;
         String taskCode = hasImages ? "REVIEW_WITH_IMAGE" : "REVIEW_NO_IMAGE";
@@ -215,6 +316,48 @@ public class CoinTaskServiceImpl implements CoinTaskService {
                 .note("Thưởng xu từ đánh giá sản phẩm #" + review.getId())
                 .sourceRef(sourceRef)
                 .build());
+    }
+
+    private CoinRedeemOptionResponse toRedeemOption(Voucher voucher, Long userId) {
+        boolean redeemed = userVoucherRepository.findByUserIdAndVoucherId(userId, voucher.getId())
+                .filter(uv -> Boolean.TRUE.equals(uv.getActive()))
+                .filter(uv -> uv.getRemainingQuantity() != null && uv.getRemainingQuantity() > 0)
+                .filter(uv -> uv.getValidUntil() == null || uv.getValidUntil().isAfter(LocalDateTime.now()))
+                .isPresent();
+
+        return CoinRedeemOptionResponse.builder()
+                .id(voucher.getId())
+                .type("voucher")
+                .title(buildVoucherTitle(voucher))
+                .description("Dùng xu để đổi voucher " + voucher.getCode() + " cho đơn hàng tiếp theo.")
+                .coinCost(resolveCoinVoucherCost(voucher))
+                .voucherCode(voucher.getCode())
+                .discountType(voucher.getDiscountType())
+                .discountValue(voucher.getDiscountValue())
+                .minOrderValue(voucher.getMinOrderValue())
+                .quantity(voucher.getQuantity())
+                .redeemed(redeemed)
+                .build();
+    }
+
+    private String buildVoucherTitle(Voucher voucher) {
+        if ("PERCENT".equalsIgnoreCase(voucher.getDiscountType())) {
+            return "Giảm " + formatNumber(voucher.getDiscountValue()) + "%";
+        }
+        return "Giảm " + String.format("%,.0f", voucher.getDiscountValue()).replace(',', '.') + "đ";
+    }
+
+    private String formatNumber(Double value) {
+        if (value == null) return "0";
+        if (Math.floor(value) == value) return String.valueOf(value.longValue());
+        return String.valueOf(value);
+    }
+
+    private long resolveCoinVoucherCost(Voucher voucher) {
+        if (voucher == null || voucher.getCoinCost() == null || voucher.getCoinCost() <= 0) {
+            return 200L;
+        }
+        return voucher.getCoinCost();
     }
 
     private void validate(CoinTaskUpsertRequest request, Long id) {

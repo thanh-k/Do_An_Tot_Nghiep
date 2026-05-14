@@ -9,9 +9,11 @@ import QuantitySelector from "@/components/common/QuantitySelector";
 import Rating from "@/components/common/Rating";
 import ProductGallery from "@/components/product/ProductGallery";
 import ProductGrid from "@/components/product/ProductGrid";
+import RecommendedProducts from "@/components/product/RecommendedProducts";
 import useCart from "@/hooks/useCart";
 import useWishlist from "@/hooks/useWishlist";
 import userProductService from "@/services/user/productService";
+import behaviorService from "@/services/user/behaviorService";
 import { formatCurrency } from "@/utils/format";
 import {
   findBestVariantForSelection,
@@ -86,6 +88,12 @@ function ProductDetailPage() {
       .getProductBySlug(slug)
       .then((product) => {
         setProductData(product);
+        behaviorService.track({
+          eventType: "VIEW_PRODUCT",
+          productId: product.id,
+          categoryId: product.category?.id,
+          brandId: product.brand?.id,
+        });
         const defaultVariant = getDefaultVariant(product);
         setSelectedAttributes(
           buildSelectedAttributesFromVariant(defaultVariant),
@@ -234,9 +242,11 @@ function ProductDetailPage() {
 
   const handleAddToCart = () => {
     addToCart(productData, selectedVariant, quantity);
+    behaviorService.track({ eventType: "ADD_TO_CART", productId: productData.id });
   };
 
   const handleBuyNow = () => {
+    behaviorService.track({ eventType: "BUY_NOW", productId: productData.id });
     const itemId = `direct_${productData.id}_${selectedVariant.id}`;
 
     // Truyền trực tiếp dữ liệu sản phẩm sang Checkout để tránh phụ thuộc vào độ trễ của state Giỏ hàng
@@ -412,7 +422,10 @@ function ProductDetailPage() {
               <Button
                 fullWidth
                 variant="outline"
-                onClick={() => toggleWishlist(productData)}
+                onClick={() => {
+                  toggleWishlist(productData);
+                  behaviorService.track({ eventType: "ADD_TO_WISHLIST", productId: productData.id });
+                }}
               >
                 <Heart
                   size={18}
@@ -505,6 +518,7 @@ function ProductDetailPage() {
             <ProductGrid products={productData.relatedProducts} />
           </section>
         )}
+      <RecommendedProducts type="similar" productId={productData.id} title="Sản phẩm tương tự" limit={8} />
     </div>
   );
 }

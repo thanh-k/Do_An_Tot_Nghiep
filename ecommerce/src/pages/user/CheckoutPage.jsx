@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useLocation, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Ticket, X } from "lucide-react";
@@ -10,6 +10,7 @@ import useAuth from "@/hooks/useAuth";
 import useCart from "@/hooks/useCart";
 import useVoucherWallet from "@/hooks/useVoucherWallet";
 import { orderService } from "@/services/user/orderService";
+import behaviorService from "@/services/user/behaviorService";
 import userVoucherService from "@/services/user/voucherService";
 import { PAYMENT_METHOD_OPTIONS } from "@/constants";
 import { formatCurrency } from "@/utils/format";
@@ -21,6 +22,7 @@ const CATEGORY_MAP = {
   SHIPPING: { label: "Vận chuyển", bg: "bg-blue-500", text: "text-blue-600" },
   CASHBACK: { label: "Hoàn xu", bg: "bg-amber-500", text: "text-amber-600" },
   VIP: { label: "Đặc quyền", bg: "bg-fuchsia-500", text: "text-fuchsia-600" },
+  COIN_REWARD: { label: "Đổi xu", bg: "bg-emerald-500", text: "text-emerald-600" },
 };
 
 function CheckoutPage() {
@@ -36,6 +38,7 @@ function CheckoutPage() {
     note: "",
   });
   const [paymentMethod, setPaymentMethod] = useState("cod");
+  const orderCompletedRef = useRef(false);
 
   // --- VOUCHER STATES ---
   const { savedVoucherCodes, syncAvailableCodes } = useVoucherWallet();
@@ -55,16 +58,38 @@ function CheckoutPage() {
     .getActiveVouchers()
     .then((data) => {
       const codes = savedVoucherCodes || [];
+
       setMyVouchers(
-        (data || []).filter(
-          (v) =>
-            codes.includes(v.code) &&
-            v.claimable !== false &&
-            v.eligible !== false
-        )
+        (data || []).filter((v) => {
+          const category = (v.category || "DISCOUNT").toUpperCase();
+
+          const isActive = v.active !== false;
+          const isClaimable = v.claimable !== false;
+          const isEligible = v.eligible !== false;
+          const hasQuantity = Number(v.remainingQuantity ?? v.quantity ?? 1) > 0;
+
+          // Mã đặc biệt: user có VIP hoặc đã đổi bằng xu thì tự hiện
+          const isSpecialOwnedVoucher =
+            category === "VIP" || category === "COIN_REWARD";
+
+          // Mã thường: chỉ hiện nếu user đã bấm lưu mã
+          const isSavedNormalVoucher =
+            ["DISCOUNT", "SHIPPING", "CASHBACK"].includes(category) &&
+            codes.includes(v.code);
+
+          return (
+            isActive &&
+            isClaimable &&
+            isEligible &&
+            hasQuantity &&
+            (isSpecialOwnedVoucher || isSavedNormalVoucher)
+          );
+        })
       );
     })
-    .catch(() => {});
+    .catch((error) => {
+      console.error("Không lấy được voucher trong checkout:", error);
+    });
 }, [savedVoucherCodes]);
 
   // Lấy ID các sản phẩm được chọn từ Giỏ hàng truyền sang
@@ -79,6 +104,29 @@ function CheckoutPage() {
     // Nếu truy cập trực tiếp URL mà không có state, điều hướng về giỏ hàng, KHÔNG cho phép thanh toán toàn bộ giỏ
     return [];
   }, [cartItems, selectedIds, directItems]);
+
+  const checkoutProductIds = useMemo(() => {
+    return [...new Set(checkoutItems.map((item) => item.productId).filter(Boolean))];
+  }, [checkoutItems]);
+
+  useEffect(() => {
+    if (!checkoutProductIds.length) return;
+
+    orderCompletedRef.current = false;
+    behaviorService.track({
+      eventType: "START_CHECKOUT",
+      productIds: checkoutProductIds,
+    });
+
+    return () => {
+      if (!orderCompletedRef.current) {
+        behaviorService.trackBeacon({
+          eventType: "ABANDON_CHECKOUT",
+          productIds: checkoutProductIds,
+        });
+      }
+    };
+  }, [checkoutProductIds.join(",")]);
 
   // Tính lại tổng tiền chỉ cho những sản phẩm được chọn
   const checkoutSubtotal = useMemo(() => {
@@ -193,6 +241,11 @@ function CheckoutPage() {
       };
 
       await orderService.createOrder(payload);
+      orderCompletedRef.current = true;
+      behaviorService.track({
+        eventType: "PLACE_ORDER",
+        productIds: checkoutProductIds,
+      });
 
       // Chỉ xoá những sản phẩm đã được chọn thanh toán khỏi giỏ hàng
       if (!directItems) {
@@ -433,7 +486,8 @@ function CheckoutPage() {
         <div className="space-y-4 max-h-[60vh] overflow-y-auto no-scrollbar pb-2">
           {myVouchers.map((v) => {
             const isEligible = checkoutSubtotal >= v.minOrderValue;
-            const catConfig = CATEGORY_MAP[v.category || "DISCOUNT"];
+            const category = (v.category || "DISCOUNT").toUpperCase();
+            const catConfig = CATEGORY_MAP[category] || CATEGORY_MAP.DISCOUNT;
             return (
               <div
                 key={v.id}

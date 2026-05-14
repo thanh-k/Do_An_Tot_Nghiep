@@ -34,6 +34,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class VoucherServiceImpl implements VoucherService {
 
+    private static final String COIN_VOUCHER_CATEGORY = "COIN_REWARD";
+
     private final VoucherRepository voucherRepository;
     private final UserVoucherRepository userVoucherRepository;
     private final MembershipSubscriptionRepository membershipSubscriptionRepository;
@@ -66,6 +68,11 @@ public class VoucherServiceImpl implements VoucherService {
                 || request.getMinOrderValue() == null || request.getMinOrderValue() < 0
                 || request.getQuantity() == null || request.getQuantity() < 1
                 || request.getExpiryDate() == null) {
+            throw new AppException(ErrorCode.INVALID_VOUCHER_DATA);
+        }
+
+        if (COIN_VOUCHER_CATEGORY.equalsIgnoreCase(request.getCategory())
+                && (request.getCoinCost() == null || request.getCoinCost() <= 0)) {
             throw new AppException(ErrorCode.INVALID_VOUCHER_DATA);
         }
 
@@ -115,6 +122,7 @@ public class VoucherServiceImpl implements VoucherService {
         // Voucher thường: ai cũng thấy và dùng nếu còn hiệu lực
         voucherRepository.findByActiveTrueOrderByIdDesc().stream()
                 .filter(v -> !isVipVoucher(v))
+                .filter(v -> !isCoinRedeemVoucher(v))
                 .filter(v -> v.getQuantity() != null && v.getQuantity() > 0)
                 .filter(v -> v.getExpiryDate() != null && v.getExpiryDate().isAfter(now))
                 .map(voucherMapper::toResponse)
@@ -194,6 +202,7 @@ public class VoucherServiceImpl implements VoucherService {
         }
 
         voucher.setImage(request.getImage());
+        voucher.setCoinCost(request.getCoinCost());
 
         Voucher saved = voucherRepository.save(voucher);
 
@@ -216,7 +225,7 @@ public class VoucherServiceImpl implements VoucherService {
         Voucher voucher = voucherRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.VOUCHER_NOT_FOUND));
 
-        if (isVipVoucher(voucher)) {
+        if (isAssignmentOnlyVoucher(voucher)) {
             userVoucherRepository.findAll().stream()
                     .filter(uv -> uv.getVoucher().getId().equals(id))
                     .forEach(userVoucherRepository::delete);
@@ -244,9 +253,11 @@ public class VoucherServiceImpl implements VoucherService {
 
         LocalDateTime now = LocalDateTime.now();
 
-        if (isVipVoucher(voucher)) {
+        if (isAssignmentOnlyVoucher(voucher)) {
             User user = getCurrentAuthenticatedUser();
-            syncVipVouchersForUser(user);
+            if (isVipVoucher(voucher)) {
+                syncVipVouchersForUser(user);
+            }
 
             UserVoucher userVoucher = userVoucherRepository.findByUserIdAndVoucherId(user.getId(), voucher.getId())
                     .orElseThrow(() -> new AppException(ErrorCode.VOUCHER_INVALID));
@@ -285,9 +296,11 @@ public class VoucherServiceImpl implements VoucherService {
         Voucher voucher = voucherRepository.findByCode(code)
                 .orElseThrow(() -> new AppException(ErrorCode.VOUCHER_NOT_FOUND));
 
-        if (isVipVoucher(voucher)) {
+        if (isAssignmentOnlyVoucher(voucher)) {
             User user = getCurrentAuthenticatedUser();
-            syncVipVouchersForUser(user);
+            if (isVipVoucher(voucher)) {
+                syncVipVouchersForUser(user);
+            }
 
             UserVoucher userVoucher = userVoucherRepository.findByUserIdAndVoucherId(user.getId(), voucher.getId())
                     .orElseThrow(() -> new AppException(ErrorCode.VOUCHER_INVALID));
@@ -315,11 +328,12 @@ public class VoucherServiceImpl implements VoucherService {
                 .discountValue(voucher.getDiscountValue())
                 .minOrderValue(voucher.getMinOrderValue())
                 .quantity(userVoucher.getRemainingQuantity())
-                .vipOnly(true)
+                .vipOnly(isVipVoucher(voucher))
                 .monthlyReset(Boolean.TRUE.equals(voucher.getMonthlyReset()))
                 .monthlyQuantity(resolveVipMonthlyQuota(voucher))
                 .expiryDate(userVoucher.getValidUntil())
                 .image(voucher.getImage())
+                .coinCost(voucher.getCoinCost())
                 .active(Boolean.TRUE.equals(userVoucher.getActive()))
                 .eligible(true)
                 .claimable(true)
@@ -341,11 +355,20 @@ public class VoucherServiceImpl implements VoucherService {
                 .monthlyQuantity(resolveVipMonthlyQuota(voucher))
                 .expiryDate(voucher.getExpiryDate())
                 .image(voucher.getImage())
+                .coinCost(voucher.getCoinCost())
                 .active(Boolean.TRUE.equals(voucher.getActive()))
                 .eligible(false)
                 .claimable(false)
                 .lockedReason("Hãy đăng ký thành viên VIP để được nhận voucher này")
                 .build();
+    }
+
+    private boolean isAssignmentOnlyVoucher(Voucher voucher) {
+        return isVipVoucher(voucher) || isCoinRedeemVoucher(voucher);
+    }
+
+    private boolean isCoinRedeemVoucher(Voucher voucher) {
+        return voucher != null && COIN_VOUCHER_CATEGORY.equalsIgnoreCase(voucher.getCategory());
     }
 
     private boolean isVipVoucher(Voucher voucher) {
@@ -370,10 +393,13 @@ public class VoucherServiceImpl implements VoucherService {
                 .findFirstByUserIdAndStatusOrderByEndedAtDesc(user.getId(), MembershipSubscriptionStatus.ACTIVE)
                 .filter(subscription -> subscription.getEndedAt() != null && subscription.getEndedAt().isAfter(now));
 
-        List<UserVoucher> currentAssignments = userVoucherRepository.findByUserId(user.getId());
+        List<UserVoucher> currentVipAssignments = userVoucherRepository.findByUserId(user.getId())
+                .stream()
+                .filter(assignment -> isVipVoucher(assignment.getVoucher()))
+                .toList();
 
         if (activeSubscription.isEmpty()) {
-            currentAssignments.forEach(userVoucherRepository::delete);
+            currentVipAssignments.forEach(userVoucherRepository::delete);
             return;
         }
 
@@ -411,7 +437,7 @@ public class VoucherServiceImpl implements VoucherService {
             userVoucherRepository.save(assignment);
         }
 
-        currentAssignments.stream()
+        currentVipAssignments.stream()
                 .filter(assignment ->
                         !activeTemplateIds.contains(assignment.getVoucher().getId())
                                 || !Boolean.TRUE.equals(assignment.getVoucher().getActive()))

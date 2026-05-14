@@ -18,6 +18,12 @@ const coinRewardService = {
   async getRedeemOptions() {
     return apiClient.request("/coins/redeems");
   },
+
+  async redeemVoucher(voucherId) {
+    return apiClient.request(`/coins/redeems/${voucherId}/redeem`, {
+      method: "POST",
+    });
+  },
 };
 
 export default coinRewardService;
