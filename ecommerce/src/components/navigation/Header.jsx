@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  Camera,
   ChevronDown,
   Heart,
   LayoutDashboard,
@@ -7,9 +8,9 @@ import {
   ShoppingCart,
   User,
   X,
-  Coins,
 } from "lucide-react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
+
 import logo from "@/assets/logo.svg";
 import SearchBar from "@/components/navigation/SearchBar";
 import { categoryService } from "@/services/admin/categoryService";
@@ -17,21 +18,23 @@ import useAuth from "@/hooks/useAuth";
 import useCart from "@/hooks/useCart";
 import useWishlist from "@/hooks/useWishlist";
 import cn from "@/utils/cn";
-import { Camera } from "lucide-react"; 
 
 function Header() {
   const [categories, setCategories] = useState([]);
   const [mobileOpen, setMobileOpen] = useState(false);
+
   const { currentUser, isAdmin, logout } = useAuth();
   const { itemsCount } = useCart();
   const { wishlistCount } = useWishlist();
 
-  const location = useLocation();
-
+  // Lấy danh mục sản phẩm để hiển thị dropdown Sản phẩm ở desktop
   useEffect(() => {
-    categoryService.getCategories().then(setCategories);
+    categoryService.getCategories().then(setCategories).catch(() => {
+      setCategories([]);
+    });
   }, []);
 
+  // Menu tài khoản trên desktop
   const accountLinks = currentUser
     ? [
         { label: "Hồ sơ", to: "/dashboard" },
@@ -45,59 +48,83 @@ function Header() {
         { label: "Đăng ký", to: "/register" },
       ];
 
+  // Menu desktop đầy đủ
   const mainNavLinks = [
     { label: "Trang chủ", to: "/" },
     { label: "Sản phẩm", to: "/products", hasDropdown: true },
     { label: "Tin tức", to: "/news" },
     { label: "Liên hệ", to: "/contact" },
     { label: "Xu thưởng", to: "/coins" },
-    { label: "giới thiệu", to: "/about" },
-    { label: "so sánh sản phẩm ", to: "/compare" },
+    { label: "Giới thiệu", to: "/about" },
+    { label: "So sánh sản phẩm", to: "/compare" },
+  ];
+
+  // Menu mobile trong nút 3 gạch
+  // Chỉ để các trang thông tin phụ, không để Trang chủ/Sản phẩm/Giỏ hàng/Tài khoản
+  // vì các chức năng đó đã có trong MobileBottomNav
+  const mobileInfoLinks = [
+    { label: "Tin tức", to: "/news" },
+    { label: "Liên hệ", to: "/contact" },
+    { label: "Xu thưởng", to: "/coins" },
+    { label: "Giới thiệu", to: "/about" },
+    { label: "So sánh sản phẩm", to: "/compare" },
   ];
 
   return (
     <header className="sticky top-0 z-40 border-b border-rose-600 bg-rose-500 shadow-lg">
-      {/* DÒNG 1: LOGO, SEARCH, ICONS */}
-      <div className="container-padded flex items-center gap-4 py-4">
-        {/* <Link to="/" className="shrink-0">
-          <img src={logo} alt="NovaShop" className="h-10 w-auto" />
-        </Link> */}
-        <Link to="/" className="shrink-0">
+      {/* 
+        DÒNG 1: HEADER CHÍNH
+        Desktop: logo + search + icon tìm ảnh + wishlist + cart + account
+        Mobile: logo + search + nút 3 gạch
+      */}
+      <div className="container-padded flex items-center gap-2 py-3 sm:gap-3 sm:py-4 lg:gap-4">
+        {/* LOGO */}
+        <Link to="/" className="shrink-0" onClick={() => setMobileOpen(false)}>
           <img
             src={logo}
             alt="InsightShop"
-            className="h-10 w-auto invert brightness-200"
+            className="h-8 w-auto invert brightness-200 sm:h-9 lg:h-10"
           />
         </Link>
 
-        <SearchBar className="hidden flex-1 lg:block" />
+        {/* 
+          SEARCH BAR
+          Mobile cũng hiển thị search.
+          Icon tìm kiếm hình ảnh nên đặt bên trong SearchBar.jsx.
+        */}
+        <SearchBar className="min-w-0 flex-1" />
 
-        {/* --- ĐOẠN CODE CẦN THAY ĐỔI --- */}
+        {/* ICON TÌM KIẾM HÌNH ẢNH RIÊNG CHO DESKTOP
+            Nếu bạn đã đưa Camera vào trong SearchBar thì có thể xóa block này.
+            Mình giữ lại chỉ hiển thị desktop để không rối mobile.
+        */}
         <nav className="hidden items-center gap-2 lg:flex">
           <NavLink
             to="/image-search"
-            // Tooltip hiện ra khi hover
             title="Tìm kiếm sản phẩm bằng hình ảnh"
             className={({ isActive }) =>
               cn(
-                // Điều chỉnh padding (p-3) để icon nằm giữa nút tròn
-                "rounded-full p-3 text-sm font-bold transition-all shadow-sm",
+                "rounded-full p-3 text-sm font-bold shadow-sm transition-all",
                 isActive
-                  ? "bg-white text-rose-600 shadow-lg scale-105"
-                  : "bg-rose-600/10 text-white hover:bg-rose-500 border border-rose-500/30",
+                  ? "scale-105 bg-white text-rose-600 shadow-lg"
+                  : "border border-rose-500/30 bg-rose-600/10 text-white hover:bg-rose-500",
               )
             }
           >
-            {/* 2. Thay text bằng Icon Camera */}
             <Camera size={20} strokeWidth={2.5} />
           </NavLink>
         </nav>
 
+        {/* 
+          DESKTOP ACTIONS
+          Chỉ hiển thị từ lg trở lên.
+        */}
         <div className="ml-auto hidden items-center gap-3 lg:flex">
           {isAdmin && (
             <Link
               to="/admin"
               className="rounded-full bg-rose-400/30 p-3 text-white transition hover:bg-white hover:text-rose-600"
+              title="Trang quản trị"
             >
               <LayoutDashboard size={20} />
             </Link>
@@ -106,8 +133,10 @@ function Header() {
           <Link
             to="/wishlist"
             className="relative rounded-full bg-rose-400/30 p-3 text-white transition hover:bg-white hover:text-rose-600"
+            title="Yêu thích"
           >
             <Heart size={20} />
+
             {wishlistCount > 0 && (
               <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-yellow-400 text-[10px] font-black text-rose-700 shadow-sm">
                 {wishlistCount}
@@ -118,8 +147,10 @@ function Header() {
           <Link
             to="/cart"
             className="relative rounded-full bg-rose-400/30 p-3 text-white transition hover:bg-white hover:text-rose-600"
+            title="Giỏ hàng"
           >
             <ShoppingCart size={20} />
+
             {itemsCount > 0 && (
               <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-yellow-400 text-[10px] font-black text-rose-700 shadow-sm">
                 {itemsCount}
@@ -127,8 +158,9 @@ function Header() {
             )}
           </Link>
 
+          {/* DESKTOP ACCOUNT DROPDOWN */}
           <div className="group relative">
-            <div className="flex cursor-pointer items-center gap-2 rounded-full border border-rose-400 bg-rose-400/20 px-3 py-1.5 transition hover:bg-white hover:text-rose-600 group-hover:bg-white group-hover:text-rose-600 text-white">
+            <div className="flex cursor-pointer items-center gap-2 rounded-full border border-rose-400 bg-rose-400/20 px-3 py-1.5 text-white transition hover:bg-white hover:text-rose-600 group-hover:bg-white group-hover:text-rose-600">
               {currentUser?.avatar ? (
                 <img
                   src={currentUser.avatar}
@@ -140,17 +172,19 @@ function Header() {
                   <User size={18} />
                 </div>
               )}
+
               <div className="hidden text-left xl:block">
-                <p className="text-[10px] opacity-80 uppercase font-bold">
+                <p className="text-[10px] font-bold uppercase opacity-80">
                   Tài khoản
                 </p>
-                <p className="text-sm font-bold truncate max-w-[100px]">
+                <p className="max-w-[100px] truncate text-sm font-bold">
                   {currentUser?.name || "Khách"}
                 </p>
               </div>
+
               <ChevronDown
                 size={14}
-                className="opacity-70 group-hover:rotate-180 transition-transform"
+                className="opacity-70 transition-transform group-hover:rotate-180"
               />
             </div>
 
@@ -164,8 +198,10 @@ function Header() {
                   {item.label}
                 </Link>
               ))}
+
               {currentUser && (
                 <button
+                  type="button"
                   onClick={logout}
                   className="block w-full rounded-xl px-4 py-3 text-left text-sm font-bold text-rose-600 hover:bg-rose-100"
                 >
@@ -176,15 +212,24 @@ function Header() {
           </div>
         </div>
 
+        {/* 
+          MOBILE MENU BUTTON
+          Nút 3 gạch chỉ mở menu thông tin phụ.
+        */}
         <button
-          className="ml-auto rounded-full bg-rose-400/30 p-3 text-white lg:hidden"
-          onClick={() => setMobileOpen(!mobileOpen)}
+          type="button"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-rose-400/30 text-white sm:h-11 sm:w-11 lg:hidden"
+          onClick={() => setMobileOpen((prev) => !prev)}
+          aria-label={mobileOpen ? "Đóng menu" : "Mở menu"}
         >
           {mobileOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
 
-      {/* DÒNG 2: THANH MENU ĐIỀU HƯỚNG MÀU ĐỎ ĐẬM HƠN */}
+      {/* 
+        DÒNG 2: DESKTOP MENU
+        Chỉ hiện trên desktop.
+      */}
       <div className="hidden border-t border-rose-400/30 bg-rose-600/50 lg:block">
         <div className="container-padded flex items-center gap-1 py-1">
           {mainNavLinks.map((nav) => (
@@ -195,12 +240,13 @@ function Header() {
                   cn(
                     "flex items-center gap-1 px-5 py-3 text-sm font-bold uppercase tracking-wide transition-all",
                     isActive
-                      ? "text-yellow-300 underline underline-offset-8 decoration-2"
-                      : "text-white hover:text-yellow-200 hover:bg-rose-700/30",
+                      ? "text-yellow-300 underline decoration-2 underline-offset-8"
+                      : "text-white hover:bg-rose-700/30 hover:text-yellow-200",
                   )
                 }
               >
                 {nav.label}
+
                 {nav.hasDropdown && (
                   <ChevronDown
                     size={14}
@@ -209,12 +255,14 @@ function Header() {
                 )}
               </NavLink>
 
+              {/* DROPDOWN DANH MỤC SẢN PHẨM DESKTOP */}
               {nav.hasDropdown && (
                 <div className="invisible absolute left-0 top-full z-50 w-72 translate-y-2 pt-1 opacity-0 transition-all group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
                   <div className="overflow-hidden rounded-xl border border-slate-100 bg-white p-2 shadow-2xl">
-                    <p className="px-4 py-2 text-xs font-black text-slate-400 uppercase tracking-widest border-b mb-1">
+                    <p className="mb-1 border-b px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-400">
                       Danh mục sản phẩm
                     </p>
+
                     {categories.map((category) => (
                       <Link
                         key={category.id}
@@ -232,36 +280,26 @@ function Header() {
         </div>
       </div>
 
-      {/* MOBILE UI */}
+      {/* 
+        MOBILE UI:
+        Chỉ hiển thị 5 mục thông tin phụ.
+        Không để SearchBar ở đây nữa vì SearchBar đã nằm ngoài header.
+        Không để sản phẩm/giỏ hàng/tài khoản vì đã có MobileBottomNav.
+      */}
       {mobileOpen && (
-        <div className="fixed inset-0 top-[73px] z-50 bg-white lg:hidden overflow-y-auto">
-          <div className="container-padded space-y-6 py-8">
-            <div className="grid gap-3">
-              {mainNavLinks.map((nav) => (
-                <div key={nav.to}>
-                  <Link
-                    to={nav.to}
-                    onClick={() => setMobileOpen(false)}
-                    className="flex items-center justify-between rounded-xl bg-slate-50 px-5 py-4 text-base font-bold text-slate-800 active:bg-rose-50"
-                  >
-                    {nav.label}
-                    <X size={16} className="opacity-20" />
-                  </Link>
-                  {nav.hasDropdown && (
-                    <div className="mt-2 ml-4 grid gap-2 border-l-2 border-rose-100 pl-4">
-                      {categories.map((category) => (
-                        <Link
-                          key={category.id}
-                          to={`/products?category=${category.id}`}
-                          onClick={() => setMobileOpen(false)}
-                          className="py-3 text-sm font-bold text-slate-500 hover:text-rose-600"
-                        >
-                          {category.name}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
+        <div className="fixed inset-0 top-[64px] z-50 bg-white/95 backdrop-blur sm:top-[72px] lg:hidden">
+          <div className="container-padded max-h-[calc(100vh-64px)] overflow-y-auto py-5 sm:max-h-[calc(100vh-72px)]">
+            <div className="space-y-3">
+              {mobileInfoLinks.map((nav) => (
+                <Link
+                  key={nav.to}
+                  to={nav.to}
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center justify-between rounded-2xl bg-slate-50 px-5 py-5 text-base font-black text-slate-800 shadow-sm active:bg-rose-50 sm:text-lg"
+                >
+                  <span>{nav.label}</span>
+                  <span className="text-xl leading-none text-slate-300">›</span>
+                </Link>
               ))}
             </div>
           </div>

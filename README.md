@@ -442,3 +442,56 @@ Nội dung thực hiện:
     + Trang Xu thưởng
 
 ✍️ Người thực hiện: Thanh
+
+📅 Ngày: 15/05/2026
+🧩 Nội dung công việc:
+
+1. FE:
+- Tối ưu giao diện Header trên mobile
+- Chỉnh lại bố cục Header mobile theo hướng gọn hơn:
+    + Logo bên trái
+    + Thanh tìm kiếm nằm ngoài menu 3 gạch
+    + Nút menu 3 gạch bên phải
+- Bổ sung icon tìm kiếm bằng hình ảnh vào trong thanh tìm kiếm
+- Sửa `SearchBar.jsx` để hỗ trợ:
+    + Tìm kiếm sản phẩm bằng từ khóa
+    + Điều hướng sang trang tìm kiếm bằng hình ảnh
+- Tối ưu menu 3 gạch trên mobile
+- Rút gọn menu 3 gạch chỉ còn các mục thông tin phụ:
+    + Tin tức
+    + Liên hệ
+    + Xu thưởng
+    + Giới thiệu
+    + So sánh sản phẩm
+- Không đưa các mục Trang chủ, Sản phẩm, Giỏ hàng, Tài khoản vào menu 3 gạch vì đã có thanh điều hướng mobile riêng
+- Thêm và tinh chỉnh thanh điều hướng dưới màn hình trên mobile/tablet
+- Cập nhật `MobileBottomNav.jsx` gồm các mục:
+    + Trang chủ
+    + Cửa hàng
+    + Giỏ hàng
+    + Tài khoản
+- Bỏ mục Thông báo trong thanh điều hướng mobile vì hệ thống chưa làm chức năng thông báo
+- Điều chỉnh kích thước icon và chữ tự thích ứng theo màn hình:
+    + Điện thoại nhỏ
+    + Điện thoại lớn
+    + Tablet/iPad
+- Tối ưu drawer Danh mục và Tài khoản trên mobile
+- Bổ sung các liên kết nhanh trong tài khoản mobile:
+    + Hồ sơ
+    + Đơn hàng
+    + Yêu thích
+    + Giỏ hàng
+    + Ví voucher
+    + Xu thưởng
+    + Trang quản trị nếu user có quyền admin
+- Cập nhật `MainLayout.jsx` để gắn `MobileBottomNav`
+- Thêm padding bottom cho layout mobile để nội dung không bị thanh điều hướng dưới che mất
+
+2. Fix lỗi / tinh chỉnh giao diện:
+- Fix lỗi mobile menu hiển thị quá nhiều thông tin gây rối giao diện
+- Fix lỗi thanh điều hướng mobile bị lệch khi bỏ chức năng Thông báo
+- Fix icon tìm kiếm hình ảnh chưa hiển thị trong thanh tìm kiếm
+- Tối ưu Header mobile để giống giao diện các website thương mại điện tử hơn
+- Kiểm tra lại hiển thị trên giao diện mobile sau khi deploy web
+
+✍️ Người thực hiện: Thanh
