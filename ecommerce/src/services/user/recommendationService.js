@@ -1,8 +1,8 @@
-import axios from "axios";
+import apiClient from "@/services/apiClient";
 import { STORAGE_KEYS } from "@/constants";
 import { getGuestSessionId } from "@/utils/guestSession";
 
-const API_URL = "http://localhost:8080/api/v1/recommendations";
+const API_URL = "/recommendations";
 
 function getAuthHeaders() {
   const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
@@ -35,20 +35,31 @@ function normalizeProduct(product) {
 
 export const recommendationService = {
   async getMyRecommendations(limit = 8) {
-    const response = await axios.get(`${API_URL}/me`, {
-      params: { sessionId: getGuestSessionId(), limit },
-      headers: getAuthHeaders(),
-    });
-    return (response.data?.result || []).map(normalizeProduct);
+    const response = await apiClient.request(
+      `${API_URL}/me`,
+      {
+        method: "GET",
+        params: {
+          sessionId: getGuestSessionId(),
+          limit,
+        },
+        headers: getAuthHeaders(),
+      }
+    );
+    return (response?.result || []).map(normalizeProduct);
   },
 
   async getSimilarProducts(productId, limit = 8) {
     if (!productId) return [];
-    const response = await axios.get(`${API_URL}/similar/${productId}`, {
-      params: { limit },
-      headers: getAuthHeaders(),
-    });
-    return (response.data?.result || []).map(normalizeProduct);
+    const response = await apiClient.request(
+      `${API_URL}/similar/${productId}`,
+      {
+        method: "GET",
+        params: { limit },
+        headers: getAuthHeaders(),
+      }
+    );
+    return (response?.result || []).map(normalizeProduct);
   },
 };
 

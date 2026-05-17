@@ -1,8 +1,8 @@
-import axios from "axios";
+import apiClient from "@/services/apiClient";
 import { STORAGE_KEYS } from "@/constants";
 import { getGuestSessionId } from "@/utils/guestSession";
 
-const API_URL = "http://localhost:8080/api/v1/behaviors";
+const API_URL = "/behaviors";
 
 function getAuthHeaders() {
   const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
@@ -47,10 +47,15 @@ export const behaviorService = {
   async track(payload = {}) {
     try {
       if (!payload.eventType) return null;
-      const response = await axios.post(`${API_URL}/track`, normalizePayload(payload), {
-        headers: getAuthHeaders(),
-      });
-      return response.data?.result;
+      const response = await apiClient.request(
+        `${API_URL}/track`,
+        {
+          method: "POST",
+          data: normalizePayload(payload),
+          headers: getAuthHeaders(),
+        }
+      );
+      return response?.result;
     } catch (error) {
       // Tracking không được làm vỡ trải nghiệm mua hàng.
       console.warn("Không ghi nhận được hành vi người dùng:", error.response?.data || error.message);
