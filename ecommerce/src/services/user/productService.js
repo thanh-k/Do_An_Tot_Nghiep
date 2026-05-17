@@ -256,6 +256,66 @@ export const userProductService = {
       return { brands: [], colors: [], storages: [], rams: [], ssds: [] };
     }
   },
+
+  // Hàm tìm kiếm bằng hình ảnh (Tích hợp AI)
+  async imageSearch(file, k = 10) {
+    try {
+      // Bước 1: Gửi ảnh sang Python Vision Service (port 8001)
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("k", k);
+
+      const visionRes = await axios.post(
+        "http://localhost:8001/search",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        },
+      );
+
+      const productIds = visionRes.data.product_ids || [];
+      if (productIds.length === 0) {
+        return { label: "Không tìm thấy sản phẩm tương đồng", items: [] };
+      }
+
+      // Bước 2: Dùng danh sách ID lấy chi tiết sản phẩm từ Java Backend
+      const javaRes = await axios.post(`${API_URL}/batch`, productIds);
+      let products = javaRes.data.result || [];
+
+      // Ép kiểu JSON chuỗi specifications & attributes cho đúng chuẩn để UI render được
+      products = products.map((product) => {
+        if (
+          product.specifications &&
+          typeof product.specifications === "string"
+        ) {
+          try {
+            product.specifications = JSON.parse(product.specifications);
+          } catch (e) {
+            product.specifications = {};
+          }
+        }
+        if (product.variants && Array.isArray(product.variants)) {
+          product.variants = product.variants.map((v) => {
+            if (v.attributes && typeof v.attributes === "string") {
+              try {
+                v.attributes = JSON.parse(v.attributes);
+              } catch (e) {}
+            }
+            return v;
+          });
+        }
+        return product;
+      });
+
+      return {
+        label: `Tìm thấy ${products.length} sản phẩm tương tự`,
+        items: products,
+      };
+    } catch (error) {
+      console.error("Lỗi khi tìm kiếm bằng hình ảnh:", error);
+      throw error;
+    }
+  },
 };
 
 export default userProductService;

@@ -29,6 +29,15 @@ const CATEGORY_MAP = {
     label: "Đặc quyền VIP",
     style: "bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200",
   },
+  COIN_REWARD: {
+    label: "Đổi bằng xu",
+    style: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  },
+};
+
+const getCategoryConfig = (category) => CATEGORY_MAP[category || "DISCOUNT"] || {
+  label: category || "Giảm giá",
+  style: "bg-slate-100 text-slate-700 border-slate-200",
 };
 
 function VoucherManagementPage() {
@@ -89,7 +98,7 @@ function VoucherManagementPage() {
       key: "code",
       title: "Voucher",
       render: (row) => {
-        const cat = CATEGORY_MAP[row.category || "DISCOUNT"];
+        const cat = getCategoryConfig(row.category);
         return (
           <div className="flex gap-3 items-center">
             {row.image ? (
@@ -153,6 +162,14 @@ function VoucherManagementPage() {
             <span className="font-medium text-brand-600">{row.quantity}</span>{" "}
             vé
           </p>
+          {row.category === "COIN_REWARD" ? (
+            <p>
+              Giá đổi:{" "}
+              <span className="font-medium text-emerald-600">
+                {Number(row.coinCost || 0).toLocaleString("vi-VN")} xu
+              </span>
+            </p>
+          ) : null}
         </div>
       ),
     },
@@ -241,6 +258,7 @@ function VoucherManagementPage() {
           <option value="SHIPPING">Miễn phí vận chuyển</option>
           <option value="CASHBACK">Hoàn xu / Điểm</option>
           <option value="VIP">Đặc quyền VIP (reset hàng tháng)</option>
+          <option value="COIN_REWARD">Đổi voucher bằng xu</option>
         </select>
       </div>
       {loading ? (

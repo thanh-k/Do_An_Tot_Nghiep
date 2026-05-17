@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Heart, ShoppingCart, Truck } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import Breadcrumb from "@/components/common/Breadcrumb";
 import Button from "@/components/common/Button";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
@@ -8,9 +9,11 @@ import QuantitySelector from "@/components/common/QuantitySelector";
 import Rating from "@/components/common/Rating";
 import ProductGallery from "@/components/product/ProductGallery";
 import ProductGrid from "@/components/product/ProductGrid";
+import RecommendedProducts from "@/components/product/RecommendedProducts";
 import useCart from "@/hooks/useCart";
 import useWishlist from "@/hooks/useWishlist";
 import userProductService from "@/services/user/productService";
+import behaviorService from "@/services/user/behaviorService";
 import { formatCurrency } from "@/utils/format";
 import {
   findBestVariantForSelection,
@@ -85,6 +88,12 @@ function ProductDetailPage() {
       .getProductBySlug(slug)
       .then((product) => {
         setProductData(product);
+        behaviorService.track({
+          eventType: "VIEW_PRODUCT",
+          productId: product.id,
+          categoryId: product.category?.id,
+          brandId: product.brand?.id,
+        });
         const defaultVariant = getDefaultVariant(product);
         setSelectedAttributes(
           buildSelectedAttributesFromVariant(defaultVariant),
@@ -94,15 +103,25 @@ function ProductDetailPage() {
       .finally(() => setLoading(false));
   }, [slug]);
 
+  const sellableVariants = useMemo(() => {
+    if (!productData?.variants) return [];
+    return productData.variants.filter((variant) => Number(variant.stock || 0) > 0);
+  }, [productData]);
+
   const selectedVariant = useMemo(() => {
     if (!productData) return null;
 
+    const variantsForSelection = sellableVariants.length
+      ? sellableVariants
+      : productData.variants;
+
     return (
-      findVariantByAttributes(productData.variants, selectedAttributes) ||
-      findBestVariantForSelection(productData.variants, selectedAttributes) ||
+      findVariantByAttributes(variantsForSelection, selectedAttributes) ||
+      findBestVariantForSelection(variantsForSelection, selectedAttributes) ||
+      getDefaultVariant({ variants: variantsForSelection }) ||
       getDefaultVariant(productData)
     );
-  }, [productData, selectedAttributes]);
+  }, [productData, selectedAttributes, sellableVariants]);
 
   // LOGIC ĐỘNG: Lấy danh sách các thuộc tính cần hiển thị dựa theo Danh mục (Giống hệt Admin)
   const activeAttributes = useMemo(() => {
@@ -115,7 +134,8 @@ function ProductDetailPage() {
         .toLowerCase()
         .replace(/ /g, "-")
         .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[đĐ]/g, "d");
     const attributeKeys = CATEGORY_VARIANT_CONFIG[catSlug] ||
       CATEGORY_VARIANT_CONFIG["default"] || ["color"];
 
@@ -128,15 +148,20 @@ function ProductDetailPage() {
   // LOGIC ĐỘNG: Lọc ra các giá trị CÓ THẬT của từng thuộc tính từ danh sách biến thể
   const availableOptions = useMemo(() => {
     if (!productData || !productData.variants) return {};
+
+    const sourceVariants = sellableVariants.length
+      ? sellableVariants
+      : productData.variants;
+
     const options = {};
     activeAttributes.forEach((attr) => {
-      const values = productData.variants
+      const values = sourceVariants
         .map((v) => getAttributeValue(v, attr.key))
         .filter((val) => val !== "" && val !== null && val !== undefined);
-      options[attr.key] = [...new Set(values)]; // Loại bỏ các giá trị trùng lặp
+      options[attr.key] = [...new Set(values)];
     });
     return options;
-  }, [productData, activeAttributes]);
+  }, [productData, activeAttributes, sellableVariants]);
 
   useEffect(() => {
     if (!selectedVariant) {
@@ -154,13 +179,18 @@ function ProductDetailPage() {
       [attribute]: normalizeValue(value),
     };
 
+    const variantsForSelection = sellableVariants.length
+      ? sellableVariants
+      : productData.variants;
+
     const matchedVariant =
-      findVariantByAttributes(productData.variants, nextSelection) ||
+      findVariantByAttributes(variantsForSelection, nextSelection) ||
       findBestVariantForSelection(
-        productData.variants,
+        variantsForSelection,
         nextSelection,
         attribute,
       ) ||
+      getDefaultVariant({ variants: variantsForSelection }) ||
       getDefaultVariant(productData);
 
     if (matchedVariant) {
@@ -177,7 +207,11 @@ function ProductDetailPage() {
     if (!productData || !productData.variants) return;
 
     // Tìm biến thể đầu tiên khớp với ảnh được bấm
-    const variantWithImage = productData.variants.find(
+    const variantsForSelection = sellableVariants.length
+      ? sellableVariants
+      : productData.variants;
+
+    const variantWithImage = variantsForSelection.find(
       (v) => v.image === imageUrl,
     );
 
@@ -208,9 +242,11 @@ function ProductDetailPage() {
 
   const handleAddToCart = () => {
     addToCart(productData, selectedVariant, quantity);
+    behaviorService.track({ eventType: "ADD_TO_CART", productId: productData.id });
   };
 
   const handleBuyNow = () => {
+    behaviorService.track({ eventType: "BUY_NOW", productId: productData.id });
     const itemId = `direct_${productData.id}_${selectedVariant.id}`;
 
     // Truyền trực tiếp dữ liệu sản phẩm sang Checkout để tránh phụ thuộc vào độ trễ của state Giỏ hàng
@@ -386,7 +422,10 @@ function ProductDetailPage() {
               <Button
                 fullWidth
                 variant="outline"
-                onClick={() => toggleWishlist(productData)}
+                onClick={() => {
+                  toggleWishlist(productData);
+                  behaviorService.track({ eventType: "ADD_TO_WISHLIST", productId: productData.id });
+                }}
               >
                 <Heart
                   size={18}
@@ -479,6 +518,7 @@ function ProductDetailPage() {
             <ProductGrid products={productData.relatedProducts} />
           </section>
         )}
+      <RecommendedProducts type="similar" productId={productData.id} title="Sản phẩm tương tự" limit={8} />
     </div>
   );
 }

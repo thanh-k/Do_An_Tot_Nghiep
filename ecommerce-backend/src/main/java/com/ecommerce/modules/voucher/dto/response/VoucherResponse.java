@@ -23,6 +23,9 @@ public class VoucherResponse {
     private Boolean active;
     private String image;
 
+    // Giá xu để đổi voucher, chỉ dùng khi category = COIN_REWARD
+    private Long coinCost;
+
     // VIP fields
     private Boolean vipOnly;
     private Boolean monthlyReset;

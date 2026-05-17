@@ -11,6 +11,7 @@ import {
   getProductPrimaryImage,
 } from "@/utils/product";
 import { calculateDiscountPercent, formatCurrency } from "@/utils/format";
+import behaviorService from "@/services/user/behaviorService";
 
 function ProductCard({ product }) {
   const navigate = useNavigate();
@@ -32,6 +33,7 @@ function ProductCard({ product }) {
     }
 
     addToCart(product, defaultVariant, 1);
+    behaviorService.track({ eventType: "ADD_TO_CART", productId: product.id });
   };
 
   const handleBuyNow = (event) => {
@@ -44,7 +46,7 @@ function ProductCard({ product }) {
     }
 
     addToCart(product, defaultVariant, 1);
-    navigate("/checkout");
+    behaviorService.track({ eventType: "BUY_NOW", productId: product.id });
     const itemId = `direct_${product.id}_${defaultVariant.id}`;
 
     let variantAttrs = {};
@@ -85,6 +87,7 @@ function ProductCard({ product }) {
     event.preventDefault();
     event.stopPropagation();
     toggleWishlist(product);
+    behaviorService.track({ eventType: "ADD_TO_WISHLIST", productId: product.id });
   };
 
   return (

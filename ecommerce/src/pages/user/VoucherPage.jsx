@@ -35,7 +35,15 @@ const CATEGORY_MAP = {
     color: "text-fuchsia-600",
     bg: "bg-fuchsia-100",
   },
+  COIN_REWARD: {
+    label: "Đổi bằng xu",
+    icon: Coins,
+    color: "text-emerald-600",
+    bg: "bg-emerald-100",
+  },
 };
+
+const getCategoryConfig = (category) => CATEGORY_MAP[category || "DISCOUNT"] || CATEGORY_MAP.DISCOUNT;
 
 function VoucherPage() {
   const navigate = useNavigate();
@@ -136,7 +144,7 @@ function VoucherPage() {
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {filteredVouchers.map((voucher) => {
-                const catConfig = CATEGORY_MAP[voucher.category || "DISCOUNT"];
+                const catConfig = getCategoryConfig(voucher.category);
                 const Icon = catConfig.icon;
                 const lockedVip = voucher.vipOnly && voucher.eligible === false;
 
@@ -319,7 +327,7 @@ function VoucherPage() {
               <li className="flex justify-between border-b pb-2 border-slate-100">
                 <span className="text-slate-500">Phân loại:</span>
                 <span className="font-semibold text-slate-900">
-                  {CATEGORY_MAP[selectedVoucher.category || "DISCOUNT"]?.label}
+                  {getCategoryConfig(selectedVoucher.category).label}
                 </span>
               </li>
 

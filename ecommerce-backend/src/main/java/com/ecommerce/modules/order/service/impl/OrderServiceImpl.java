@@ -6,6 +6,7 @@ import com.ecommerce.modules.order.dto.request.CartItemRequest;
 import com.ecommerce.modules.order.dto.request.OrderRequest;
 import com.ecommerce.modules.order.dto.response.OrderResponse;
 
+import com.ecommerce.modules.coin.service.CoinTaskService;
 import com.ecommerce.modules.order.mapper.OrderMapper;
 import com.ecommerce.modules.order.repository.OrderRepository;
 import com.ecommerce.modules.order.service.OrderService;
@@ -13,6 +14,8 @@ import com.ecommerce.modules.product.repository.ProductVariantRepository;
 import com.ecommerce.entity.Order;
 import com.ecommerce.entity.OrderDetail;
 import com.ecommerce.entity.ProductVariant;
+import com.ecommerce.entity.Voucher;
+import com.ecommerce.modules.voucher.repository.VoucherRepository;
 import com.ecommerce.modules.voucher.service.VoucherService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,6 +33,8 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final ProductVariantRepository variantRepository;
     private final VoucherService voucherService;
+    private final CoinTaskService coinTaskService;
+    private final VoucherRepository voucherRepository;
 
     @Override
     @Transactional
@@ -121,8 +126,40 @@ public class OrderServiceImpl implements OrderService {
     public OrderResponse updateOrderStatus(Long id, String status) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
+        String oldStatus = order.getStatus();
         order.setStatus(status);
-        return orderMapper.toResponse(orderRepository.save(order));
+        Order saved = orderRepository.save(order);
+
+        if (!isCompletedStatus(oldStatus) && isCompletedStatus(status) && hasCashbackVoucher(saved)) {
+            coinTaskService.rewardOrderCompleted(saved.getUserId(), saved.getId());
+        }
+
+        return orderMapper.toResponse(saved);
+    }
+
+    private boolean isCompletedStatus(String status) {
+        if (status == null) return false;
+        String normalized = status.trim().toUpperCase();
+        return normalized.equals("COMPLETED")
+                || normalized.equals("COMPLETE")
+                || normalized.equals("DELIVERED")
+                || normalized.equals("PAID")
+                || normalized.equals("DONE");
+    }
+
+    /**
+     * Chỉ cộng 15 xu hoàn đơn khi đơn hàng có áp voucher thuộc category CASHBACK.
+     * Ví dụ voucher id 16/category CASHBACK/code 11 trong database của bạn.
+     */
+    private boolean hasCashbackVoucher(Order order) {
+        if (order == null || order.getVoucherCode() == null || order.getVoucherCode().isBlank()) {
+            return false;
+        }
+
+        return voucherRepository.findByCode(order.getVoucherCode().trim())
+                .map(Voucher::getCategory)
+                .map(category -> "CASHBACK".equalsIgnoreCase(category))
+                .orElse(false);
     }
 
     @Override

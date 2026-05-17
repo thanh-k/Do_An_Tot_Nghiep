@@ -16,6 +16,9 @@ import {
   BookOpenText,
   MessageSquareMore,
   Star,
+  Coins,
+  Activity,
+  Megaphone,
 } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import logo from "@/assets/logo.svg";
@@ -38,6 +41,9 @@ const items = [
       "CATEGORY_VIEW",
       "BRAND_VIEW",
       "CONTACT_VIEW",
+      "BEHAVIOR_VIEW",
+      "RECOMMENDATION_VIEW",
+      "ANNOUNCEMENT_VIEW",
     ],
   },
   {
@@ -69,6 +75,24 @@ const items = [
     label: "Đánh giá",
     icon: Star,
     permissions: ["REVIEW_VIEW"],
+  },
+  {
+    to: "/admin/coin-tasks",
+    label: "Nhiệm vụ xu",
+    icon: Coins,
+    permissions: ["COIN_TASK_VIEW"],
+  },
+  {
+    to: "/admin/behaviors",
+    label: "Hành vi người dùng",
+    icon: Activity,
+    permissions: ["BEHAVIOR_VIEW", "RECOMMENDATION_VIEW", "RECOMMENDATION_MANAGE"],
+  },
+  {
+    to: "/admin/announcement-bars",
+    label: "Thông báo chạy",
+    icon: Megaphone,
+    permissions: ["ANNOUNCEMENT_VIEW", "ANNOUNCEMENT_MANAGE"],
   },
   {
     to: "/admin/vouchers",

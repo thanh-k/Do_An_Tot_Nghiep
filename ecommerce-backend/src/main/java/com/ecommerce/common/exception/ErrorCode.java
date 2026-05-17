@@ -9,6 +9,11 @@ public enum ErrorCode {
 
     PRODUCT_NOT_FOUND(1018, "Không tìm thấy sản phẩm", HttpStatus.NOT_FOUND),
 
+
+    COIN_TASK_NOT_FOUND(1601, "Không tìm thấy nhiệm vụ xu", HttpStatus.NOT_FOUND),
+    COIN_TASK_INVALID(1602, "Thông tin nhiệm vụ xu không hợp lệ", HttpStatus.BAD_REQUEST),
+    COIN_TASK_CODE_EXISTS(1603, "Mã nhiệm vụ xu đã tồn tại", HttpStatus.BAD_REQUEST),
+
     UNCATEGORIZED_EXCEPTION(9999, "Lỗi hệ thống chưa xác định", HttpStatus.INTERNAL_SERVER_ERROR),
     INVALID_KEY(1001, "Mã lỗi không hợp lệ", HttpStatus.BAD_REQUEST),
 

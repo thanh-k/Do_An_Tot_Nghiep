@@ -291,3 +291,207 @@ Nội dung thực hiện:
 - Cập nhật logic chỉ tính rating theo các đánh giá đang hiển thị
 
 ✍️ Người thực hiện: Thanh
+
+📅 Ngày: 12/05/2026
+🧩 Nội dung công việc:
+
+1. FE:
+- Hoàn thiện giao diện Xu thưởng cho phía user
+- Thêm trang Xu thưởng gồm: tổng xu hiện có, nhiệm vụ nhận xu, đổi quà
+- Sửa giao diện và luồng nhận xu hằng ngày
+- Bổ sung bộ đếm cho nhiệm vụ online đủ 5 phút
+- Sửa modal quản lý nhiệm vụ xu ở trang admin để hiển thị đúng giao diện và cuộn tốt trên màn hình nhỏ
+- Hoàn thiện trang admin quản lý nhiệm vụ nhận xu: thêm, sửa, xóa, lọc theo loại nhiệm vụ
+
+2. BE:
+- Làm API cho phần Xu thưởng
+- Thêm xử lý lấy tổng quan ví xu
+- Thêm xử lý nhận xu nhiệm vụ hằng ngày
+- Thêm xử lý cộng xu khi đánh giá sản phẩm
+- Sửa lỗi overview bị 500 do transaction read-only nhưng lại tạo ví xu
+
+✍️ Người thực hiện: Thanh
+
+📅 Ngày: 13/05/2026
+🧩 Nội dung công việc:
+
+1. FE:
+- Sửa form cập nhật sản phẩm ở trang admin
+- Sửa hiển thị phần Thông số (Tên: Giá trị) về đúng dạng nhiều dòng
+- Sửa validate khiến nút Lưu bị khóa sai
+- Sửa logic giữ SKU cũ cho variant cũ, chỉ tạo SKU mới cho variant mới hoặc variant tách lịch sử
+- Sửa trang chi tiết sản phẩm để ưu tiên chọn variant còn hàng
+- Sửa hiển thị các option biến thể như màu sắc, dung lượng, RAM
+
+2. BE:
+- Sửa logic cập nhật variant sản phẩm
+- Giữ đúng nghiệp vụ:
+  + chỉ sửa hình -> cập nhật trực tiếp
+  + chỉ sửa giá -> cập nhật trực tiếp
+  + sửa thông số nhận diện variant đã có người mua -> giữ bản cũ stock = 0, tạo bản mới
+- Sửa lỗi trùng SKU khi tạo variant mới từ variant cũ đã có đơn hàng
+- Chuẩn hóa so sánh attributes để tránh tạo duplicate variant sai
+
+✍️ Người thực hiện: Thanh
+
+📅 Ngày: 14/05/2026
+🧩 Nội dung công việc:
+
+1. FE:
+- Hoàn thiện chức năng theo dõi hành vi người dùng phục vụ đề xuất sản phẩm
+- Gắn tracking hành vi vào các thao tác chính của người dùng:
+    + Xem chi tiết sản phẩm
+    + Tìm kiếm sản phẩm
+    + Thêm sản phẩm vào giỏ hàng
+    + Mua ngay
+    + Bắt đầu thanh toán
+    + Bỏ dở thanh toán
+    + Đặt hàng thành công
+- Thêm hiển thị sản phẩm đề xuất cá nhân hóa ở phía người dùng
+- Thêm component hiển thị sản phẩm đề xuất dùng lại cho trang chủ và trang chi tiết sản phẩm
+- Hoàn thiện trang quản lý hành vi người dùng bên admin
+- Thêm giao diện xem thống kê hành vi:
+    + Tổng lượt xem sản phẩm
+    + Tổng lượt tìm kiếm
+    + Tổng lượt thêm giỏ hàng
+    + Tổng lượt bỏ dở thanh toán
+    + Tổng lượt đặt hàng thành công
+- Thêm bảng lịch sử hành vi và bảng điểm quan tâm sản phẩm
+- Sửa lỗi hiển thị voucher khi có category mới `COIN_REWARD`
+- Sửa lỗi trang hồ sơ user bị crash khi voucher không có cấu hình màu/icon
+- Sửa logic hiển thị voucher trong hồ sơ và thanh toán:
+    + Mã thường như DISCOUNT, SHIPPING, CASHBACK chỉ hiện khi user bấm lưu mã
+    + Mã VIP tự hiện khi user có quyền VIP
+    + Mã đổi xu COIN_REWARD tự hiện khi user đã đổi bằng xu
+- Cập nhật giao diện trang Xu thưởng để hỗ trợ đổi voucher bằng xu
+- Bổ sung dòng chữ chạy đầu trang giống các website thương mại điện tử
+- Thêm component hiển thị thông báo chạy phía trên Header
+- Thêm trang admin quản lý thông báo chạy:
+    + Thêm thông báo
+    + Sửa nội dung
+    + Bật / tắt hiển thị
+    + Đổi màu nền
+    + Đổi màu chữ
+    + Chỉnh tốc độ chạy
+    + Xóa thông báo
+
+2. BE:
+- Thêm module theo dõi hành vi người dùng
+- Thiết kế bảng lưu lịch sử hành vi người dùng `user_behavior_events`
+- Thiết kế bảng lưu điểm quan tâm sản phẩm `user_product_interests`
+- Xây dựng API ghi nhận hành vi:
+    + POST /api/v1/behaviors/track
+- Xây dựng module đề xuất sản phẩm cá nhân hóa
+- Thêm API đề xuất sản phẩm:
+    + GET /api/v1/recommendations/me
+    + GET /api/v1/recommendations/similar/{productId}
+- Xây dựng logic tính điểm quan tâm sản phẩm dựa trên hành vi:
+    + VIEW_PRODUCT
+    + SEARCH_PRODUCT
+    + ADD_TO_CART
+    + BUY_NOW
+    + START_CHECKOUT
+    + ABANDON_CHECKOUT
+    + PLACE_ORDER
+- Thêm API admin quản lý hành vi người dùng:
+    + GET /api/v1/admin/behaviors/summary
+    + GET /api/v1/admin/behaviors
+    + GET /api/v1/admin/behaviors/interests
+- Thêm permission quản lý hành vi:
+    + BEHAVIOR_VIEW
+- Sửa logic voucher đổi bằng xu
+- Thêm category voucher `COIN_REWARD` dùng riêng cho voucher đổi bằng xu
+- Thêm field `coinCost` để admin có thể chỉnh số xu cần dùng để đổi voucher
+- Bổ sung seed sẵn 3 voucher đổi xu:
+    + COIN20K
+    + COIN50K
+    + COIN10P
+- Sửa logic đồng bộ voucher VIP để không xóa nhầm voucher đổi bằng xu của user
+- Sửa logic cashback đơn hàng
+- Chỉ cộng 15 xu khi đơn hàng có áp voucher thuộc category `CASHBACK`
+- Không cộng xu cho đơn hàng nếu user không áp mã cashback
+- Đảm bảo mỗi đơn hàng chỉ được cộng xu cashback một lần
+- Thêm module thông báo chạy đầu trang
+- Thiết kế bảng `announcement_bars`
+- Xây dựng API client lấy thông báo đang bật:
+    + GET /api/v1/announcement-bar/active
+- Xây dựng API admin quản lý thông báo chạy:
+    + GET /api/v1/admin/announcement-bars
+    + POST /api/v1/admin/announcement-bars
+    + PUT /api/v1/admin/announcement-bars/{id}
+    + PATCH /api/v1/admin/announcement-bars/{id}/toggle
+    + DELETE /api/v1/admin/announcement-bars/{id}
+- Thêm permission:
+    + ANNOUNCEMENT_VIEW
+    + ANNOUNCEMENT_MANAGE
+- Seed sẵn dữ liệu thông báo chạy mặc định cho website
+
+3. Fix lỗi phát sinh:
+- Fix lỗi API `/api/v1/behaviors/track` trả 500 làm đỏ console phía frontend
+- Fix lỗi thiếu biến môi trường `JWT_SECRET` khiến backend không khởi động được
+- Fix lỗi `VoucherPage.jsx` đọc category không có icon
+- Fix lỗi `UserDashboard.jsx` đọc category không có màu nền `bg`
+- Fix lỗi voucher đổi bằng xu không hiện trong hồ sơ và thanh toán
+- Fix lỗi checkout chỉ lấy voucher đã lưu trong localStorage mà không lấy voucher VIP và voucher đổi xu
+- Fix logic hiển thị voucher để tránh toàn bộ user đều thấy tất cả mã
+- Fix logic cashback để chỉ áp dụng khi user dùng mã voucher thuộc loại hoàn xu
+- Kiểm tra lại luồng hiển thị voucher ở:
+    + Trang Voucher
+    + Trang hồ sơ user
+    + Trang thanh toán
+    + Trang Xu thưởng
+
+✍️ Người thực hiện: Thanh
+
+📅 Ngày: 15/05/2026
+🧩 Nội dung công việc:
+
+1. FE:
+- Tối ưu giao diện Header trên mobile
+- Chỉnh lại bố cục Header mobile theo hướng gọn hơn:
+    + Logo bên trái
+    + Thanh tìm kiếm nằm ngoài menu 3 gạch
+    + Nút menu 3 gạch bên phải
+- Bổ sung icon tìm kiếm bằng hình ảnh vào trong thanh tìm kiếm
+- Sửa `SearchBar.jsx` để hỗ trợ:
+    + Tìm kiếm sản phẩm bằng từ khóa
+    + Điều hướng sang trang tìm kiếm bằng hình ảnh
+- Tối ưu menu 3 gạch trên mobile
+- Rút gọn menu 3 gạch chỉ còn các mục thông tin phụ:
+    + Tin tức
+    + Liên hệ
+    + Xu thưởng
+    + Giới thiệu
+    + So sánh sản phẩm
+- Không đưa các mục Trang chủ, Sản phẩm, Giỏ hàng, Tài khoản vào menu 3 gạch vì đã có thanh điều hướng mobile riêng
+- Thêm và tinh chỉnh thanh điều hướng dưới màn hình trên mobile/tablet
+- Cập nhật `MobileBottomNav.jsx` gồm các mục:
+    + Trang chủ
+    + Cửa hàng
+    + Giỏ hàng
+    + Tài khoản
+- Bỏ mục Thông báo trong thanh điều hướng mobile vì hệ thống chưa làm chức năng thông báo
+- Điều chỉnh kích thước icon và chữ tự thích ứng theo màn hình:
+    + Điện thoại nhỏ
+    + Điện thoại lớn
+    + Tablet/iPad
+- Tối ưu drawer Danh mục và Tài khoản trên mobile
+- Bổ sung các liên kết nhanh trong tài khoản mobile:
+    + Hồ sơ
+    + Đơn hàng
+    + Yêu thích
+    + Giỏ hàng
+    + Ví voucher
+    + Xu thưởng
+    + Trang quản trị nếu user có quyền admin
+- Cập nhật `MainLayout.jsx` để gắn `MobileBottomNav`
+- Thêm padding bottom cho layout mobile để nội dung không bị thanh điều hướng dưới che mất
+
+2. Fix lỗi / tinh chỉnh giao diện:
+- Fix lỗi mobile menu hiển thị quá nhiều thông tin gây rối giao diện
+- Fix lỗi thanh điều hướng mobile bị lệch khi bỏ chức năng Thông báo
+- Fix icon tìm kiếm hình ảnh chưa hiển thị trong thanh tìm kiếm
+- Tối ưu Header mobile để giống giao diện các website thương mại điện tử hơn
+- Kiểm tra lại hiển thị trên giao diện mobile sau khi deploy web
+
+✍️ Người thực hiện: Thanh

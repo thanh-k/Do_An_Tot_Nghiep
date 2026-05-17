@@ -5,7 +5,8 @@ import LoadingSpinner from "@/components/common/LoadingSpinner";
 import PageHeader from "@/components/common/PageHeader";
 import ProductGrid from "@/components/product/ProductGrid";
 import ImageUploader from "@/components/search/ImageUploader";
-import productService from "@/services/admin/productService";
+import userProductService from "@/services/user/productService";
+import toast from "react-hot-toast";
 
 function ImageSearchPage() {
   const [file, setFile] = useState(null);
@@ -26,8 +27,10 @@ function ImageSearchPage() {
     if (!file) return;
     setLoading(true);
     try {
-      const response = await productService.imageSearch(file);
+      const response = await userProductService.imageSearch(file);
       setResult(response);
+    } catch (error) {
+      toast.error("Có lỗi xảy ra khi tìm kiếm bằng hình ảnh!");
     } finally {
       setLoading(false);
     }
@@ -37,7 +40,7 @@ function ImageSearchPage() {
     <div className="container-padded space-y-8 py-8">
       <PageHeader
         title="Tìm kiếm sản phẩm bằng hình ảnh"
-        description="Mock giao diện visual search: upload ảnh, preview, mô phỏng quá trình AI và hiển thị danh sách sản phẩm liên quan."
+        description="Tải lên hoặc chụp ảnh sản phẩm bạn muốn tìm. Trí tuệ nhân tạo (AI) sẽ phân tích và tìm ra sản phẩm giống nhất trong hệ thống."
       />
 
       <ImageUploader
@@ -53,21 +56,20 @@ function ImageSearchPage() {
       <div className="flex flex-wrap items-center gap-3">
         <Button onClick={handleSearch} disabled={!file || loading}>
           <SearchCode size={18} />
-          Phân tích ảnh (mock)
+          Phân tích hình ảnh AI
         </Button>
         <p className="text-sm text-slate-500">
-          Gợi ý: đổi tên file theo keyword như <strong>iphone.png</strong> hoặc{" "}
-          <strong>laptop.jpg</strong> để xem kết quả tương ứng.
+          Hệ thống AI sẽ tự động phân tích và đưa ra các gợi ý chính xác nhất.
         </p>
       </div>
 
       {loading ? (
-        <LoadingSpinner label="Đang mô phỏng phân tích hình ảnh..." />
+        <LoadingSpinner label="AI đang quét và phân tích hình ảnh của bạn..." />
       ) : result.items.length ? (
         <div className="space-y-6">
           <div className="rounded-3xl border border-brand-100 bg-brand-50 p-5">
             <p className="text-sm font-medium text-brand-700">
-              Hệ thống mock nhận diện ảnh thuộc nhóm:
+              Kết quả nhận diện từ hệ thống AI:
               <span className="ml-2 text-base font-bold">{result.label}</span>
             </p>
           </div>
@@ -75,7 +77,7 @@ function ImageSearchPage() {
         </div>
       ) : (
         <div className="card p-8 text-center text-sm leading-6 text-slate-500">
-          Upload ảnh và bấm "Phân tích ảnh" để xem kết quả demo.
+          Tải ảnh lên và bấm "Phân tích hình ảnh AI" để bắt đầu tìm kiếm.
         </div>
       )}
     </div>

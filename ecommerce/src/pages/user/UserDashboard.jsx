@@ -36,6 +36,7 @@ const CATEGORY_MAP = {
   SHIPPING: { label: "Vận chuyển", bg: "bg-blue-500", text: "text-blue-600", hover: "group-hover:text-blue-600" },
   CASHBACK: { label: "Hoàn xu", bg: "bg-amber-500", text: "text-amber-600", hover: "group-hover:text-amber-600" },
   VIP: { label: "Đặc quyền VIP", bg: "bg-fuchsia-500", text: "text-fuchsia-600", hover: "group-hover:text-fuchsia-600" },
+  COIN_REWARD: { label: "Đổi xu", bg: "bg-emerald-500", text: "text-emerald-600", hover: "group-hover:text-emerald-600" },
 };
 
 const getStatusColorClass = (status) => {
@@ -53,21 +54,48 @@ const getStatusColorClass = (status) => {
 export default function UserDashboard() {
   const { currentUser, logout } = useAuth();
   const { wishlistItems } = useWishlist();
-  const { syncAvailableCodes } = useVoucherWallet();
+  const { savedVoucherCodes } = useVoucherWallet();
   const navigate = useNavigate();
   const [myVouchers, setMyVouchers] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
   const [membership, setMembership] = useState({ vip: false, membershipName: "Thành viên thường" });
 
   useEffect(() => {
-    userVoucherService
-      .getActiveVouchers()
-      .then((data) => {
-        setMyVouchers(data || []);
-        syncAvailableCodes((data || []).map((item) => item.code));
-      })
-      .catch(() => {});
-  }, []);
+  userVoucherService
+    .getActiveVouchers()
+    .then((data) => {
+      const codes = savedVoucherCodes || [];
+
+      setMyVouchers(
+        (data || []).filter((v) => {
+          const category = (v.category || "DISCOUNT").toUpperCase();
+
+          const isActive = v.active !== false;
+          const isClaimable = v.claimable !== false;
+          const isEligible = v.eligible !== false;
+          const hasQuantity = Number(v.remainingQuantity ?? v.quantity ?? 1) > 0;
+
+          const isSpecialOwnedVoucher =
+            category === "VIP" || category === "COIN_REWARD";
+
+          const isSavedNormalVoucher =
+            ["DISCOUNT", "SHIPPING", "CASHBACK"].includes(category) &&
+            codes.includes(v.code);
+
+          return (
+            isActive &&
+            isClaimable &&
+            isEligible &&
+            hasQuantity &&
+            (isSpecialOwnedVoucher || isSavedNormalVoucher)
+          );
+        })
+      );
+    })
+    .catch((error) => {
+      console.error("Không lấy được voucher hồ sơ:", error);
+    });
+}, [savedVoucherCodes]);
 
   useEffect(() => {
     membershipService.getMyMembership().then((data) => {

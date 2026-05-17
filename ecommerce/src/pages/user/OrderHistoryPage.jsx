@@ -13,6 +13,7 @@ import {
   formatOrderStatus,
   formatPaymentStatus,
 } from "@/utils/format";
+import { ATTRIBUTE_OPTIONS } from "@/utils/categoryConfig";
 
 const getStatusColorClass = (status) => {
   switch (status) {
@@ -37,6 +38,26 @@ const canReviewOrder = (status) => {
   return ["DELIVERED", "COMPLETED", "PAID"].includes(
     String(status || "").toUpperCase()
   );
+};
+
+const formatOrderVariantLabel = (attributesData, fallbackLabel) => {
+  if (!attributesData || attributesData === "null") return fallbackLabel || "Mặc định";
+
+  let attrs = attributesData;
+  if (typeof attributesData === "string") {
+    try {
+      attrs = JSON.parse(attributesData);
+    } catch (e) {
+      return fallbackLabel || "Mặc định";
+    }
+  }
+
+  if (!attrs || Object.keys(attrs).length === 0) return fallbackLabel || "Mặc định";
+  const parts = [];
+  Object.entries(attrs).forEach(([key, value]) => {
+    if (value) parts.push(`${ATTRIBUTE_OPTIONS[key]?.label || key}: ${value}`);
+  });
+  return parts.join(" - ") || fallbackLabel || "Mặc định";
 };
 
 function OrderHistoryPage() {

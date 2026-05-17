@@ -10,10 +10,12 @@ import com.ecommerce.modules.category.repository.CategoryRepository;
 import com.ecommerce.modules.product.dto.request.ProductRequest;
 import com.ecommerce.modules.product.dto.response.*;
 import com.ecommerce.modules.product.repository.*;
+import com.ecommerce.modules.order.repository.OrderDetailRepository;
 import com.ecommerce.modules.product.service.ProductService;
 import com.ecommerce.modules.product.service.ProductValidatorService;
 import com.ecommerce.modules.review.repository.ProductReviewRepository;
 import com.ecommerce.modules.upload.service.CloudinaryService;
+import com.ecommerce.service.VisionServiceClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +24,13 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.LinkedHashMap;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +44,9 @@ public class ProductServiceImpl implements ProductService {
         private final ProductValidatorService productValidator;
         private final CloudinaryService cloudinaryService;
         private final ProductReviewRepository productReviewRepository;
+        private final OrderDetailRepository orderDetailRepository;
+        private final VisionServiceClient visionServiceClient;
+        private final ObjectMapper objectMapper = new ObjectMapper();
 
         @Override
         @Transactional(readOnly = true)
@@ -61,6 +72,9 @@ public class ProductServiceImpl implements ProductService {
 
                 Product savedProduct = productRepository.save(product);
                 saveVariantsAndImages(request, savedProduct);
+
+                // Gọi Vision Service để trích xuất và lưu vector hình ảnh
+                visionServiceClient.indexProduct(savedProduct.getId(), savedProduct.getThumbnail());
 
                 return getProductResponse(savedProduct);
         }
@@ -129,16 +143,19 @@ public class ProductServiceImpl implements ProductService {
                 existingProduct.setCategory(category);
                 existingProduct.setBrand(brand);
 
-                if (existingProduct.getVariants() != null) {
-                        existingProduct.getVariants().clear();
-                }
                 if (existingProduct.getImages() != null) {
                         existingProduct.getImages().clear();
                 }
 
                 productRepository.saveAndFlush(existingProduct);
 
-                saveVariantsAndImages(request, existingProduct);
+                // Cập nhật biến thể thông minh và chỉ lưu lại ảnh chung của sản phẩm
+                updateProductVariantsSmart(request, existingProduct);
+                saveOnlyImages(request, existingProduct);
+
+                // Gọi Vision Service để cập nhật lại vector ảnh
+                visionServiceClient.indexProduct(existingProduct.getId(), existingProduct.getThumbnail());
+
                 return getProductResponse(existingProduct);
         }
 
@@ -150,6 +167,9 @@ public class ProductServiceImpl implements ProductService {
 
                 cleanOldResources(product);
                 productRepository.delete(product);
+
+                // Xóa vector ảnh khỏi hệ thống AI (FAISS)
+                visionServiceClient.removeProduct(id);
         }
 
         @Override
@@ -166,6 +186,248 @@ public class ProductServiceImpl implements ProductService {
                 Product product = productRepository.findById(id)
                                 .orElseThrow(() -> new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION));
                 return getProductResponse(product);
+        }
+
+        @Override
+        public void syncAllProductsToVision() {
+                List<Product> products = productRepository.findAll();
+                int count = 0;
+                for (Product product : products) {
+                        if (product.getThumbnail() != null && !product.getThumbnail().trim().isEmpty()) {
+                                visionServiceClient.indexProduct(product.getId(), product.getThumbnail());
+                                count++;
+                        }
+                }
+                System.out.println("✅ Đã gửi yêu cầu đồng bộ " + count + " sản phẩm sang Vision Service.");
+        }
+
+        @Override
+        @Transactional(readOnly = true)
+        public List<ProductResponse> getProductsByIds(List<Long> ids) {
+                // 1. Lấy dữ liệu từ DB (MySQL sẽ xáo trộn thứ tự)
+                List<Product> products = productRepository.findAllById(ids);
+                
+                // 2. Chuyển thành Map để tra cứu nhanh
+                Map<Long, Product> productMap = products.stream()
+                                .collect(Collectors.toMap(Product::getId, Function.identity()));
+                
+                // 3. Ép Java phải giữ nguyên thứ tự ID mà AI Python đã trả về
+                return ids.stream()
+                                .filter(productMap::containsKey)
+                                .map(id -> getProductResponse(productMap.get(id)))
+                                .collect(Collectors.toList());
+        }
+
+        // --- LOGIC MỚI: CẬP NHẬT BIẾN THỂ THÔNG MINH ---
+        private void updateProductVariantsSmart(ProductRequest request, Product product) {
+                if (request.getVariants() == null) {
+                        return;
+                }
+
+                List<ProductVariant> existingVariants = product.getVariants() == null
+                                ? new ArrayList<>()
+                                : new ArrayList<>(product.getVariants());
+
+                Map<Long, ProductVariant> existingVariantsById = existingVariants.stream()
+                                .filter(v -> v.getId() != null)
+                                .collect(Collectors.toMap(ProductVariant::getId, Function.identity()));
+
+                Map<String, ProductVariant> existingVariantsBySku = existingVariants.stream()
+                                .filter(v -> normalizeSku(v.getSku()) != null)
+                                .collect(Collectors.toMap(
+                                                v -> normalizeSku(v.getSku()),
+                                                Function.identity(),
+                                                (a, b) -> a));
+
+                Set<Long> incomingVariantIds = new HashSet<>();
+                Set<String> requestSkus = new HashSet<>();
+                List<ProductVariant> variantsToSave = new ArrayList<>();
+                List<ProductVariant> variantsToRemove = new ArrayList<>();
+                List<ProductVariant> onlyNewVariants = new ArrayList<>();
+
+                for (var vReq : request.getVariants()) {
+                        String reqSku = normalizeSku(vReq.getSku());
+                        if (reqSku == null || reqSku.isBlank()) {
+                                throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
+                        }
+
+                        if (!requestSkus.add(reqSku)) {
+                                throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
+                        }
+
+                        ProductVariant targetVariant = null;
+                        if (vReq.getId() != null && existingVariantsById.containsKey(vReq.getId())) {
+                                targetVariant = existingVariantsById.get(vReq.getId());
+                                incomingVariantIds.add(vReq.getId());
+                        } else if (existingVariantsBySku.containsKey(reqSku)) {
+                                targetVariant = existingVariantsBySku.get(reqSku);
+                                if (targetVariant.getId() != null) {
+                                        incomingVariantIds.add(targetVariant.getId());
+                                }
+                        }
+
+                        if (targetVariant != null) {
+                                boolean isUsedInOrder = orderDetailRepository.existsByProductVariant_Id(targetVariant.getId());
+                                boolean isAttributeChanged = !areAttributesEquivalent(targetVariant.getAttributes(), vReq.getAttributes());
+                                boolean isSkuChanged = !Objects.equals(normalizeSku(targetVariant.getSku()), reqSku);
+
+                                if (isUsedInOrder && (isAttributeChanged || isSkuChanged)) {
+                                        targetVariant.setStock(0);
+                                        variantsToSave.add(targetVariant);
+
+                                        String baseSkuForNewVariant = reqSku;
+                                        if (Objects.equals(normalizeSku(targetVariant.getSku()), reqSku)) {
+                                        baseSkuForNewVariant = reqSku + "-NEW";
+                                        }
+                                        String newVariantSku = buildUniqueVariantSku(baseSkuForNewVariant);
+
+                                        ProductVariant newVariant = ProductVariant.builder()
+                                                        .sku(newVariantSku)
+                                                        .price(vReq.getPrice())
+                                                        .compareAtPrice(vReq.getCompareAtPrice())
+                                                        .stock(vReq.getStock())
+                                                        .attributes(normalizeAttributesJson(vReq.getAttributes()))
+                                                        .image(vReq.getImage())
+                                                        .product(product)
+                                                        .build();
+                                        variantsToSave.add(newVariant);
+                                        onlyNewVariants.add(newVariant);
+                                } else {
+                                        if (!Objects.equals(normalizeSku(targetVariant.getSku()), reqSku)
+                                                        && variantRepository.existsBySkuAndIdNot(reqSku, targetVariant.getId())) {
+                                                throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
+                                        }
+
+                                        targetVariant.setSku(reqSku);
+                                        targetVariant.setPrice(vReq.getPrice());
+                                        targetVariant.setCompareAtPrice(vReq.getCompareAtPrice());
+                                        targetVariant.setStock(vReq.getStock());
+                                        targetVariant.setAttributes(normalizeAttributesJson(vReq.getAttributes()));
+                                        targetVariant.setImage(vReq.getImage());
+                                        variantsToSave.add(targetVariant);
+                                }
+                        } else {
+                                if (variantRepository.existsBySku(reqSku)) {
+                                        throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
+                                }
+
+                                ProductVariant newVariant = ProductVariant.builder()
+                                                .sku(reqSku)
+                                                .price(vReq.getPrice())
+                                                .compareAtPrice(vReq.getCompareAtPrice())
+                                                .stock(vReq.getStock())
+                                                .attributes(normalizeAttributesJson(vReq.getAttributes()))
+                                                .image(vReq.getImage())
+                                                .product(product)
+                                                .build();
+                                variantsToSave.add(newVariant);
+                                onlyNewVariants.add(newVariant);
+                        }
+                }
+
+                for (ProductVariant existingVariant : existingVariants) {
+                        if (existingVariant.getId() == null) {
+                                continue;
+                        }
+                        if (!incomingVariantIds.contains(existingVariant.getId())) {
+                                boolean isUsedInOrder = orderDetailRepository.existsByProductVariant_Id(existingVariant.getId());
+                                if (isUsedInOrder) {
+                                        existingVariant.setStock(0);
+                                        variantsToSave.add(existingVariant);
+                                } else {
+                                        variantsToRemove.add(existingVariant);
+                                }
+                        }
+                }
+
+                if (!variantsToRemove.isEmpty()) {
+                        if (product.getVariants() != null) {
+                                product.getVariants().removeAll(variantsToRemove);
+                        }
+                        variantRepository.deleteAll(variantsToRemove);
+                        variantRepository.flush();
+                }
+
+                variantRepository.saveAll(variantsToSave);
+                variantRepository.flush();
+
+                if (product.getVariants() == null) {
+                        product.setVariants(new HashSet<>());
+                }
+                product.getVariants().addAll(onlyNewVariants);
+        }
+
+        private String normalizeSku(String sku) {
+                return sku == null ? null : sku.trim().toUpperCase();
+        }
+
+        private String buildUniqueVariantSku(String desiredSku) {
+                String normalized = normalizeSku(desiredSku);
+                if (normalized == null || normalized.isBlank()) {
+                        throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
+                }
+
+                if (!variantRepository.existsBySku(normalized)) {
+                        return normalized;
+                }
+
+                int counter = 1;
+                String candidate;
+                do {
+                        candidate = normalized + "-V" + counter;
+                        counter++;
+                } while (variantRepository.existsBySku(candidate));
+
+                return candidate;
+        }
+        private boolean areAttributesEquivalent(String oldAttributes, String newAttributes) {
+                return normalizeAttributeMap(oldAttributes).equals(normalizeAttributeMap(newAttributes));
+        }
+
+        private String normalizeAttributesJson(String rawAttributes) {
+                try {
+                        Map<String, String> normalized = normalizeAttributeMap(rawAttributes);
+                        return objectMapper.writeValueAsString(normalized);
+                } catch (Exception e) {
+                        return rawAttributes == null ? "{}" : rawAttributes;
+                }
+        }
+
+        private Map<String, String> normalizeAttributeMap(String rawAttributes) {
+                try {
+                        if (rawAttributes == null || rawAttributes.isBlank()) {
+                                return new LinkedHashMap<>();
+                        }
+                        Map<String, Object> parsed = objectMapper.readValue(rawAttributes,
+                                        new TypeReference<LinkedHashMap<String, Object>>() {
+                                        });
+                        Map<String, String> normalized = new LinkedHashMap<>();
+                        for (Map.Entry<String, Object> entry : parsed.entrySet()) {
+                                String key = entry.getKey() == null ? "" : entry.getKey().trim().toLowerCase();
+                                String value = entry.getValue() == null ? "" : String.valueOf(entry.getValue()).trim();
+                                normalized.put(key, value);
+                        }
+                        return normalized;
+                } catch (Exception e) {
+                        Map<String, String> fallback = new LinkedHashMap<>();
+                        fallback.put("raw", rawAttributes == null ? "" : rawAttributes.trim());
+                        return fallback;
+                }
+        }
+
+        // Hàm phụ trợ để lưu ảnh khi Update (tách ra từ saveVariantsAndImages cũ)
+        private void saveOnlyImages(ProductRequest request, Product product) {
+                if (request.getImages() != null) {
+                        List<ProductImage> images = request.getImages().stream()
+                                        .map(url -> ProductImage.builder().imageUrl(url).product(product).build())
+                                        .collect(Collectors.toList());
+                        images = imageRepository.saveAll(images);
+                        if (product.getImages() == null) {
+                                product.setImages(new HashSet<>(images));
+                        } else {
+                                product.getImages().addAll(images);
+                        }
+                }
         }
 
         private void saveVariantsAndImages(ProductRequest request, Product product) {
@@ -298,7 +560,8 @@ public class ProductServiceImpl implements ProductService {
                         List<ProductImage> images = new ArrayList<>(
                                         product.getImages() != null ? product.getImages() : new HashSet<>());
 
-                        List<ProductReview> reviews = productReviewRepository.findByProductIdAndIsVisibleTrueOrderByCreatedAtDesc(product.getId());
+                        List<ProductReview> reviews = productReviewRepository
+                                        .findByProductIdAndIsVisibleTrueOrderByCreatedAtDesc(product.getId());
                         double averageRating = reviews.isEmpty()
                                         ? 0.0
                                         : reviews.stream().mapToInt(ProductReview::getRating).average().orElse(0.0);
@@ -338,6 +601,7 @@ public class ProductServiceImpl implements ProductService {
                                                                         .stock(v.getStock())
                                                                         .attributes(v.getAttributes())
                                                                         .image(v.getImage())
+                                                                        .hasOrders(orderDetailRepository.existsByProductVariant_Id(v.getId()))
                                                                         .build())
                                                         .collect(Collectors.toList()))
                                         .images(images.stream()
