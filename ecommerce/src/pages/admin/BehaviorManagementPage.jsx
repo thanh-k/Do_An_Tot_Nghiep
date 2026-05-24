@@ -9,6 +9,7 @@ import useAuth from "@/hooks/useAuth";
 import { useDebounce } from "@/hooks/useDebounce";
 import { hasAnyPermission } from "@/utils/permission";
 import behaviorService from "@/services/admin/behaviorService";
+import { sortNewestFirst } from "@/utils/sortNewest";
 
 const EVENT_OPTIONS = [
   { value: "", label: "Tất cả hành vi" },
@@ -214,9 +215,9 @@ function BehaviorManagementPage() {
       {loading ? (
         <div className="card p-8 text-center text-sm text-slate-500">Đang tải dữ liệu hành vi...</div>
       ) : activeTab === "events" ? (
-        <DataTable columns={eventColumns} data={events} pagination={{ enabled: true, pageSize: 10, itemLabel: "hành vi" }} />
+        <DataTable columns={eventColumns} data={sortNewestFirst(events)} pagination={{ enabled: true, pageSize: 10, itemLabel: "hành vi" }} />
       ) : (
-        <DataTable columns={interestColumns} data={interests} pagination={{ enabled: true, pageSize: 10, itemLabel: "điểm quan tâm" }} />
+        <DataTable columns={interestColumns} data={sortNewestFirst(interests)} pagination={{ enabled: true, pageSize: 10, itemLabel: "điểm quan tâm" }} />
       )}
     </div>
   );

@@ -48,4 +48,5 @@ public interface UserBehaviorEventRepository extends JpaRepository<UserBehaviorE
                                               @Param("fromDate") LocalDateTime fromDate,
                                               @Param("toDate") LocalDateTime toDate,
                                               Pageable pageable);
+    void deleteByUserId(Long userId);
 }

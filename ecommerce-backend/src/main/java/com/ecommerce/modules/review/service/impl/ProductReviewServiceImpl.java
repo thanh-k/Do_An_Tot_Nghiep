@@ -176,8 +176,9 @@ public class ProductReviewServiceImpl implements ProductReviewService {
     private boolean matchesKeyword(ProductReview review, String keyword) {
         if (keyword == null || keyword.isBlank()) return true;
         String productName = review.getProduct() != null ? safe(review.getProduct().getName()) : "";
-        String userName = review.getUser() != null ? safe(review.getUser().getFullName()) : "";
-        String userEmail = review.getUser() != null ? safe(review.getUser().getEmail()) : "";
+        boolean userDeleted = review.getUser() != null && Boolean.TRUE.equals(review.getUser().getDeleted());
+        String userName = review.getUser() != null ? safe(resolveReviewerName(review.getUser())) : "";
+        String userEmail = review.getUser() != null && !userDeleted ? safe(review.getUser().getEmail()) : "";
         String comment = safe(review.getComment());
         return productName.contains(keyword) || userName.contains(keyword) || userEmail.contains(keyword) || comment.contains(keyword);
     }
@@ -211,9 +212,9 @@ public class ProductReviewServiceImpl implements ProductReviewService {
                 .productName(product != null ? product.getName() : "Sản phẩm")
                 .productSlug(product != null ? product.getSlug() : null)
                 .userId(user != null ? user.getId() : null)
-                .userName(user != null ? user.getFullName() : "Khách hàng")
-                .userEmail(user != null ? user.getEmail() : null)
-                .userAvatar(user != null ? user.getAvatar() : null)
+                .userName(user != null ? resolveReviewerName(user) : "Khách hàng")
+                .userEmail(user != null && !Boolean.TRUE.equals(user.getDeleted()) ? user.getEmail() : null)
+                .userAvatar(user != null && !Boolean.TRUE.equals(user.getDeleted()) ? user.getAvatar() : null)
                 .orderId(review.getOrder() != null ? review.getOrder().getId() : null)
                 .rating(review.getRating())
                 .comment(review.getComment())
@@ -296,8 +297,8 @@ public class ProductReviewServiceImpl implements ProductReviewService {
         return ProductReviewItemResponse.builder()
                 .id(review.getId())
                 .userId(review.getUser().getId())
-                .user(review.getUser().getFullName())
-                .avatar(review.getUser().getAvatar())
+                .user(resolveReviewerName(review.getUser()))
+                .avatar(Boolean.TRUE.equals(review.getUser().getDeleted()) ? null : review.getUser().getAvatar())
                 .rating(review.getRating())
                 .createdAt(review.getCreatedAt())
                 .date(review.getCreatedAt() != null
@@ -313,6 +314,15 @@ public class ProductReviewServiceImpl implements ProductReviewService {
                 .shopReplyBy(review.getShopReplyBy())
                 .shopReplyAt(review.getShopReplyAt())
                 .build();
+    }
+
+    private String resolveReviewerName(User user) {
+        if (user == null || Boolean.TRUE.equals(user.getDeleted())) {
+            return "Tài khoản đã ngưng hoạt động";
+        }
+        return user.getFullName() != null && !user.getFullName().isBlank()
+                ? user.getFullName()
+                : "Khách hàng";
     }
 
     private Optional<Order> findReviewedOrder(User user, Long productId) {

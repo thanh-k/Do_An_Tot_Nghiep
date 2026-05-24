@@ -1,13 +1,5 @@
-import axios from "axios";
-import { STORAGE_KEYS } from "@/constants";
+import apiClient from "@/services/apiClient";
 import { getGuestSessionId } from "@/utils/guestSession";
-
-const API_URL = "http://localhost:8080/api/v1/behaviors";
-
-function getAuthHeaders() {
-  const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
 
 function normalizeLong(value) {
   const numberValue = Number(value);
@@ -47,13 +39,16 @@ export const behaviorService = {
   async track(payload = {}) {
     try {
       if (!payload.eventType) return null;
-      const response = await axios.post(`${API_URL}/track`, normalizePayload(payload), {
-        headers: getAuthHeaders(),
+
+      return await apiClient.request("/behaviors/track", {
+        method: "POST",
+        body: JSON.stringify(normalizePayload(payload)),
       });
-      return response.data?.result;
     } catch (error) {
-      // Tracking không được làm vỡ trải nghiệm mua hàng.
-      console.warn("Không ghi nhận được hành vi người dùng:", error.response?.data || error.message);
+      console.warn(
+        "Không ghi nhận được hành vi người dùng:",
+        error?.message || error
+      );
       return null;
     }
   },
@@ -63,10 +58,24 @@ export const behaviorService = {
       if (!navigator.sendBeacon || !payload.eventType) {
         return this.track(payload);
       }
-      const blob = new Blob([JSON.stringify(normalizePayload(payload))], { type: "application/json" });
-      navigator.sendBeacon(`${API_URL}/track`, blob);
+
+      const apiBaseUrl =
+        import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
+
+      const token = localStorage.getItem("auth_token");
+      const data = normalizePayload(payload);
+
+      if (token) {
+        return this.track(data);
+      }
+
+      const blob = new Blob([JSON.stringify(data)], {
+        type: "application/json",
+      });
+
+      navigator.sendBeacon(`${apiBaseUrl}/behaviors/track`, blob);
       return true;
-    } catch (error) {
+    } catch {
       return null;
     }
   },

@@ -46,32 +46,35 @@ public class UserMapper {
                 ? activeSubscription
                 : membershipSubscriptionRepository.findTopByUserIdOrderByCreatedAtDesc(user.getId());
 
-        boolean vip = activeSubscription.isPresent();
+        boolean deleted = Boolean.TRUE.equals(user.getDeleted());
+        boolean vip = !deleted && activeSubscription.isPresent();
         String membershipCode = vip ? activeSubscription.get().getPlan().getCode() : "REGULAR";
         String membershipName = vip ? activeSubscription.get().getPlan().getName() : "Thành viên thường";
-        String membershipStatus = latestSubscription.map(subscription -> subscription.getStatus().name()).orElse("REGULAR");
+        String membershipStatus = deleted ? "DELETED" : latestSubscription.map(subscription -> subscription.getStatus().name()).orElse("REGULAR");
 
         return UserResponse.builder()
                 .id(user.getId())
-                .fullName(user.getFullName())
-                .primaryPhone(primary != null ? primary.getPhone() : null)
-                .primaryAddress(primary != null ? primary.getAddressLine() : null)
-                .email(user.getEmail())
-                .avatar(user.getAvatar())
+                .fullName(deleted ? "Tài khoản đã ngưng hoạt động" : user.getFullName())
+                .primaryPhone(deleted ? null : (primary != null ? primary.getPhone() : null))
+                .primaryAddress(deleted ? null : (primary != null ? primary.getAddressLine() : null))
+                .email(deleted ? null : user.getEmail())
+                .avatar(deleted ? null : user.getAvatar())
                 .role(primaryRole)
                 .roles(roles)
                 .permissions(permissions)
                 .active(user.getActive())
+                .deleted(deleted)
+                .deletedAt(user.getDeletedAt())
                 .authProvider(user.getAuthProvider())
                 .vip(vip)
                 .membershipCode(membershipCode)
                 .membershipName(membershipName)
                 .membershipStatus(membershipStatus)
-                .membershipStartedAt(activeSubscription.map(MembershipSubscription::getStartedAt).orElse(null))
-                .membershipEndedAt(activeSubscription.map(MembershipSubscription::getEndedAt).orElse(null))
+                .membershipStartedAt(vip ? activeSubscription.map(MembershipSubscription::getStartedAt).orElse(null) : null)
+                .membershipEndedAt(vip ? activeSubscription.map(MembershipSubscription::getEndedAt).orElse(null) : null)
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
-                .addresses(addresses)
+                .addresses(deleted ? List.of() : addresses)
                 .build();
     }
 

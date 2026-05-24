@@ -4,7 +4,12 @@ import com.ecommerce.common.exception.AppException;
 import com.ecommerce.common.exception.ErrorCode;
 import com.ecommerce.entity.User;
 import com.ecommerce.entity.UserAddress;
+import com.ecommerce.modules.behavior.repository.UserBehaviorEventRepository;
+import com.ecommerce.modules.behavior.repository.UserProductInterestRepository;
+import com.ecommerce.modules.coin.repository.CoinTransactionRepository;
+import com.ecommerce.modules.coin.repository.UserCoinWalletRepository;
 import com.ecommerce.modules.phoneprefix.service.PhonePrefixService;
+import com.ecommerce.modules.productCompare.repository.ProductCompareRepository;
 import com.ecommerce.modules.role.entity.RoleName;
 import com.ecommerce.modules.upload.service.CloudinaryService;
 import com.ecommerce.modules.user.dto.request.AdminUserUpdateRequest;
@@ -17,6 +22,7 @@ import com.ecommerce.modules.user.repository.UserRepository;
 import com.ecommerce.modules.user.service.UserMapper;
 import com.ecommerce.modules.user.service.UserService;
 import com.ecommerce.modules.validation.InputValidator;
+import com.ecommerce.modules.voucher.repository.UserVoucherRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -24,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -36,6 +43,12 @@ public class UserServiceImpl implements UserService {
     private final InputValidator inputValidator;
     private final CloudinaryService cloudinaryService;
     private final PhonePrefixService phonePrefixService;
+    private final UserVoucherRepository userVoucherRepository;
+    private final ProductCompareRepository productCompareRepository;
+    private final UserBehaviorEventRepository userBehaviorEventRepository;
+    private final UserProductInterestRepository userProductInterestRepository;
+    private final CoinTransactionRepository coinTransactionRepository;
+    private final UserCoinWalletRepository userCoinWalletRepository;
 
     @Override
     public UserResponse getCurrentUser() {
@@ -160,10 +173,19 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void deleteUser(Long id) {
+        User currentUser = getCurrentAuthenticatedUser();
         User user = findUserById(id);
+
+        if (currentUser.getId().equals(user.getId())) {
+            throw new AppException(ErrorCode.ROLE_INVALID);
+        }
 
         if (user.getRole() == RoleName.ADMIN || user.getRole() == RoleName.SUPER_ADMIN) {
             throw new AppException(ErrorCode.ADMIN_CANNOT_DELETE);
+        }
+
+        if (Boolean.TRUE.equals(user.getDeleted())) {
+            return;
         }
 
         if (user.getAvatar() != null && !user.getAvatar().isBlank() && user.getAvatar().startsWith("http")) {
@@ -173,7 +195,27 @@ public class UserServiceImpl implements UserService {
             }
         }
 
-        userRepository.delete(user);
+        Long userId = user.getId();
+        userVoucherRepository.deleteByUserId(userId);
+        productCompareRepository.deleteAllByUserId(userId);
+        userProductInterestRepository.deleteByUserId(userId);
+        userBehaviorEventRepository.deleteByUserId(userId);
+        coinTransactionRepository.deleteByUserId(userId);
+        userCoinWalletRepository.deleteByUserId(userId);
+
+        user.getAddresses().clear();
+        user.getAccessRoles().clear();
+        user.setFullName("Tài khoản đã ngưng hoạt động");
+        user.setEmail("deleted_user_" + userId + "@deleted.local");
+        user.setPasswordHash(null);
+        user.setAvatar(null);
+        user.setActive(false);
+        user.setDeleted(true);
+        user.setDeletedAt(LocalDateTime.now());
+        user.setAuthProvider("DELETED");
+        user.setProviderId(null);
+
+        userRepository.save(user);
     }
 
     @Override

@@ -46,4 +46,5 @@ public interface UserProductInterestRepository extends JpaRepository<UserProduct
                                                    @Param("userKeyword") String userKeyword,
                                                    @Param("productKeyword") String productKeyword,
                                                    Pageable pageable);
+    void deleteByUserId(Long userId);
 }

@@ -1,10 +1,19 @@
 import apiClient from "@/services/apiClient";
 
-const mapUser = (user) => ({
+const DELETED_ACCOUNT_LABEL = "Tài khoản đã ngưng hoạt động";
+
+const mapUser = (user) => {
+  const deleted = Boolean(user.deleted);
+  const displayName = deleted ? DELETED_ACCOUNT_LABEL : user.fullName;
+
+  return ({
   ...user,
-  name: user.fullName,
-  phone: user.primaryPhone || "",
-  address: user.primaryAddress || "",
+  deleted,
+  displayName,
+  name: displayName,
+  fullName: displayName,
+  phone: deleted ? "" : (user.primaryPhone || ""),
+  address: deleted ? "" : (user.primaryAddress || ""),
   role: user.role,
   roles: user.roles || [],
   permissions: user.permissions || [],
@@ -16,6 +25,7 @@ const mapUser = (user) => ({
   membershipStartedAt: user.membershipStartedAt || null,
   membershipEndedAt: user.membershipEndedAt || null,
 });
+};
 
 const adminUserService = {
   async getUsers() {

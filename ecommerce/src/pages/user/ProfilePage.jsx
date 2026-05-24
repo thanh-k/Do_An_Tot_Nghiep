@@ -6,12 +6,13 @@ import Input from "@/components/common/Input";
 import PageHeader from "@/components/common/PageHeader";
 import useAuth from "@/hooks/useAuth";
 import userService from "@/services/user/profileService";
+import accountCancellationService from "@/services/user/accountCancellationService";
 import { validateEmail, validateFullName, validatePhone } from "@/utils/validators";
 
 const emptyAddress = { recipientName: "", phone: "", addressLine: "", isDefault: false };
 
 function ProfilePage() {
-  const { currentUser, updateProfile, uploadAvatar } = useAuth();
+  const { currentUser, updateProfile, uploadAvatar, logout } = useAuth();
   const [form, setForm] = useState({ fullName: currentUser?.fullName || currentUser?.name || "", email: currentUser?.email || "", avatar: currentUser?.avatar || "", avatarFile: null });
   const [addresses, setAddresses] = useState([]);
   const [addressForm, setAddressForm] = useState(emptyAddress);
@@ -19,6 +20,8 @@ function ProfilePage() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [addressLoading, setAddressLoading] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState("");
+  const [cancellationLoading, setCancellationLoading] = useState(false);
 
   const previewAvatar = useMemo(() => (form.avatarFile ? URL.createObjectURL(form.avatarFile) : form.avatar), [form.avatar, form.avatarFile]);
 
@@ -46,6 +49,25 @@ function ProfilePage() {
     } catch (error) {
       toast.error(error.message);
     } finally { setLoading(false); }
+  };
+
+
+  const submitCancellationRequest = async () => {
+    const confirmed = window.confirm(
+      "Bạn chắc chắn muốn gửi yêu cầu hủy tài khoản? Sau khi admin duyệt, tài khoản sẽ ngưng hoạt động, không thể đăng nhập lại. Đơn hàng và đánh giá cũ vẫn được giữ theo nghiệp vụ hệ thống."
+    );
+    if (!confirmed) return;
+
+    try {
+      setCancellationLoading(true);
+      await accountCancellationService.createRequest({ reason: cancellationReason });
+      toast.success("Đã gửi yêu cầu hủy tài khoản. Bạn sẽ được đăng xuất khỏi hệ thống.");
+      logout();
+    } catch (error) {
+      toast.error(error?.message || "Gửi yêu cầu hủy tài khoản thất bại");
+    } finally {
+      setCancellationLoading(false);
+    }
   };
 
   const submitAddress = async (event) => {
@@ -133,6 +155,32 @@ function ProfilePage() {
               {!addresses.length ? <p className="text-sm text-slate-500">Chưa có địa chỉ nào được lưu.</p> : null}
             </div>
           </div>
+
+
+          <div className="card border border-rose-100 bg-rose-50/50 p-6">
+            <h2 className="text-xl font-bold text-rose-700">Hủy tài khoản</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Chức năng này dùng khi bạn không còn nhu cầu sử dụng tài khoản. Sau khi gửi yêu cầu,
+              quản trị viên sẽ xem xét và ngưng hoạt động tài khoản bằng cơ chế soft delete: thông tin cá nhân được ẩn,
+              nhưng đơn hàng và đánh giá cũ vẫn được giữ để bảo toàn dữ liệu giao dịch.
+            </p>
+            <div className="mt-4 space-y-2">
+              <label className="text-sm font-medium text-slate-700">Lý do hủy tài khoản</label>
+              <textarea
+                value={cancellationReason}
+                onChange={(event) => setCancellationReason(event.target.value)}
+                rows={4}
+                placeholder="Ví dụ: Tôi không còn nhu cầu sử dụng tài khoản này."
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-rose-400 focus:ring-4 focus:ring-rose-100"
+              />
+            </div>
+            <div className="mt-5 flex justify-end">
+              <Button variant="danger" loading={cancellationLoading} onClick={submitCancellationRequest}>
+                Gửi yêu cầu hủy tài khoản
+              </Button>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>

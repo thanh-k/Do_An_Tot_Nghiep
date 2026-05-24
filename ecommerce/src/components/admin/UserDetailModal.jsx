@@ -25,7 +25,7 @@ function UserDetailModal({ user, isOpen, onClose, onAssignRole, type = "customer
         </div>
         <div className="rounded-2xl bg-slate-50 p-4">
           <p className="text-sm text-slate-500">Email</p>
-          <p className="mt-1 font-semibold text-slate-900">{user.email || "Chưa có email"}</p>
+          <p className="mt-1 font-semibold text-slate-900">{user.deleted ? "Đã ẩn" : (user.email || "Chưa có email")}</p>
         </div>
         <div className="rounded-2xl bg-slate-50 p-4">
           <p className="text-sm text-slate-500">Vai trò chính</p>
@@ -33,7 +33,7 @@ function UserDetailModal({ user, isOpen, onClose, onAssignRole, type = "customer
         </div>
         <div className="rounded-2xl bg-slate-50 p-4">
           <p className="text-sm text-slate-500">Trạng thái</p>
-          <p className="mt-1 font-semibold text-slate-900">{user.active ? "Hoạt động" : "Đã khóa"}</p>
+          <p className="mt-1 font-semibold text-slate-900">{user.deleted ? "Ngưng hoạt động" : (user.active ? "Hoạt động" : "Đã khóa")}</p>
         </div>
       </div>
 

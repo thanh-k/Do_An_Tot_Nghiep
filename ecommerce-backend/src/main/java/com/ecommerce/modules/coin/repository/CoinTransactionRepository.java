@@ -13,4 +13,5 @@ public interface CoinTransactionRepository extends JpaRepository<CoinTransaction
     Long sumPositiveAmountByUserIdBetween(Long userId, LocalDateTime start, LocalDateTime end);
 
     boolean existsByUserIdAndTaskTaskCodeIgnoreCaseAndSourceRef(Long userId, String taskCode, String sourceRef);
+    void deleteByUserId(Long userId);
 }

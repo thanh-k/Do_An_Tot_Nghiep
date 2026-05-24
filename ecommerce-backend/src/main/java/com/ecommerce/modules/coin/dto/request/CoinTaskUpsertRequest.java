@@ -10,6 +10,7 @@ public class CoinTaskUpsertRequest {
     private String description;
     private CoinTaskCategory category;
     private Long coinReward;
+    private Integer requiredActiveMinutes;
     private Boolean isActive;
     private Boolean vipMultiplierEnabled;
     private String limitText;

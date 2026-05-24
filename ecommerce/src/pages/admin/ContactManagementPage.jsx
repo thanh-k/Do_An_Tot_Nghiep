@@ -10,6 +10,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import useAuth from "@/hooks/useAuth";
 import { hasAnyPermission } from "@/utils/permission";
 import contactService from "@/services/admin/contactService";
+import { sortNewestFirst } from "@/utils/sortNewest";
 
 const STATUS_OPTIONS = [
   { value: "", label: "Tất cả trạng thái" },
@@ -224,7 +225,7 @@ function ContactManagementPage() {
       {loading ? (
         <div className="card p-8 text-center text-sm text-slate-500">Đang tải danh sách liên hệ...</div>
       ) : (
-        <DataTable columns={columns} data={contacts} pagination={{ enabled: true, pageSize: 8, itemLabel: "liên hệ" }} />
+        <DataTable columns={columns} data={sortNewestFirst(contacts)} pagination={{ enabled: true, pageSize: 8, itemLabel: "liên hệ" }} />
       )}
 
       <Modal

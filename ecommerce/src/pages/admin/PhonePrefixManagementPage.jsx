@@ -7,6 +7,7 @@ import Input from "@/components/common/Input";
 import PageHeader from "@/components/common/PageHeader";
 import { useDebounce } from "@/hooks/useDebounce";
 import phonePrefixService from "@/services/admin/phonePrefixService";
+import { sortNewestFirst } from "@/utils/sortNewest";
 
 const initialForm = { prefix: "", providerName: "", active: true };
 
@@ -167,7 +168,7 @@ function PhonePrefixManagementPage() {
       {loading ? (
         <div className="card p-8 text-center text-sm text-slate-500">Đang tải danh sách đầu số...</div>
       ) : (
-        <DataTable columns={columns} data={filteredPrefixes} pagination={{ enabled: true, pageSize: 10, itemLabel: "đầu số" }} />
+        <DataTable columns={columns} data={sortNewestFirst(filteredPrefixes)} pagination={{ enabled: true, pageSize: 10, itemLabel: "đầu số" }} />
       )}
     </div>
   );

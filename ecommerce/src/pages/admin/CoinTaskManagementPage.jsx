@@ -8,8 +8,13 @@ import DataTable from "@/components/admin/DataTable";
 import CoinTaskFormModal from "@/components/admin/CoinTaskFormModal";
 import coinTaskService from "@/services/admin/coinTaskService";
 import { useDebounce } from "@/hooks/useDebounce";
+import { sortNewestFirst } from "@/utils/sortNewest";
 
 const CATEGORY_LABEL = {
+  DAILY_LOGIN: "Đăng nhập hằng ngày",
+  ONLINE_DURATION: "Hoạt động theo thời gian",
+  REVIEW_NO_IMAGE: "Đánh giá không có hình",
+  REVIEW_WITH_IMAGE: "Đánh giá có hình",
   DAILY: "Hằng ngày",
   REVIEW: "Đánh giá",
 };
@@ -101,6 +106,13 @@ function CoinTaskManagementPage() {
       ),
     },
     {
+      key: "requiredActiveMinutes",
+      title: "Thời gian",
+      render: (row) => row.category === "ONLINE_DURATION"
+        ? <span className="text-sm font-bold text-slate-700">{row.requiredActiveMinutes || 5} phút</span>
+        : <span className="text-sm text-slate-400">Không áp dụng</span>,
+    },
+    {
       key: "status",
       title: "Trạng thái",
       render: (row) => (
@@ -158,14 +170,16 @@ function CoinTaskManagementPage() {
           className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800"
         >
           <option value="">Tất cả loại nhiệm vụ</option>
-          <option value="DAILY">Hằng ngày</option>
-          <option value="REVIEW">Đánh giá</option>
+          <option value="DAILY_LOGIN">Đăng nhập hằng ngày</option>
+          <option value="ONLINE_DURATION">Hoạt động theo thời gian</option>
+          <option value="REVIEW_NO_IMAGE">Đánh giá không có hình</option>
+          <option value="REVIEW_WITH_IMAGE">Đánh giá có hình</option>
         </select>
       </div>
 
       <DataTable
         columns={columns}
-        data={filteredData}
+        data={sortNewestFirst(filteredData)}
         rowKey="id"
         pagination={{ enabled: true, pageSize: 8, itemLabel: "nhiệm vụ" }}
       />
