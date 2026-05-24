@@ -19,6 +19,8 @@ public class UserResponse {
     private List<String> roles;
     private List<String> permissions;
     private Boolean active;
+    private Boolean deleted;
+    private LocalDateTime deletedAt;
     private String authProvider;
     private Boolean vip;
     private String membershipCode;

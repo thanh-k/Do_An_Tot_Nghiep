@@ -3,8 +3,10 @@ import Button from "@/components/common/Button";
 import Input from "@/components/common/Input";
 
 const CATEGORY_OPTIONS = [
-  { value: "DAILY", label: "Hằng ngày" },
-  { value: "REVIEW", label: "Đánh giá sản phẩm" },
+  { value: "DAILY_LOGIN", label: "Đăng nhập hằng ngày" },
+  { value: "ONLINE_DURATION", label: "Hoạt động theo thời gian" },
+  { value: "REVIEW_NO_IMAGE", label: "Đánh giá không có hình" },
+  { value: "REVIEW_WITH_IMAGE", label: "Đánh giá có hình" },
 ];
 
 const EMPTY_FORM = {
@@ -12,13 +14,14 @@ const EMPTY_FORM = {
   taskCode: "",
   title: "",
   description: "",
-  category: "DAILY",
+  category: "DAILY_LOGIN",
   coinReward: 0,
   isActive: true,
   vipMultiplierEnabled: false,
   limitText: "",
   ctaLabel: "",
   sortOrder: 0,
+  requiredActiveMinutes: 5,
 };
 
 function CoinTaskFormModal({ open, onClose, onSubmit, task }) {
@@ -31,13 +34,14 @@ function CoinTaskFormModal({ open, onClose, onSubmit, task }) {
         taskCode: task.taskCode || "",
         title: task.title || "",
         description: task.description || "",
-        category: task.category || "DAILY",
+        category: task.category || "DAILY_LOGIN",
         coinReward: task.coinReward ?? 0,
         isActive: task.isActive ?? true,
         vipMultiplierEnabled: task.vipMultiplierEnabled ?? false,
         limitText: task.limitText || "",
         ctaLabel: task.ctaLabel || "",
         sortOrder: task.sortOrder ?? 0,
+        requiredActiveMinutes: task.requiredActiveMinutes ?? 5,
       });
     } else {
       setForm(EMPTY_FORM);
@@ -56,6 +60,7 @@ function CoinTaskFormModal({ open, onClose, onSubmit, task }) {
       ...form,
       coinReward: Number(form.coinReward || 0),
       sortOrder: Number(form.sortOrder || 0),
+      requiredActiveMinutes: form.category === "ONLINE_DURATION" ? Number(form.requiredActiveMinutes || 5) : null,
     });
   };
 
@@ -125,6 +130,18 @@ function CoinTaskFormModal({ open, onClose, onSubmit, task }) {
                     onChange={(e) => handleChange("coinReward", e.target.value)}
                     required
                   />
+
+                  {form.category === "ONLINE_DURATION" ? (
+                    <Input
+                      label="Thời gian hoạt động cần đạt (phút)"
+                      type="number"
+                      min="1"
+                      value={form.requiredActiveMinutes}
+                      onChange={(e) => handleChange("requiredActiveMinutes", e.target.value)}
+                      placeholder="VD: 5"
+                      required
+                    />
+                  ) : null}
 
                   <Input
                     label="Giới hạn hiển thị"

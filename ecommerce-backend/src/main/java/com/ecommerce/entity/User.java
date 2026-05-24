@@ -53,6 +53,13 @@ public class User {
     @Builder.Default
     private Boolean active = true;
 
+    @Column(name = "deleted")
+    @Builder.Default
+    private Boolean deleted = false;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @Column(name = "auth_provider", nullable = false, length = 20)
     @Builder.Default
     private String authProvider = "LOCAL";

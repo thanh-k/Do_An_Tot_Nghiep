@@ -34,6 +34,9 @@ public class CoinTask {
     @Column(name = "coin_reward", nullable = false)
     private Long coinReward;
 
+    @Column(name = "required_active_minutes")
+    private Integer requiredActiveMinutes;
+
     @Builder.Default
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;

@@ -9,6 +9,7 @@ import NewsTopicFormModal from "@/components/admin/NewsTopicFormModal";
 import newsService from "@/services/admin/newsService";
 import useAuth from "@/hooks/useAuth";
 import { hasAnyPermission } from "@/utils/permission";
+import { sortNewestFirst } from "@/utils/sortNewest";
 
 function NewsTopicManagementPage() {
   const { currentUser } = useAuth();
@@ -366,7 +367,7 @@ function NewsTopicManagementPage() {
       ) : (
         <DataTable
           columns={columns}
-          data={filtered}
+          data={sortNewestFirst(filtered)}
           pagination={{ enabled: true, pageSize: 8, itemLabel: "chủ đề" }}
         />
       )}

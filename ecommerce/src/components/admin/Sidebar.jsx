@@ -19,6 +19,7 @@ import {
   Coins,
   Activity,
   Megaphone,
+  UserX,
 } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import logo from "@/assets/logo.svg";
@@ -111,6 +112,12 @@ const items = [
     label: "Khách hàng",
     icon: Users,
     permissions: ["CUSTOMER_VIEW", "USER_VIEW"],
+  },
+  {
+    to: "/admin/account-cancellations",
+    label: "Yêu cầu hủy tài khoản",
+    icon: UserX,
+    permissions: ["USER_VIEW", "USER_DELETE"],
   },
   {
     to: "/admin/staff",

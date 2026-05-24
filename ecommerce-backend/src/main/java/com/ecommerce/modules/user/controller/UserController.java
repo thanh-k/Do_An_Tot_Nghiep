@@ -138,7 +138,7 @@ public class UserController {
     public ApiResponse<String> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return ApiResponse.<String>builder()
-                .message("Xóa người dùng thành công")
+                .message("Đã ngưng hoạt động tài khoản người dùng")
                 .result("OK")
                 .build();
     }
