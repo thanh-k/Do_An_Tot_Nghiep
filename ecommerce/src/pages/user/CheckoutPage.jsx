@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useLocation, Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Ticket, X } from "lucide-react";
+import { MapPin, Plus, Ticket, X } from "lucide-react";
+import AddressSelector from "@/components/user/Mapp";
 import Button from "@/components/common/Button";
 import Input from "@/components/common/Input";
 import PageHeader from "@/components/common/PageHeader";
@@ -12,10 +13,11 @@ import useVoucherWallet from "@/hooks/useVoucherWallet";
 import { orderService } from "@/services/user/orderService";
 import behaviorService from "@/services/user/behaviorService";
 import userVoucherService from "@/services/user/voucherService";
+import profileService from "@/services/user/profileService";
 import { PAYMENT_METHOD_OPTIONS } from "@/constants";
 import { formatCurrency } from "@/utils/format";
+import { validateFullName, validatePhone } from "@/utils/validators";
 
-import AddressSelector from "@/components/user/Mapp";
 // Cấu hình UI Icon và Màu sắc cho từng loại Voucher
 const CATEGORY_MAP = {
   DISCOUNT: { label: "Giảm giá", bg: "bg-rose-500", text: "text-rose-600" },
@@ -23,6 +25,13 @@ const CATEGORY_MAP = {
   CASHBACK: { label: "Hoàn xu", bg: "bg-amber-500", text: "text-amber-600" },
   VIP: { label: "Đặc quyền", bg: "bg-fuchsia-500", text: "text-fuchsia-600" },
   COIN_REWARD: { label: "Đổi xu", bg: "bg-emerald-500", text: "text-emerald-600" },
+};
+
+const emptyCheckoutAddress = {
+  recipientName: "",
+  phone: "",
+  addressLine: "",
+  isDefault: false,
 };
 
 function CheckoutPage() {
@@ -45,13 +54,14 @@ function CheckoutPage() {
   const [myVouchers, setMyVouchers] = useState([]);
   const [appliedVoucher, setAppliedVoucher] = useState(null);
   const [showVoucherModal, setShowVoucherModal] = useState(false);
-  const [shippingAddressInfo, setShippingAddressInfo] = useState({
-    province: "",
-    district: "",
-    ward: "",
-    specificAddress: "",
-    fullAddress: "",
-  });
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [addressLoading, setAddressLoading] = useState(false);
+  const [addressSaving, setAddressSaving] = useState(false);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [addressForm, setAddressForm] = useState(emptyCheckoutAddress);
+  const [addressErrors, setAddressErrors] = useState({});
 
   useEffect(() => {
   userVoucherService
@@ -108,6 +118,11 @@ function CheckoutPage() {
   const checkoutProductIds = useMemo(() => {
     return [...new Set(checkoutItems.map((item) => item.productId).filter(Boolean))];
   }, [checkoutItems]);
+
+  const selectedAddress = useMemo(() => {
+    if (!addresses.length) return null;
+    return addresses.find((item) => item.id === selectedAddressId) || addresses.find((item) => item.isDefault) || addresses[0];
+  }, [addresses, selectedAddressId]);
 
   useEffect(() => {
     if (!checkoutProductIds.length) return;
@@ -182,28 +197,130 @@ function CheckoutPage() {
     }
   }, [checkoutSubtotal, appliedVoucher]);
 
+  const loadAddresses = async () => {
+    try {
+      setAddressLoading(true);
+      const data = await profileService.getProfileAddresses();
+      const list = Array.isArray(data) ? data : [];
+      setAddresses(list);
+      const defaultAddress = list.find((item) => item.isDefault) || list[0];
+      setSelectedAddressId((prev) => prev || defaultAddress?.id || null);
+      return list;
+    } catch (error) {
+      console.error("Không tải được sổ địa chỉ:", error);
+      setAddresses([]);
+      return [];
+    } finally {
+      setAddressLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (currentUser) {
       setShipping({
-        fullName: currentUser.name || "",
+        fullName: currentUser.fullName || currentUser.name || "",
         email: currentUser.email || "",
         phone: currentUser.phone || "",
         note: "",
       });
+      loadAddresses();
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    if (!selectedAddress) return;
+    setShipping((prev) => ({
+      ...prev,
+      fullName: selectedAddress.recipientName || prev.fullName || currentUser?.name || "",
+      phone: selectedAddress.phone || prev.phone || currentUser?.phone || "",
+    }));
+  }, [selectedAddress, currentUser]);
+
+  const resetAddressForm = () => {
+    setAddressForm({
+      ...emptyCheckoutAddress,
+      recipientName: selectedAddress?.recipientName || currentUser?.fullName || currentUser?.name || "",
+      phone: selectedAddress?.phone || currentUser?.phone || "",
+      isDefault: addresses.length === 0,
+    });
+    setAddressErrors({});
+  };
+
+  const openAddressModal = () => {
+    resetAddressForm();
+    setShowAddressForm(addresses.length === 0);
+    setShowAddressModal(true);
+  };
+
+  const submitCheckoutAddress = async (event) => {
+    event.preventDefault();
+
+    const nextErrors = {};
+    if (!validateFullName(addressForm.recipientName)) {
+      nextErrors.recipientName = "Tên người nhận không hợp lệ.";
+    }
+    if (!validatePhone(addressForm.phone)) {
+      nextErrors.phone = "Số điện thoại phải gồm đúng 10 chữ số.";
+    }
+    if (!addressForm.addressLine?.trim()) {
+      nextErrors.addressLine = "Vui lòng chọn đầy đủ khu vực và nhập địa chỉ chi tiết.";
+    }
+
+    if (Object.keys(nextErrors).length) {
+      setAddressErrors(nextErrors);
+      return;
+    }
+
+    try {
+      setAddressSaving(true);
+      const payload = {
+        recipientName: addressForm.recipientName.trim(),
+        phone: addressForm.phone.trim(),
+        addressLine: addressForm.addressLine.trim(),
+        isDefault: addressForm.isDefault || addresses.length === 0,
+      };
+
+      const created = await profileService.createAddress(payload);
+      const list = await loadAddresses();
+
+      const createdId =
+        created?.id ||
+        list.find(
+          (item) =>
+            item.recipientName === payload.recipientName &&
+            item.phone === payload.phone &&
+            item.addressLine === payload.addressLine
+        )?.id;
+
+      if (createdId) {
+        setSelectedAddressId(createdId);
+      }
+
+      setShipping((prev) => ({
+        ...prev,
+        fullName: payload.recipientName,
+        phone: payload.phone,
+      }));
+
+      toast.success("Đã thêm địa chỉ nhận hàng");
+      setShowAddressForm(false);
+      setAddressErrors({});
+      setAddressForm(emptyCheckoutAddress);
+    } catch (error) {
+      toast.error(error?.message || "Không thể thêm địa chỉ nhận hàng");
+    } finally {
+      setAddressSaving(false);
+    }
+  };
 
   const canSubmit = useMemo(
     () =>
       shipping.fullName &&
       shipping.email &&
       shipping.phone &&
-      shippingAddressInfo.province &&
-      shippingAddressInfo.district &&
-      shippingAddressInfo.ward &&
-      shippingAddressInfo.specificAddress?.trim() &&
+      selectedAddress?.addressLine &&
       checkoutItems.length > 0,
-    [checkoutItems.length, shipping, shippingAddressInfo],
+    [checkoutItems.length, shipping, selectedAddress],
   );
 
   if (!currentUser) {
@@ -221,7 +338,7 @@ function CheckoutPage() {
   const handlePlaceOrder = async (event) => {
     event.preventDefault();
     if (!canSubmit) {
-      toast.error("Vui lòng hoàn thiện thông tin giao hàng.");
+      toast.error(addresses.length ? "Vui lòng chọn địa chỉ giao hàng." : "Bạn cần thêm địa chỉ nhận hàng trong hồ sơ trước khi thanh toán.");
       return;
     }
 
@@ -231,8 +348,8 @@ function CheckoutPage() {
       // Chuẩn bị payload chuẩn xác theo Backend OrderRequest
       const payload = {
         userId: currentUser.id, // Truyền ID của user đang đăng nhập
-        phoneNumber: shipping.phone,
-        shippingAddress: `${shippingAddressInfo.fullAddress}${shipping.note ? ` (Ghi chú: ${shipping.note})` : ""}`,
+        phoneNumber: selectedAddress.phone || shipping.phone,
+        shippingAddress: `${selectedAddress.addressLine}${shipping.note ? ` (Ghi chú: ${shipping.note})` : ""}`,
         items: checkoutItems.map((item) => ({
           variantId: item.variantId,
           quantity: item.quantity,
@@ -285,35 +402,63 @@ function CheckoutPage() {
             <h2 className="mb-5 text-xl font-bold text-slate-900">
               Thông tin giao hàng
             </h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              <Input
-                label="Họ và tên"
-                value={shipping.fullName}
-                onChange={(event) =>
-                  handleChange("fullName", event.target.value)
-                }
-              />
-              <Input
-                label="Email"
-                type="email"
-                value={shipping.email}
-                onChange={(event) => handleChange("email", event.target.value)}
-              />
-              <Input
-                label="Số điện thoại"
-                value={shipping.phone}
-                onChange={(event) => handleChange("phone", event.target.value)}
-              />
-              <div className="md:col-span-2">
-                <AddressSelector onAddressChange={setShippingAddressInfo} />
-              </div>
-              <div className="md:col-span-2">
+            <div className="space-y-4">
+              {addressLoading ? (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-500">
+                  Đang tải sổ địa chỉ...
+                </div>
+              ) : selectedAddress ? (
+                <div className="rounded-2xl border border-brand-100 bg-brand-50/30 p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-3 flex items-center gap-2 text-brand-700">
+                        <MapPin size={18} />
+                        <span className="font-bold">Địa chỉ nhận hàng</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-slate-900">
+                        <span className="font-black">{selectedAddress.recipientName}</span>
+                        <span className="text-slate-300">|</span>
+                        <span className="font-semibold">{selectedAddress.phone}</span>
+                        {selectedAddress.isDefault ? (
+                          <span className="rounded border border-brand-300 px-2 py-0.5 text-xs font-bold text-brand-700">Mặc định</span>
+                        ) : null}
+                      </div>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">{selectedAddress.addressLine}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={openAddressModal}
+                      className="text-sm font-bold text-brand-600 hover:underline"
+                    >
+                      Thay đổi
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-rose-300 bg-rose-50 p-5">
+                  <p className="font-bold text-rose-700">Bạn chưa có địa chỉ nhận hàng</p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Vui lòng thêm địa chỉ nhận hàng để tiếp tục thanh toán. Bạn có thể lưu địa chỉ ngay tại trang này.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={openAddressModal}
+                    className="mt-3 inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-sm font-bold text-white hover:bg-brand-700"
+                  >
+                    <Plus size={16} />
+                    Thêm địa chỉ
+                  </button>
+                </div>
+              )}
+
+              <div>
                 <Input
                   label="Ghi chú"
                   textarea
                   rows={4}
                   value={shipping.note}
                   onChange={(event) => handleChange("note", event.target.value)}
+                  placeholder="Lưu ý cho người bán hoặc đơn vị giao hàng..."
                 />
               </div>
             </div>
@@ -475,6 +620,146 @@ function CheckoutPage() {
           </Button>
         </aside>
       </form>
+
+      <Modal
+        isOpen={showAddressModal}
+        onClose={() => setShowAddressModal(false)}
+        title="Địa chỉ nhận hàng"
+        size="lg"
+      >
+        <div className="space-y-5">
+          <div className="max-h-[42vh] space-y-3 overflow-y-auto pr-1">
+            {addresses.map((item) => {
+              const checked = selectedAddress?.id === item.id;
+              return (
+                <label
+                  key={item.id}
+                  className={`block cursor-pointer rounded-2xl border p-4 transition ${
+                    checked ? "border-brand-500 bg-brand-50" : "border-slate-200 bg-white hover:border-brand-200"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      className="mt-1 h-4 w-4 text-brand-600 focus:ring-brand-500"
+                      checked={checked}
+                      onChange={() => setSelectedAddressId(item.id)}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2 text-slate-900">
+                        <span className="font-black">{item.recipientName}</span>
+                        <span className="text-slate-300">|</span>
+                        <span className="font-semibold">{item.phone}</span>
+                        {item.isDefault ? (
+                          <span className="rounded border border-brand-300 px-2 py-0.5 text-xs font-bold text-brand-700">Mặc định</span>
+                        ) : null}
+                      </div>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">{item.addressLine}</p>
+                    </div>
+                  </div>
+                </label>
+              );
+            })}
+            {!addresses.length ? (
+              <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+                Bạn chưa có địa chỉ nào được lưu. Hãy thêm địa chỉ mới bên dưới để tiếp tục thanh toán.
+              </div>
+            ) : null}
+          </div>
+
+          {!showAddressForm ? (
+            <button
+              type="button"
+              onClick={() => {
+                resetAddressForm();
+                setShowAddressForm(true);
+              }}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50"
+            >
+              <Plus size={16} />
+              Thêm địa chỉ mới
+            </button>
+          ) : (
+            <form onSubmit={submitCheckoutAddress} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-black text-slate-900">Thêm địa chỉ nhận hàng</h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Địa chỉ này sẽ được lưu vào sổ địa chỉ để dùng cho các lần thanh toán sau.
+                  </p>
+                </div>
+                {addresses.length ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddressForm(false);
+                      setAddressErrors({});
+                    }}
+                    className="text-sm font-bold text-slate-500 hover:text-slate-800"
+                  >
+                    Ẩn form
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <Input
+                  label="Người nhận"
+                  value={addressForm.recipientName}
+                  error={addressErrors.recipientName}
+                  onChange={(event) =>
+                    setAddressForm((prev) => ({ ...prev, recipientName: event.target.value }))
+                  }
+                  placeholder="Tên người nhận"
+                />
+                <Input
+                  label="Số điện thoại"
+                  value={addressForm.phone}
+                  error={addressErrors.phone}
+                  onChange={(event) =>
+                    setAddressForm((prev) => ({ ...prev, phone: event.target.value }))
+                  }
+                  placeholder="Ví dụ: 0348932044"
+                />
+                <div className="md:col-span-2">
+                  <AddressSelector
+                    compact
+                    onAddressChange={(info) => {
+                      setAddressForm((prev) => ({ ...prev, addressLine: info.fullAddress || "" }));
+                    }}
+                  />
+                  {addressErrors.addressLine ? (
+                    <p className="mt-2 text-sm font-medium text-rose-600">{addressErrors.addressLine}</p>
+                  ) : null}
+                </div>
+                <label className="flex items-center gap-2 text-sm text-slate-600 md:col-span-2">
+                  <input
+                    type="checkbox"
+                    checked={addressForm.isDefault || addresses.length === 0}
+                    disabled={addresses.length === 0}
+                    onChange={(event) =>
+                      setAddressForm((prev) => ({ ...prev, isDefault: event.target.checked }))
+                    }
+                  />
+                  Đặt làm địa chỉ mặc định
+                </label>
+              </div>
+
+              <div className="mt-5 flex justify-end">
+                <Button type="submit" loading={addressSaving}>
+                  Lưu địa chỉ
+                </Button>
+              </div>
+            </form>
+          )}
+
+          <div className="flex justify-end border-t border-slate-100 pt-4">
+            <Button type="button" onClick={() => setShowAddressModal(false)} disabled={!selectedAddress}>
+              Xác nhận
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* --- VOUCHER MODAL --- */}
       <Modal

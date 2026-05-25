@@ -591,3 +591,55 @@ Nội dung thực hiện:
 - Kiểm tra và tối ưu lại trải nghiệm người dùng trên các chức năng mới
 
 ✍️ Người thực hiện: Thanh
+
+📅 Ngày: 25/05/2026
+🧩 Nội dung công việc:
+1. FE:
+
+- Hoàn thiện chức năng quản lý địa chỉ giao hàng cho người dùng
+- Cho phép người dùng lưu nhiều địa chỉ giao hàng trong hồ sơ cá nhân
+- Bổ sung trường Người nhận độc lập với tên tài khoản đăng nhập
+- Cho phép người dùng đặt tên người nhận tùy ý cho từng địa chỉ
+- Hỗ trợ thiết lập địa chỉ mặc định
+
+- Tối ưu quy trình thanh toán (Checkout)
+- Loại bỏ yêu cầu nhập lại toàn bộ thông tin giao hàng khi thanh toán
+- Tự động lấy thông tin địa chỉ đã lưu từ hồ sơ người dùng
+- Hiển thị địa chỉ mặc định trong trang thanh toán
+- Bổ sung chức năng chọn địa chỉ giao hàng đã lưu
+- Cho phép thêm địa chỉ mới trực tiếp tại trang thanh toán
+- Đồng bộ dữ liệu địa chỉ giữa hồ sơ cá nhân và trang thanh toán
+- Thiết kế giao diện lựa chọn địa chỉ theo hướng tương tự các sàn thương mại điện tử
+
+- Hoàn thiện component AddressSelector
+- Tích hợp API địa giới hành chính Việt Nam
+- Tự động tải:
+    + Tỉnh/Thành phố
+    + Quận/Huyện
+    + Phường/Xã
+- Tự động ghép địa chỉ đầy đủ từ dữ liệu đã chọn
+
+- Khắc phục lỗi vòng lặp render React
+- Sửa lỗi:
+    Maximum update depth exceeded
+- Tối ưu useEffect và callback xử lý địa chỉ
+- Ngăn component AddressSelector cập nhật state lặp vô hạn
+- Tối ưu hiệu năng cập nhật địa chỉ giao hàng
+
+2. BE:
+
+- Kiểm tra và đồng bộ API địa chỉ giao hàng
+- Kiểm tra luồng lưu địa chỉ mặc định
+- Kiểm tra luồng lấy danh sách địa chỉ người dùng
+- Kiểm tra dữ liệu checkout sử dụng địa chỉ đã lưu
+- Đảm bảo tương thích với chức năng nhiều địa chỉ giao hàng
+
+3. Fix lỗi phát sinh:
+
+- Fix lỗi AddressSelector gây render vô hạn
+- Fix lỗi cập nhật địa chỉ giao hàng lặp liên tục
+- Fix lỗi đồng bộ dữ liệu địa chỉ giữa Profile và Checkout
+- Fix lỗi callback địa chỉ gây re-render nhiều lần
+- Kiểm tra và tối ưu lại trải nghiệm nhập địa chỉ giao hàng
+
+✍️ Người thực hiện: Thanh
