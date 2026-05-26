@@ -111,7 +111,7 @@ function Header() {
               )
             }
           >
-            <Camera size={20} strokeWidth={2.5} />
+            {/* <Camera size={20} strokeWidth={2.5} /> */}
           </NavLink>
         </nav>
 
