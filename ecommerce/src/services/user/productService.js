@@ -249,7 +249,7 @@ export const userProductService = {
           if (v.attributes && typeof v.attributes === "string") {
             try {
               v.attributes = JSON.parse(v.attributes);
-            } catch (e) {}
+            } catch (e) { }
           }
           return v;
         });
@@ -344,46 +344,45 @@ export const userProductService = {
   // Hàm tìm kiếm bằng hình ảnh (Tích hợp AI)
   async imageSearch(file, k = 10) {
     try {
-      // Bước 1: Gửi ảnh sang Python Vision Service (port 8001)
+      // Bước 1: Gửi ảnh sang Vision Service qua Nginx proxy
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("k", k);
+      formData.append("k", String(k));
 
-      const visionRes = await axios.post(
-        "http://localhost:8001/search",
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        },
-      );
+      const baseUrl = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1")
+        .replace("/api/v1", "");
+      const visionUrl = import.meta.env.DEV
+        ? "http://localhost:8001"
+        : `${baseUrl}/vision`;
 
-      const productIds = visionRes.data.product_ids || [];
+      const visionRes = await fetch(`${visionUrl}/search`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!visionRes.ok) throw new Error("Vision service lỗi");
+      const visionData = await visionRes.json();
+      const productIds = visionData.product_ids || [];
+
       if (productIds.length === 0) {
         return { label: "Không tìm thấy sản phẩm tương đồng", items: [] };
       }
 
-      // Bước 2: Dùng danh sách ID lấy chi tiết sản phẩm từ Java Backend
-      const javaRes = await axios.post(`${API_URL}/batch`, productIds);
-      let products = javaRes.data.result || [];
+      // Bước 2: Lấy chi tiết sản phẩm từ Java Backend
+      const products = await apiClient.request(`${API_URL}/batch`, {
+        method: "POST",
+        body: JSON.stringify(productIds),
+      });
 
-      // Ép kiểu JSON chuỗi specifications & attributes cho đúng chuẩn để UI render được
-      products = products.map((product) => {
-        if (
-          product.specifications &&
-          typeof product.specifications === "string"
-        ) {
-          try {
-            product.specifications = JSON.parse(product.specifications);
-          } catch (e) {
-            product.specifications = {};
-          }
+      const normalizedProducts = (Array.isArray(products) ? products : []).map((product) => {
+        if (product.specifications && typeof product.specifications === "string") {
+          try { product.specifications = JSON.parse(product.specifications); }
+          catch { product.specifications = {}; }
         }
         if (product.variants && Array.isArray(product.variants)) {
           product.variants = product.variants.map((v) => {
             if (v.attributes && typeof v.attributes === "string") {
-              try {
-                v.attributes = JSON.parse(v.attributes);
-              } catch (e) {}
+              try { v.attributes = JSON.parse(v.attributes); } catch { }
             }
             return v;
           });
@@ -392,8 +391,8 @@ export const userProductService = {
       });
 
       return {
-        label: `Tìm thấy ${products.length} sản phẩm tương tự`,
-        items: products,
+        label: `Tìm thấy ${normalizedProducts.length} sản phẩm tương tự`,
+        items: normalizedProducts,
       };
     } catch (error) {
       console.error("Lỗi khi tìm kiếm bằng hình ảnh:", error);

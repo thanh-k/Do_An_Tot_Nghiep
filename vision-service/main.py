@@ -14,7 +14,7 @@ app = FastAPI(
 # Thêm đoạn cấu hình CORS này vào ngay dưới phần khai báo app
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"], # Cấp quyền cho React Frontend gọi API
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "https://hitcinsight.id.vn"], # Cấp quyền cho React Frontend gọi API
     allow_credentials=True,
     allow_methods=["*"], # Cho phép tất cả method (GET, POST,...)
     allow_headers=["*"], # Cho phép tất cả headers
