@@ -13,8 +13,10 @@ function ImageUploader({ file, previewUrl, onChange, onClear }) {
       // Chuyển đổi ảnh Base64 từ Webcam thành dạng File (để giống với khi chọn file từ máy)
       const res = await fetch(imageSrc);
       const blob = await res.blob();
-      const capturedFile = new File([blob], "camera-capture.jpg", { type: "image/jpeg" });
-      
+      const capturedFile = new File([blob], "camera-capture.jpg", {
+        type: "image/jpeg",
+      });
+
       onChange(capturedFile);
       setIsCameraOpen(false); // Tắt camera sau khi chụp
     }
@@ -30,7 +32,9 @@ function ImageUploader({ file, previewUrl, onChange, onClear }) {
               audio={false}
               ref={webcamRef}
               screenshotFormat="image/jpeg"
-              mirrored={true} /* Thêm dòng này để lật lại camera giống soi gương */
+              mirrored={
+                true
+              } /* Thêm dòng này để lật lại camera giống soi gương */
               className="w-full object-cover"
               videoConstraints={{ facingMode: "environment" }}
             />
@@ -41,7 +45,7 @@ function ImageUploader({ file, previewUrl, onChange, onClear }) {
               <X size={20} />
             </button>
           </div>
-          
+
           <div className="mt-6 flex gap-4">
             <button
               onClick={capture}
@@ -58,13 +62,14 @@ function ImageUploader({ file, previewUrl, onChange, onClear }) {
           <div className="grid h-16 w-16 place-items-center rounded-2xl bg-brand-50 text-brand-600">
             {previewUrl ? <ImagePlus size={28} /> : <UploadCloud size={28} />}
           </div>
-          
+
           <div className="space-y-2">
             <h3 className="text-xl font-semibold text-slate-900">
               {file ? "Đổi ảnh tìm kiếm" : "Upload hoặc Chụp ảnh sản phẩm"}
             </h3>
             <p className="max-w-xl text-sm leading-6 text-slate-500">
-              Đây là giao diện mock AI visual search. Hãy tải ảnh lên hoặc bật webcam để chụp trực tiếp.
+              Đây là giao diện mock AI visual search. Hãy tải ảnh lên hoặc bật
+              webcam để chụp trực tiếp.
             </p>
           </div>
 
@@ -81,10 +86,10 @@ function ImageUploader({ file, previewUrl, onChange, onClear }) {
               />
             </label>
 
-            {/* Nút 2: Bật Camera UI */}
+            {/* Nút 2: Bật Camera UI (Ẩn trên PC, hiện trên Mobile & Tablet)  lg:hidden thay cho md:hidden */}
             <button
               onClick={() => setIsCameraOpen(true)}
-              className="flex cursor-pointer items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+              className="flex lg:hidden cursor-pointer items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
             >
               <Camera size={18} />
               <span>Mở Camera</span>
@@ -107,7 +112,8 @@ function ImageUploader({ file, previewUrl, onChange, onClear }) {
                 Ảnh đã chọn: {file?.name || "Ảnh chụp từ Camera"}
               </h4>
               <p className="text-sm leading-6 text-slate-500">
-                Hệ thống sẽ tiến hành trích xuất đặc trưng hình ảnh và tìm kiếm các sản phẩm tương đồng trong cơ sở dữ liệu.
+                Hệ thống sẽ tiến hành trích xuất đặc trưng hình ảnh và tìm kiếm
+                các sản phẩm tương đồng trong cơ sở dữ liệu.
               </p>
               <button
                 className="mt-2 text-sm font-semibold text-rose-600 transition hover:text-rose-700"

@@ -6,7 +6,7 @@ import LoadingSpinner from "@/components/common/LoadingSpinner";
 import PageHeader from "@/components/common/PageHeader";
 import ProductGrid from "@/components/product/ProductGrid";
 import { useDebounce } from "@/hooks/useDebounce";
-import productService from "@/services/admin/productService";
+import userProductService from "@/services/user/productService";
 import behaviorService from "@/services/user/behaviorService";
 
 function SearchResultPage() {
@@ -15,26 +15,28 @@ function SearchResultPage() {
   const [keyword, setKeyword] = useState(queryParam);
   const debouncedKeyword = useDebounce(keyword, 350);
   const [loading, setLoading] = useState(true);
-  const [products, setProducts] = useState([]);
+  const [response, setResponse] = useState({ items: [], total: 0 });
 
   useEffect(() => {
     setKeyword(queryParam);
   }, [queryParam]);
 
   useEffect(() => {
+    if (!debouncedKeyword) {
+      setResponse({ items: [], total: 0 });
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    productService
-      .getProducts({
-        search: debouncedKeyword,
-        pageSize: 12,
-      })
-      .then((response) => {
-        setProducts(response.items);
+    userProductService
+      .searchProducts(debouncedKeyword, 1, 12)
+      .then((data) => {
+        setResponse(data);
         if (debouncedKeyword?.trim()) {
           behaviorService.track({
             eventType: "SEARCH_PRODUCT",
             keyword: debouncedKeyword.trim(),
-            productIds: (response.items || []).slice(0, 8).map((item) => item.id),
+            productIds: (data.items || []).slice(0, 8).map((item) => item.id),
           });
         }
       })
@@ -50,7 +52,7 @@ function SearchResultPage() {
     <div className="container-padded py-8">
       <PageHeader
         title="Kết quả tìm kiếm"
-        description="Tìm kiếm sản phẩm bằng chữ hoặc ký tự. Khu vực này dùng mock data và lọc trực tiếp trên frontend."
+        description="Kết quả được trả về từ hệ thống tìm kiếm thông minh của chúng tôi."
       />
 
       <form
@@ -72,11 +74,9 @@ function SearchResultPage() {
 
       <div className="mb-6 text-sm text-slate-500">
         {queryParam ? (
-          <p>
-            Đang hiển thị kết quả cho từ khoá:
-            <span className="ml-2 font-semibold text-slate-900">
-              "{queryParam}"
-            </span>
+          <p className="flex items-center gap-2">
+            <span className="font-semibold text-slate-900">"{queryParam}"</span>
+            - Tìm thấy {response.total} sản phẩm.
           </p>
         ) : (
           <p>Nhập từ khoá để bắt đầu tìm kiếm.</p>
@@ -87,7 +87,7 @@ function SearchResultPage() {
         <LoadingSpinner label="Đang tìm sản phẩm..." />
       ) : (
         <ProductGrid
-          products={products}
+          products={response.items}
           emptyTitle="Không có sản phẩm phù hợp"
           emptyDescription="Hãy thử dùng từ khoá ngắn hơn hoặc tên thương hiệu phổ biến."
         />

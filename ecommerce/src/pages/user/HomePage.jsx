@@ -9,6 +9,20 @@ import {
   Headphones,
   Watch,
   Camera,
+  Speaker,
+  Keyboard,
+  Mouse,
+  Monitor,
+  BatteryCharging,
+  Shield,
+  Tv,
+  Box,
+  Wind,
+  Fan,
+  Briefcase,
+  Shirt,
+  Footprints,
+  LayoutGrid,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,8 +31,37 @@ import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ProductGrid from "@/components/product/ProductGrid";
 import RecommendedProducts from "@/components/product/RecommendedProducts";
 import { categoryService } from "@/services/admin/categoryService";
+import { brandService } from "@/services/admin/brandService";
 import productService from "@/services/admin/productService";
 import newsService from "@/services/user/newsService";
+
+// Hàm tự động lấy Icon theo tên danh mục
+const getCategoryIcon = (categoryName) => {
+  if (!categoryName) return <LayoutGrid size={20} />;
+  const name = categoryName.toLowerCase();
+
+  if (name.includes("điện thoại")) return <Smartphone size={20} />;
+  if (name.includes("macbook") || name.includes("laptop")) return <Laptop size={20} />;
+  if (name.includes("máy tính bảng") || name.includes("tablet")) return <TabletSmartphone size={20} />;
+  if (name.includes("đồng hồ")) return <Watch size={20} />;
+  if (name.includes("tai nghe")) return <Headphones size={20} />;
+  if (name.includes("loa")) return <Speaker size={20} />;
+  if (name.includes("bàn phím")) return <Keyboard size={20} />;
+  if (name.includes("chuột")) return <Mouse size={20} />;
+  if (name.includes("màn hình")) return <Monitor size={20} />;
+  if (name.includes("máy ảnh") || name.includes("camera")) return <Camera size={20} />;
+  if (name.includes("sạc") || name.includes("dự phòng")) return <BatteryCharging size={20} />;
+  if (name.includes("ốp lưng")) return <Shield size={20} />;
+  if (name.includes("tivi") || name.includes("tv")) return <Tv size={20} />;
+  if (name.includes("tủ lạnh") || name.includes("máy giặt")) return <Box size={20} />;
+  if (name.includes("điều hòa")) return <Wind size={20} />;
+  if (name.includes("quạt")) return <Fan size={20} />;
+  if (name.includes("balo") || name.includes("túi xách")) return <Briefcase size={20} />;
+  if (name.includes("quần áo")) return <Shirt size={20} />;
+  if (name.includes("giày dép")) return <Footprints size={20} />;
+
+  return <LayoutGrid size={20} />;
+};
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -36,18 +79,21 @@ function HomePage() {
     deals: [],
   });
   const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
   const [news, setNews] = useState([]);
   const [trendingNews, setTrendingNews] = useState([]);
   const [highlightIndex, setHighlightIndex] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(8 * 60); // 8 phút
 
   useEffect(() => {
     Promise.all([
       productService.getHomeCollections(),
       categoryService.getCategories(),
+      brandService.getBrands(),
       newsService.getPosts({ page: 0, size: 6 }),
       newsService.getTrendingPosts(),
     ])
-      .then(([homeCollections, categoriesData, newsData, trendingData]) => {
+      .then(([homeCollections, categoriesData, brandsData, newsData, trendingData]) => {
         setCollections(
           homeCollections || {
             banners: [],
@@ -58,6 +104,7 @@ function HomePage() {
         );
 
         setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+        setBrands(Array.isArray(brandsData) ? brandsData : []);
 
         const posts = Array.isArray(newsData?.content)
           ? newsData.content
@@ -155,6 +202,22 @@ function HomePage() {
     return () => clearInterval(interval);
   }, [discountedProducts.length]);
 
+  // Logic đếm ngược 8 phút cho Deal Sốc
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => (prev <= 1 ? 8 * 60 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return { m, s };
+  };
+
+  const { m, s } = formatTime(timeLeft);
+
   const formatCurrency = (value) =>
     Number(value || 0).toLocaleString("vi-VN") + " ₫";
 
@@ -187,16 +250,7 @@ function HomePage() {
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="text-slate-400 group-hover:text-rose-600 transition-colors shrink-0">
-                      {cat.name?.includes("Điện thoại") && <Smartphone size={18} />}
-                      {cat.name?.includes("Laptop") && <Laptop size={18} />}
-                      {cat.name?.includes("Tablet") && (
-                        <TabletSmartphone size={18} />
-                      )}
-                      {cat.name?.includes("Phụ kiện") && (
-                        <Headphones size={18} />
-                      )}
-                      {cat.name?.includes("Đồng hồ") && <Watch size={18} />}
-                      {cat.name?.includes("Máy ảnh") && <Camera size={18} />}
+                      {getCategoryIcon(cat.name)}
                     </div>
 
                     <span className="text-sm font-semibold text-slate-700 group-hover:text-rose-600 transition-colors truncate">
@@ -389,60 +443,93 @@ function HomePage() {
       </motion.section>
 
       <motion.section className="container-padded py-4" {...fadeInUp}>
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <h2 className="text-2xl font-black italic uppercase text-rose-600 flex items-center gap-2">
-                <Zap className="animate-pulse fill-rose-600" /> Deal sốc mỗi ngày
+        <div className="bg-gradient-to-r from-rose-400 to-orange-400 rounded-2xl p-5 sm:p-6 shadow-lg border border-rose-100">
+          <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <h2 className="text-xl sm:text-2xl font-black italic uppercase text-white flex items-center gap-2">
+                <Zap className="animate-pulse text-yellow-300 fill-yellow-300" /> Deal sốc mỗi ngày
               </h2>
 
-              <div className="flex gap-2 text-white">
-                {["08", "51", "45"].map((time, i) => (
-                  <span
-                    key={i}
-                    className="bg-slate-900 px-2 py-1 rounded font-bold"
-                  >
-                    {time}
-                  </span>
-                ))}
+              <div className="flex gap-1 sm:gap-2 text-white font-mono text-sm sm:text-lg">
+                <span className="bg-slate-900 px-2 py-1 rounded-lg font-bold shadow-inner text-center min-w-[28px]">00</span>
+                <span className="font-bold py-1 text-yellow-300">:</span>
+                <span className="bg-slate-900 px-2 py-1 rounded-lg font-bold shadow-inner text-center min-w-[28px]">{m}</span>
+                <span className="font-bold py-1 text-yellow-300">:</span>
+                <span className="bg-slate-900 px-2 py-1 rounded-lg font-bold shadow-inner text-center min-w-[28px]">{s}</span>
               </div>
             </div>
 
             <Link
-              to="/products"
-              className="text-sm font-bold text-rose-600 hover:underline"
+              to="/products?sort=sale"
+              className="text-sm font-bold text-white hover:text-yellow-300 hover:underline transition-colors"
             >
-              Xem thêm
+              Xem tất cả &gt;
             </Link>
           </div>
 
-          <ProductGrid products={featuredProducts.slice(0, 5)} />
+          <div className="bg-white/95 backdrop-blur-sm rounded-[1.5rem] p-4 sm:p-6 shadow-inner">
+            <ProductGrid products={discountedProducts.length > 0 ? discountedProducts.slice(0, 5) : featuredProducts.slice(0, 5)} />
+          </div>
         </div>
       </motion.section>
 
       <motion.section className="container-padded py-4" {...fadeInUp}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {[
-            { color: "bg-indigo-500", label: "Giảm 50%", desc: "Đơn tối thiểu 100k" },
-            { color: "bg-blue-500", label: "Giảm 10k", desc: "Đơn tối thiểu 100k" },
-            { color: "bg-green-500", label: "Freeship", desc: "Đơn tối thiểu 100k" },
-            { color: "bg-rose-500", label: "Giảm 2k", desc: "Đơn tối thiểu 100k" },
-            { color: "bg-amber-500", label: "Giảm 200k", desc: "Đơn tối thiểu 100k" },
-          ].map((v, i) => (
-            <motion.div
-              key={i}
-              whileHover={{ scale: 1.05, y: -5 }}
-              whileTap={{ scale: 0.95 }}
-              className={`${v.color} p-4 rounded-xl text-white shadow-md relative overflow-hidden group cursor-pointer`}
-            >
-              <p className="text-lg font-black">{v.label}</p>
-              <p className="text-xs opacity-80">{v.desc}</p>
-              <Percent
-                className="absolute -right-2 -bottom-2 opacity-20 rotate-12 transition-transform group-hover:scale-125"
-                size={60}
-              />
-            </motion.div>
-          ))}
+        <div className="space-y-10 my-4">
+          {/* DANH MỤC - 1 DÒNG SCROLL NGANG */}
+          <div>
+            <div className="flex items-center justify-between mb-5 px-2">
+              <h3 className="text-xl font-black italic uppercase text-slate-900 ">
+               🔥 Khám Phá Danh Mục
+              </h3>
+              <Link to="/products" className="text-sm font-bold text-rose-600 hover:underline">
+                Xem tất cả &gt;
+              </Link>
+            </div>
+            <div className="flex gap-3 sm:gap-4 overflow-x-auto snap-x snap-mandatory pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] px-2">
+              {categories.slice(0, 20).map((cat) => (
+                <Link key={cat.id} to={`/products?category=${cat.id}`} className="group flex flex-col items-center gap-2 snap-start min-w-[85px] sm:min-w-[110px]">
+                  <div className="flex h-[85px] w-full sm:h-[110px] items-center justify-center rounded-[1.25rem] sm:rounded-[1.5rem] bg-white shadow-sm border border-slate-100 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-md group-hover:border-rose-300 overflow-hidden relative">
+                    <div className="absolute inset-0 bg-slate-50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    {cat.icon ? (
+                      <img src={cat.icon} alt={cat.name} className="h-full w-full object-cover p-2.5 sm:p-3 relative z-10 transition-transform duration-300 group-hover:scale-110 mix-blend-multiply" />
+                    ) : (
+                      <div className="text-slate-400 group-hover:text-rose-600 transition-colors relative z-10">
+                        {getCategoryIcon(cat.name)}
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-center text-[11px] sm:text-xs font-bold text-slate-700 line-clamp-2 leading-tight px-1 group-hover:text-rose-600 transition-colors">
+                    {cat.name}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* THƯƠNG HIỆU - 1 DÒNG SCROLL NGANG */}
+          {brands.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-5 px-2">
+                <h3 className="text-xl font-black italic uppercase text-slate-900 ">
+                  🌟 Thương Hiệu Nổi Bật
+                </h3>
+              </div>
+              <div className="flex gap-3 sm:gap-4 overflow-x-auto snap-x snap-mandatory pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] px-2">
+                {brands.slice(0, 20).map((brand) => (
+                  <Link key={brand.id} to={`/products?brands=${brand.name}`} className="group flex flex-col items-center justify-center snap-start min-w-[110px] sm:min-w-[150px]">
+                    <div className="flex h-16 sm:h-20 w-full px-4 items-center justify-center rounded-2xl bg-white shadow-sm border border-slate-100 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-md group-hover:border-blue-300 relative overflow-hidden">
+                      <div className="absolute inset-0 bg-blue-50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      {brand.logo ? (
+                        <img src={brand.logo} alt={brand.name} className="max-h-10 sm:max-h-12 max-w-full object-contain relative z-10 transition-transform duration-300 group-hover:scale-110 mix-blend-multiply" />
+                      ) : (
+                        <span className="text-xs font-black uppercase text-slate-400 group-hover:text-blue-600 relative z-10 transition-colors">{brand.name}</span>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </motion.section>
 

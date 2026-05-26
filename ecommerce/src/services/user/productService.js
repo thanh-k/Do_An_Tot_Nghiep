@@ -1,5 +1,5 @@
-import apiClient from "@/services/apiClient";
-const API_URL = "/products";
+import axios from "axios";
+const API_URL = "http://localhost:8080/api/v1/products";
 
 export const userProductService = {
   // Hàm lấy danh sách sản phẩm có xử lý Lọc, Sắp xếp và Phân trang
@@ -7,8 +7,8 @@ export const userProductService = {
     try {
       // BƯỚC 1: Gọi API lấy toàn bộ sản phẩm từ Backend
       // (Vì Backend chưa có API Query Params chuẩn, ta sẽ lấy hết và xử lý tại Frontend cho mượt)
-      const response = await apiClient.request(API_URL);
-      let products = Array.isArray(response) ? response : [];
+      const response = await axios.get(API_URL);
+      let products = response.data.result || [];
 
       // BƯỚC 2: Xử lý LỌC (Filter) Danh mục, Thương hiệu & Khoảng giá
       if (filters.category) {
@@ -75,12 +75,17 @@ export const userProductService = {
       }
 
       // BƯỚC 3: Xử lý TÌM KIẾM (Search)
-      if (filters.search) {
-        const keyword = filters.search.toLowerCase();
+      const searchQuery = filters.search || filters.q || filters.keyword;
+      if (searchQuery) {
+        const keyword = searchQuery.toLowerCase().trim();
+        const removeAccents = (str) => str ? str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D') : '';
+        const cleanKeyword = removeAccents(keyword);
+
         products = products.filter(
-          (p) =>
-            p.name.toLowerCase().includes(keyword) ||
-            p.slug.toLowerCase().includes(keyword),
+          (p) => {
+            const name = p.name ? p.name.toLowerCase() : "";
+            return name.includes(keyword) || removeAccents(name).includes(cleanKeyword) || (p.slug && p.slug.includes(cleanKeyword));
+          }
         );
       }
 
@@ -143,10 +148,88 @@ export const userProductService = {
     }
   },
 
+  // 1. Hàm dành riêng cho Dropdown gợi ý tìm kiếm trên thanh SearchBar
+  async getSearchSuggestions(keyword, limit = 5) {
+    try {
+      if (!keyword || !keyword.trim()) return [];
+      
+      const response = await axios.get(API_URL);
+      const allProducts = response.data.result || [];
+
+      const searchKw = keyword.toLowerCase().trim();
+      const removeAccents = (str) => str ? str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D') : '';
+      const cleanSearchKw = removeAccents(searchKw);
+
+      const matchedProducts = allProducts.filter(p => {
+        const name = p.name ? p.name.toLowerCase() : "";
+        const cleanName = removeAccents(name);
+        return name.includes(searchKw) || cleanName.includes(cleanSearchKw) || (p.slug && p.slug.includes(cleanSearchKw));
+      });
+
+      matchedProducts.sort((a, b) => b.id - a.id);
+      return matchedProducts.slice(0, limit);
+    } catch (error) {
+      console.error("Lỗi khi lấy gợi ý tìm kiếm:", error);
+      return [];
+    }
+  },
+
+  // 2. Hàm MỚI ĐỘC LẬP dành riêng cho trang Kết quả tìm kiếm (SearchResultPage)
+  async searchProducts(keyword, page = 1, pageSize = 12) {
+    try {
+      const response = await axios.get(API_URL);
+      let allProducts = response.data.result || [];
+
+      if (keyword && keyword.trim()) {
+        const searchKw = keyword.toLowerCase().trim();
+        const removeAccents = (str) => str ? str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D') : '';
+        const cleanSearchKw = removeAccents(searchKw);
+
+        allProducts = allProducts.filter(p => {
+          const name = p.name ? p.name.toLowerCase() : "";
+          const cleanName = removeAccents(name);
+          return name.includes(searchKw) || cleanName.includes(cleanSearchKw) || (p.slug && p.slug.includes(cleanSearchKw));
+        });
+      }
+
+      allProducts.sort((a, b) => b.id - a.id);
+
+      let items = allProducts;
+
+      // Ép kiểu JSON cho các chuỗi cấu hình để UI render không bị lỗi
+      items = items.map((product) => {
+        if (product.specifications && typeof product.specifications === "string") {
+          try { product.specifications = JSON.parse(product.specifications); } 
+          catch (e) { product.specifications = {}; }
+        }
+        if (product.variants && Array.isArray(product.variants)) {
+          product.variants = product.variants.map((v) => {
+            if (v.attributes && typeof v.attributes === "string") {
+              try { v.attributes = JSON.parse(v.attributes); } catch (e) {}
+            }
+            return v;
+          });
+        }
+        return product;
+      });
+
+      const total = items.length;
+      const totalPages = Math.ceil(total / pageSize);
+      const startIndex = (page - 1) * pageSize;
+      const paginatedItems = items.slice(startIndex, startIndex + pageSize);
+
+      return { items: paginatedItems, total, page, totalPages: totalPages === 0 ? 1 : totalPages };
+    } catch (error) {
+      console.error("Lỗi khi tìm kiếm sản phẩm ở trang Search:", error);
+      return { items: [], total: 0, page: 1, totalPages: 1 };
+    }
+  },
+
   // Hàm lấy chi tiết một sản phẩm theo Slug
   async getProductBySlug(slug) {
     try {
-      const product = await apiClient.request(`${API_URL}/slug/${slug}`);
+      const response = await axios.get(`${API_URL}/slug/${slug}`);
+      let product = response.data.result;
 
       // Ép kiểu chuỗi JSON specifications thành Object để UI render được
       if (
@@ -202,7 +285,8 @@ export const userProductService = {
   // Hàm lấy dữ liệu cho Trang Chủ (HomePage)
   async getHomeCollections() {
     try {
-      const allProducts = await apiClient.request(API_URL);
+      const response = await axios.get(API_URL);
+      const allProducts = response.data.result || [];
 
       // Lọc ra các danh sách tương ứng (lấy tối đa 8 sản phẩm mỗi bộ sưu tập cho đẹp)
       const featured = allProducts.filter((p) => p.isFeatured).slice(0, 8);
@@ -228,9 +312,9 @@ export const userProductService = {
   async getAvailableFilters() {
     try {
       // Lấy danh sách thương hiệu THẬT từ Backend
-      const brandRes = await apiClient.request("/brands");
-      const brandNames = Array.isArray(brandRes)
-        ? brandRes.map((b) => b.name)
+      const brandRes = await axios.get("http://localhost:8080/api/v1/brands");
+      const brandNames = brandRes.data.result
+        ? brandRes.data.result.map((b) => b.name)
         : [];
 
       // Trả về dạng mảng String trơn để FilterSidebar của bạn map() không bị lỗi Object

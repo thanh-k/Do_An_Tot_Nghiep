@@ -6,9 +6,17 @@ import com.ecommerce.modules.product.dto.response.ProductResponse;
 import com.ecommerce.modules.product.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+
+import org.springframework.data.domain.Page;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/products")
@@ -16,6 +24,32 @@ import java.util.List;
 public class ProductController {
 
     private final ProductService productService;
+
+    @GetMapping("/filter")
+    public ResponseEntity<?> getProductsByFilter(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Long category,
+            @RequestParam(required = false) List<String> brands,
+            @RequestParam(required = false) Double minPrice,
+            @RequestParam(required = false) Double maxPrice,
+            @RequestParam(required = false) Boolean inStock,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "12") int pageSize,
+            @RequestParam(defaultValue = "newest") String sort) {
+
+        Page<ProductResponse> result = productService.getProductsWithFilter(
+                search, category, brands, minPrice, maxPrice, inStock, page, pageSize, sort);
+
+        // Trả về format đồng bộ với Frontend hiện tại
+        return ResponseEntity.ok(Map.of(
+                "result", Map.of(
+                        "items", result.getContent(),
+                        "total", result.getTotalElements(),
+                        "page", page,
+                        "totalPages", result.getTotalPages())));
+    }
+
+
 
     // 1. Lấy tất cả sản phẩm
     @GetMapping

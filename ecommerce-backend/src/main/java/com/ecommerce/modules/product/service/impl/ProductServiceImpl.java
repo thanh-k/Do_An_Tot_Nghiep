@@ -17,6 +17,9 @@ import com.ecommerce.modules.review.repository.ProductReviewRepository;
 import com.ecommerce.modules.upload.service.CloudinaryService;
 import com.ecommerce.service.VisionServiceClient;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +34,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.LinkedHashMap;
 import java.util.Objects;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 @Service
 @RequiredArgsConstructor
@@ -47,6 +54,43 @@ public class ProductServiceImpl implements ProductService {
         private final OrderDetailRepository orderDetailRepository;
         private final VisionServiceClient visionServiceClient;
         private final ObjectMapper objectMapper = new ObjectMapper();
+
+        @Override
+        public Page<ProductResponse> getProductsWithFilter(
+                        String keyword, Long categoryId, List<String> brands,
+                        Double minPrice, Double maxPrice, Boolean inStock,
+                        int page, int size, String sortBy) {
+
+                // 1. Xử lý Sắp xếp (Sort)
+                Sort sort = Sort.by(Sort.Direction.DESC, "id"); // Mặc định là mới nhất
+
+                if (sortBy != null) {
+                        switch (sortBy) {
+                                case "price-asc":
+                                        // Lưu ý: Nếu DB của bạn phức tạp, phần sắp xếp theo giá biến thể
+                                        // có thể cần xử lý Native Query. Tạm thời map vào field cơ bản
+                                        break;
+                                case "price-desc":
+                                        break;
+                                case "newest":
+                                        sort = Sort.by(Sort.Direction.DESC, "id");
+                                        break;
+                        }
+                }
+
+                // Spring Data JPA dùng page bắt đầu từ 0
+                Pageable pageable = PageRequest.of(page > 0 ? page - 1 : 0, size, sort);
+
+                // 2. Tạo đối tượng Specification từ điều kiện lọc
+                Specification<Product> spec = ProductSpecification.filterProducts(
+                                keyword, categoryId, brands, minPrice, maxPrice, inStock);
+
+                // 3. Query Database
+                Page<Product> productPage = productRepository.findAll(spec, pageable);
+
+                // 4. Map Entity sang DTO / Response
+                return productPage.map(this::getProductResponse);
+        }
 
         @Override
         @Transactional(readOnly = true)
@@ -206,11 +250,11 @@ public class ProductServiceImpl implements ProductService {
         public List<ProductResponse> getProductsByIds(List<Long> ids) {
                 // 1. Lấy dữ liệu từ DB (MySQL sẽ xáo trộn thứ tự)
                 List<Product> products = productRepository.findAllById(ids);
-                
+
                 // 2. Chuyển thành Map để tra cứu nhanh
                 Map<Long, Product> productMap = products.stream()
                                 .collect(Collectors.toMap(Product::getId, Function.identity()));
-                
+
                 // 3. Ép Java phải giữ nguyên thứ tự ID mà AI Python đã trả về
                 return ids.stream()
                                 .filter(productMap::containsKey)
@@ -267,8 +311,10 @@ public class ProductServiceImpl implements ProductService {
                         }
 
                         if (targetVariant != null) {
-                                boolean isUsedInOrder = orderDetailRepository.existsByProductVariant_Id(targetVariant.getId());
-                                boolean isAttributeChanged = !areAttributesEquivalent(targetVariant.getAttributes(), vReq.getAttributes());
+                                boolean isUsedInOrder = orderDetailRepository
+                                                .existsByProductVariant_Id(targetVariant.getId());
+                                boolean isAttributeChanged = !areAttributesEquivalent(targetVariant.getAttributes(),
+                                                vReq.getAttributes());
                                 boolean isSkuChanged = !Objects.equals(normalizeSku(targetVariant.getSku()), reqSku);
 
                                 if (isUsedInOrder && (isAttributeChanged || isSkuChanged)) {
@@ -277,7 +323,7 @@ public class ProductServiceImpl implements ProductService {
 
                                         String baseSkuForNewVariant = reqSku;
                                         if (Objects.equals(normalizeSku(targetVariant.getSku()), reqSku)) {
-                                        baseSkuForNewVariant = reqSku + "-NEW";
+                                                baseSkuForNewVariant = reqSku + "-NEW";
                                         }
                                         String newVariantSku = buildUniqueVariantSku(baseSkuForNewVariant);
 
@@ -294,7 +340,8 @@ public class ProductServiceImpl implements ProductService {
                                         onlyNewVariants.add(newVariant);
                                 } else {
                                         if (!Objects.equals(normalizeSku(targetVariant.getSku()), reqSku)
-                                                        && variantRepository.existsBySkuAndIdNot(reqSku, targetVariant.getId())) {
+                                                        && variantRepository.existsBySkuAndIdNot(reqSku,
+                                                                        targetVariant.getId())) {
                                                 throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
                                         }
 
@@ -330,7 +377,8 @@ public class ProductServiceImpl implements ProductService {
                                 continue;
                         }
                         if (!incomingVariantIds.contains(existingVariant.getId())) {
-                                boolean isUsedInOrder = orderDetailRepository.existsByProductVariant_Id(existingVariant.getId());
+                                boolean isUsedInOrder = orderDetailRepository
+                                                .existsByProductVariant_Id(existingVariant.getId());
                                 if (isUsedInOrder) {
                                         existingVariant.setStock(0);
                                         variantsToSave.add(existingVariant);
@@ -380,6 +428,7 @@ public class ProductServiceImpl implements ProductService {
 
                 return candidate;
         }
+
         private boolean areAttributesEquivalent(String oldAttributes, String newAttributes) {
                 return normalizeAttributeMap(oldAttributes).equals(normalizeAttributeMap(newAttributes));
         }
@@ -601,7 +650,9 @@ public class ProductServiceImpl implements ProductService {
                                                                         .stock(v.getStock())
                                                                         .attributes(v.getAttributes())
                                                                         .image(v.getImage())
-                                                                        .hasOrders(orderDetailRepository.existsByProductVariant_Id(v.getId()))
+                                                                        .hasOrders(orderDetailRepository
+                                                                                        .existsByProductVariant_Id(
+                                                                                                        v.getId()))
                                                                         .build())
                                                         .collect(Collectors.toList()))
                                         .images(images.stream()

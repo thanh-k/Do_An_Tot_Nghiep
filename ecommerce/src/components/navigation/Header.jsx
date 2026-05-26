@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  Camera,
   ChevronDown,
   Heart,
   LayoutDashboard,
@@ -29,9 +28,12 @@ function Header() {
 
   // Lấy danh mục sản phẩm để hiển thị dropdown Sản phẩm ở desktop
   useEffect(() => {
-    categoryService.getCategories().then(setCategories).catch(() => {
-      setCategories([]);
-    });
+    categoryService
+      .getCategories()
+      .then(setCategories)
+      .catch(() => {
+        setCategories([]);
+      });
   }, []);
 
   // Menu tài khoản trên desktop
@@ -92,38 +94,16 @@ function Header() {
           Mobile cũng hiển thị search.
           Icon tìm kiếm hình ảnh nên đặt bên trong SearchBar.jsx.
         */}
-        <SearchBar className="min-w-0 flex-1" />
-
-        {/* ICON TÌM KIẾM HÌNH ẢNH RIÊNG CHO DESKTOP
-            Nếu bạn đã đưa Camera vào trong SearchBar thì có thể xóa block này.
-            Mình giữ lại chỉ hiển thị desktop để không rối mobile.
-        */}
-        <nav className="hidden items-center gap-2 lg:flex">
-          <NavLink
-            to="/image-search"
-            title="Tìm kiếm sản phẩm bằng hình ảnh"
-            className={({ isActive }) =>
-              cn(
-                "rounded-full p-3 text-sm font-bold shadow-sm transition-all",
-                isActive
-                  ? "scale-105 bg-white text-rose-600 shadow-lg"
-                  : "border border-rose-500/30 bg-rose-600/10 text-white hover:bg-rose-500",
-              )
-            }
-          >
-            <Camera size={20} strokeWidth={2.5} />
-          </NavLink>
-        </nav>
+        <SearchBar className="min-w-0 flex-1 lg:max-w-xl xl:max-w-2xl lg:mx-3" />
 
         {/* 
-          DESKTOP ACTIONS
-          Chỉ hiển thị từ lg trở lên.
+          ACTIONS
         */}
-        <div className="ml-auto hidden items-center gap-3 lg:flex">
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-3">
           {isAdmin && (
             <Link
               to="/admin"
-              className="rounded-full bg-rose-400/30 p-3 text-white transition hover:bg-white hover:text-rose-600"
+              className="hidden lg:block rounded-full bg-rose-400/30 p-3 text-white transition hover:bg-white hover:text-rose-600"
               title="Trang quản trị"
             >
               <LayoutDashboard size={20} />
@@ -132,13 +112,13 @@ function Header() {
 
           <Link
             to="/wishlist"
-            className="relative rounded-full bg-rose-400/30 p-3 text-white transition hover:bg-white hover:text-rose-600"
+            className="relative rounded-full bg-rose-400/30 p-2 lg:p-3 text-white transition hover:bg-white hover:text-rose-600"
             title="Yêu thích"
           >
-            <Heart size={20} />
+            <Heart className="h-4 w-4 sm:h-5 sm:w-5" />
 
             {wishlistCount > 0 && (
-              <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-yellow-400 text-[10px] font-black text-rose-700 shadow-sm">
+              <span className="absolute -right-1 -top-1 grid h-4 w-4 sm:h-5 sm:w-5 place-items-center rounded-full bg-yellow-400 text-[9px] sm:text-[10px] font-black text-rose-700 shadow-sm">
                 {wishlistCount}
               </span>
             )}
@@ -146,30 +126,30 @@ function Header() {
 
           <Link
             to="/cart"
-            className="relative rounded-full bg-rose-400/30 p-3 text-white transition hover:bg-white hover:text-rose-600"
+            className="relative rounded-full bg-rose-400/30 p-2 lg:p-3 text-white transition hover:bg-white hover:text-rose-600"
             title="Giỏ hàng"
           >
-            <ShoppingCart size={20} />
+            <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
 
             {itemsCount > 0 && (
-              <span className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-yellow-400 text-[10px] font-black text-rose-700 shadow-sm">
+              <span className="absolute -right-1 -top-1 grid h-4 w-4 sm:h-5 sm:w-5 place-items-center rounded-full bg-yellow-400 text-[9px] sm:text-[10px] font-black text-rose-700 shadow-sm">
                 {itemsCount}
               </span>
             )}
           </Link>
 
-          {/* DESKTOP ACCOUNT DROPDOWN */}
-          <div className="group relative">
-            <div className="flex cursor-pointer items-center gap-2 rounded-full border border-rose-400 bg-rose-400/20 px-3 py-1.5 text-white transition hover:bg-white hover:text-rose-600 group-hover:bg-white group-hover:text-rose-600">
+          {/* ACCOUNT DROPDOWN */}
+          <div className="group relative hidden lg:block">
+            <div className="flex cursor-pointer items-center gap-1 sm:gap-2 rounded-full border border-rose-400 bg-rose-400/20 p-1 sm:px-3 sm:py-1.5 text-white transition hover:bg-white hover:text-rose-600 group-hover:bg-white group-hover:text-rose-600">
               {currentUser?.avatar ? (
                 <img
                   src={currentUser.avatar}
                   alt="User"
-                  className="h-8 w-8 rounded-full border-2 border-white object-cover"
+                  className="h-7 w-7 sm:h-8 sm:w-8 rounded-full border border-white sm:border-2 object-cover"
                 />
               ) : (
-                <div className="grid h-8 w-8 place-items-center rounded-full bg-white/20">
-                  <User size={18} />
+                <div className="grid h-7 w-7 sm:h-8 sm:w-8 place-items-center rounded-full bg-white/20">
+                  <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </div>
               )}
 
@@ -182,10 +162,7 @@ function Header() {
                 </p>
               </div>
 
-              <ChevronDown
-                size={14}
-                className="opacity-70 transition-transform group-hover:rotate-180"
-              />
+              <ChevronDown className="hidden sm:block h-3.5 w-3.5 opacity-70 transition-transform group-hover:rotate-180" />
             </div>
 
             <div className="invisible absolute right-0 top-full z-20 mt-3 w-56 translate-y-2 rounded-2xl border border-slate-100 bg-white p-2 opacity-0 shadow-2xl transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
@@ -218,11 +195,15 @@ function Header() {
         */}
         <button
           type="button"
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-rose-400/30 text-white sm:h-11 sm:w-11 lg:hidden"
+          className="grid h-9 w-9 sm:h-10 sm:w-10 shrink-0 place-items-center rounded-full bg-rose-400/30 text-white lg:hidden"
           onClick={() => setMobileOpen((prev) => !prev)}
           aria-label={mobileOpen ? "Đóng menu" : "Mở menu"}
         >
-          {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+          {mobileOpen ? (
+            <X className="h-4 w-4 sm:h-5 sm:w-5" />
+          ) : (
+            <Menu className="h-4 w-4 sm:h-5 sm:w-5" />
+          )}
         </button>
       </div>
 

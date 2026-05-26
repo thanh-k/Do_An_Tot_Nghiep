@@ -25,7 +25,7 @@ import { ATTRIBUTE_OPTIONS } from "@/utils/categoryConfig";
 import userProductService from "@/services/user/productService";
 
 const getStatusColorClass = (status) => {
-  switch (status) {
+  switch (String(status || "").toUpperCase()) {
     case "PENDING":
       return "bg-amber-100 text-amber-700";
     case "CONFIRMED":
@@ -33,8 +33,11 @@ const getStatusColorClass = (status) => {
     case "PROCESSING":
       return "bg-indigo-100 text-indigo-700";
     case "SHIPPED":
+    case "SHIPPING":
       return "bg-purple-100 text-purple-700";
     case "DELIVERED":
+    case "COMPLETED":
+    case "PAID":
       return "bg-emerald-100 text-emerald-700";
     case "CANCELLED":
       return "bg-rose-100 text-rose-700";
@@ -45,12 +48,13 @@ const getStatusColorClass = (status) => {
 
 const canReviewOrder = (status) => {
   return ["DELIVERED", "COMPLETED", "PAID"].includes(
-    String(status || "").toUpperCase()
+    String(status || "").toUpperCase(),
   );
 };
 
 const formatOrderVariantLabel = (attributesData, fallbackLabel) => {
-  if (!attributesData || attributesData === "null") return fallbackLabel || "Mặc định";
+  if (!attributesData || attributesData === "null")
+    return fallbackLabel || "Mặc định";
 
   let attrs = attributesData;
   if (typeof attributesData === "string") {
@@ -61,7 +65,8 @@ const formatOrderVariantLabel = (attributesData, fallbackLabel) => {
     }
   }
 
-  if (!attrs || Object.keys(attrs).length === 0) return fallbackLabel || "Mặc định";
+  if (!attrs || Object.keys(attrs).length === 0)
+    return fallbackLabel || "Mặc định";
   const parts = [];
   Object.entries(attrs).forEach(([key, value]) => {
     if (value) parts.push(`${ATTRIBUTE_OPTIONS[key]?.label || key}: ${value}`);
@@ -90,18 +95,15 @@ function OrderDetailPage() {
   const handleCancelOrder = async () => {
     if (
       !window.confirm(
-        "Bạn có chắc chắn muốn hủy đơn hàng này không? Hành động này không thể hoàn tác."
+        "Bạn có chắc chắn muốn hủy đơn hàng này không? Hành động này không thể hoàn tác.",
       )
     )
       return;
 
     try {
-      await apiClient.request(
-        `/orders/${order.id}/status?status=CANCELLED`,
-        {
-          method: "PUT",
-        },
-      );
+      await apiClient.request(`/orders/${order.id}/status?status=CANCELLED`, {
+        method: "PUT",
+      });
       toast.success("Đã hủy đơn hàng thành công!");
       setOrder({ ...order, status: "CANCELLED" });
     } catch (error) {
@@ -166,7 +168,8 @@ function OrderDetailPage() {
                   const variant = item.productVariant || item.variant || {};
                   const product = item.product || variant.product || {};
 
-                  const itemName = item.name || item.productName || product.name || "Sản phẩm";
+                  const itemName =
+                    item.name || item.productName || product.name || "Sản phẩm";
                   const itemImage =
                     item.image ||
                     item.thumbnail ||
@@ -177,8 +180,10 @@ function OrderDetailPage() {
                     item.price || item.priceAtPurchase || variant.price || 0;
                   const itemQuantity = item.quantity || 1;
                   const productId = item.productId || product.id;
-                  const productSlug = item.productSlug || item.slug || product.slug;
-                  const variantId = item.variantId || item.productVariantId || variant.id;
+                  const productSlug =
+                    item.productSlug || item.slug || product.slug;
+                  const variantId =
+                    item.variantId || item.productVariantId || variant.id;
 
                   let variantAttrs = {};
                   try {
@@ -187,7 +192,7 @@ function OrderDetailPage() {
                       typeof attrsData === "string"
                         ? JSON.parse(attrsData)
                         : attrsData || {};
-                  } catch (e) { }
+                  } catch (e) {}
 
                   const variantLabel =
                     item.variantLabel ||
@@ -226,35 +231,59 @@ function OrderDetailPage() {
                                 type="button"
                                 onClick={async () => {
                                   if (!productSlug || !variantId) {
-                                    console.log("Dữ liệu item bị thiếu từ API:", item);
-                                    toast.error(`Lỗi API: Thiếu dữ liệu (Slug: ${productSlug ? 'OK' : 'Lỗi'}, ID: ${variantId ? 'OK' : 'Lỗi'})`);
+                                    console.log(
+                                      "Dữ liệu item bị thiếu từ API:",
+                                      item,
+                                    );
+                                    toast.error(
+                                      `Lỗi API: Thiếu dữ liệu (Slug: ${productSlug ? "OK" : "Lỗi"}, ID: ${variantId ? "OK" : "Lỗi"})`,
+                                    );
                                     return;
                                   }
-                                  
-                                  const loadingToast = toast.loading("Đang kiểm tra sản phẩm...");
+
+                                  const loadingToast = toast.loading(
+                                    "Đang kiểm tra sản phẩm...",
+                                  );
                                   try {
-                                    const fullProduct = await userProductService.getProductBySlug(productSlug);
+                                    const fullProduct =
+                                      await userProductService.getProductBySlug(
+                                        productSlug,
+                                      );
                                     // Ép kiểu về String để so sánh an toàn, tránh lỗi lệch kiểu Number/String
-                                    const fullVariant = fullProduct.variants?.find((v) => String(v.id) === String(variantId));
-                                    
+                                    const fullVariant =
+                                      fullProduct.variants?.find(
+                                        (v) =>
+                                          String(v.id) === String(variantId),
+                                      );
+
                                     if (!fullVariant) {
                                       toast.dismiss(loadingToast);
-                                      toast.error("Sản phẩm này hiện không còn tồn tại.");
+                                      toast.error(
+                                        "Sản phẩm này hiện không còn tồn tại.",
+                                      );
                                       return;
                                     }
                                     if (fullVariant.stock <= 0) {
                                       toast.dismiss(loadingToast);
-                                      toast.error("Sản phẩm này hiện đã hết hàng.");
+                                      toast.error(
+                                        "Sản phẩm này hiện đã hết hàng.",
+                                      );
                                       return;
                                     }
-                                    
-                                    addToCart(fullProduct, fullVariant, itemQuantity);
+
+                                    addToCart(
+                                      fullProduct,
+                                      fullVariant,
+                                      itemQuantity,
+                                    );
                                     toast.dismiss(loadingToast);
                                     toast.success("Đã thêm vào giỏ hàng!");
                                     navigate("/cart");
                                   } catch (error) {
                                     toast.dismiss(loadingToast);
-                                    toast.error("Sản phẩm này hiện không còn tồn tại.");
+                                    toast.error(
+                                      "Sản phẩm này hiện không còn tồn tại.",
+                                    );
                                   }
                                 }}
                                 className="flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-sm font-bold text-white transition-all hover:bg-brand-700 hover:shadow-md"
@@ -268,10 +297,14 @@ function OrderDetailPage() {
                                   type="button"
                                   onClick={() => {
                                     if (!productSlug) {
-                                      toast.error("Không tìm thấy sản phẩm để đánh giá.");
+                                      toast.error(
+                                        "Không tìm thấy sản phẩm để đánh giá.",
+                                      );
                                       return;
                                     }
-                                    navigate(`/products/${productSlug}#review-section`);
+                                    navigate(
+                                      `/products/${productSlug}#review-section`,
+                                    );
                                   }}
                                   className="text-sm font-semibold text-amber-600 hover:underline"
                                 >
@@ -288,7 +321,7 @@ function OrderDetailPage() {
                       </div>
                     </div>
                   );
-                }
+                },
               )}
             </div>
 
@@ -304,15 +337,16 @@ function OrderDetailPage() {
 
               {(order.voucherCode ||
                 (order.discountAmount && order.discountAmount > 0)) && (
-                  <div className="flex justify-between items-center text-rose-600">
-                    <span>
-                      Voucher ưu đãi {order.voucherCode ? `(${order.voucherCode})` : ""}:
-                    </span>
-                    <span className="font-semibold">
-                      -{formatCurrency(order.discountAmount || 0)}
-                    </span>
-                  </div>
-                )}
+                <div className="flex justify-between items-center text-rose-600">
+                  <span>
+                    Voucher ưu đãi{" "}
+                    {order.voucherCode ? `(${order.voucherCode})` : ""}:
+                  </span>
+                  <span className="font-semibold">
+                    -{formatCurrency(order.discountAmount || 0)}
+                  </span>
+                </div>
+              )}
 
               <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-lg font-bold text-slate-900">
                 <span>Tổng thanh toán:</span>
@@ -357,14 +391,14 @@ function OrderDetailPage() {
                 <p className="text-slate-500 mb-1">Trạng thái đơn hàng:</p>
                 <span
                   className={`inline-block rounded-full px-4 py-1.5 text-xs font-black uppercase tracking-wider mt-1 ${getStatusColorClass(
-                    order.status
+                    order.status,
                   )}`}
                 >
                   {formatOrderStatus(order.status)}
                 </span>
               </div>
 
-              {order.status === "PENDING" && (
+              {String(order.status || "").toUpperCase() === "PENDING" && (
                 <div className="pt-4 border-t border-slate-100 mt-2">
                   <button
                     onClick={handleCancelOrder}
