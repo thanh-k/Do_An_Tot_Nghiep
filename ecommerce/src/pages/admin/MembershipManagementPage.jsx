@@ -7,6 +7,7 @@ import DataTable from "@/components/admin/DataTable";
 import MembershipPlanFormModal from "@/components/admin/MembershipPlanFormModal";
 import membershipService from "@/services/admin/membershipService";
 import { formatCurrency } from "@/utils/format";
+import { sortNewestFirst } from "@/utils/sortNewest";
 
 function MembershipManagementPage() {
   const [plans, setPlans] = useState([]);
@@ -116,7 +117,7 @@ function MembershipManagementPage() {
       {loading ? (
         <div className="card p-10 text-center text-slate-500">Đang tải danh sách gói hội viên...</div>
       ) : plans.length ? (
-        <DataTable columns={columns} data={plans} />
+        <DataTable columns={columns} data={sortNewestFirst(plans)} />
       ) : (
         <div className="card flex flex-col items-center justify-center gap-3 p-12 text-center text-slate-500">
           <Crown size={42} className="text-amber-400" />

@@ -64,6 +64,10 @@ public enum ErrorCode {
     ADDRESS_REQUIRED(1120, "Địa chỉ là bắt buộc", HttpStatus.BAD_REQUEST),
     OTP_INVALID(1121, "Mã xác thực không hợp lệ", HttpStatus.BAD_REQUEST),
     OTP_EXPIRED(1122, "Mã xác thực đã hết hạn", HttpStatus.BAD_REQUEST),
+    ACCOUNT_CANCELLATION_REQUEST_EXISTS(1123, "Bạn đã gửi yêu cầu hủy tài khoản và đang chờ quản trị viên xử lý", HttpStatus.BAD_REQUEST),
+    ACCOUNT_CANCELLATION_REQUEST_NOT_FOUND(1124, "Không tìm thấy yêu cầu hủy tài khoản", HttpStatus.NOT_FOUND),
+    ACCOUNT_CANCELLATION_REQUEST_PROCESSED(1125, "Yêu cầu hủy tài khoản đã được xử lý", HttpStatus.BAD_REQUEST),
+    ACCOUNT_CANCELLATION_HAS_UNFINISHED_ORDERS(1126, "Không thể hủy tài khoản vì khách hàng còn đơn hàng chưa hoàn thành", HttpStatus.BAD_REQUEST),
 
     PHONE_PREFIX_NOT_FOUND(1201, "Không tìm thấy đầu số", HttpStatus.NOT_FOUND),
     PHONE_PREFIX_ALREADY_EXISTS(1202, "Đầu số đã tồn tại", HttpStatus.BAD_REQUEST),

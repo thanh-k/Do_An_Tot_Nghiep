@@ -12,4 +12,5 @@ public interface CoinTaskRepository extends JpaRepository<CoinTask, Long> {
     boolean existsByTaskCodeIgnoreCaseAndIdNot(String taskCode, Long id);
     List<CoinTask> findByIsActiveTrueOrderByCategoryAscSortOrderAscIdAsc();
     List<CoinTask> findAllByOrderByCategoryAscSortOrderAscIdAsc();
+    Optional<CoinTask> findFirstByCategoryAndIsActiveTrueOrderBySortOrderAscIdAsc(com.ecommerce.modules.coin.entity.CoinTaskCategory category);
 }

@@ -10,6 +10,7 @@ import newsService from "@/services/admin/newsService";
 import useAuth from "@/hooks/useAuth";
 import { hasAnyPermission } from "@/utils/permission";
 import { formatDate } from "@/utils/format";
+import { sortNewestFirst } from "@/utils/sortNewest";
 
 function NewsPostManagementPage() {
   const { currentUser } = useAuth();
@@ -400,7 +401,7 @@ function NewsPostManagementPage() {
       ) : (
         <DataTable
           columns={columns}
-          data={filtered}
+          data={sortNewestFirst(filtered)}
           pagination={{ enabled: true, pageSize: 8, itemLabel: "bài viết" }}
         />
       )}

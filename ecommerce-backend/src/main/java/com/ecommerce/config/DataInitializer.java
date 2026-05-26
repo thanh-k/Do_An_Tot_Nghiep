@@ -106,7 +106,7 @@ public class DataInitializer implements CommandLineRunner {
                 permission("USER_VIEW", "Xem người dùng", "USER"),
                 permission("USER_CREATE", "Tạo người dùng", "USER"),
                 permission("USER_UPDATE", "Cập nhật người dùng", "USER"),
-                permission("USER_DELETE", "Xóa người dùng", "USER"),
+                permission("USER_DELETE", "Ngưng hoạt động / hủy tài khoản người dùng", "USER"),
                 permission("USER_LOCK", "Khóa / mở khóa người dùng", "USER"),
                 permission("CUSTOMER_VIEW", "Xem khách hàng", "CUSTOMER"),
                 permission("STAFF_VIEW", "Xem nhân sự", "STAFF"),

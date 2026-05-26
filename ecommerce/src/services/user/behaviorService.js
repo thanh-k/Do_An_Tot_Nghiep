@@ -4,11 +4,6 @@ import { getGuestSessionId } from "@/utils/guestSession";
 
 const API_URL = "/behaviors";
 
-function getAuthHeaders() {
-  const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
 function normalizeLong(value) {
   const numberValue = Number(value);
   return Number.isFinite(numberValue) && numberValue > 0 ? numberValue : undefined;
@@ -47,18 +42,18 @@ export const behaviorService = {
   async track(payload = {}) {
     try {
       if (!payload.eventType) return null;
-      const response = await apiClient.request(
-        `${API_URL}/track`,
-        {
-          method: "POST",
-          data: normalizePayload(payload),
-          headers: getAuthHeaders(),
-        }
-      );
-      return response?.result;
+
+      const response = await apiClient.request(`${API_URL}/track`, {
+        method: "POST",
+        body: JSON.stringify(normalizePayload(payload)),
+      });
+
+      return response?.result || response;
     } catch (error) {
-      // Tracking không được làm vỡ trải nghiệm mua hàng.
-      console.warn("Không ghi nhận được hành vi người dùng:", error.response?.data || error.message);
+      console.warn(
+        "Không ghi nhận được hành vi người dùng:",
+        error?.message || error
+      );
       return null;
     }
   },
@@ -68,10 +63,26 @@ export const behaviorService = {
       if (!navigator.sendBeacon || !payload.eventType) {
         return this.track(payload);
       }
-      const blob = new Blob([JSON.stringify(normalizePayload(payload))], { type: "application/json" });
-      navigator.sendBeacon(`${API_URL}/track`, blob);
+
+      const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+      const data = normalizePayload(payload);
+
+      // sendBeacon không gắn Authorization header ổn định,
+      // nên user đã đăng nhập thì dùng apiClient để gửi kèm JWT.
+      if (token) {
+        return this.track(data);
+      }
+
+      const apiBaseUrl =
+        import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
+
+      const blob = new Blob([JSON.stringify(data)], {
+        type: "application/json",
+      });
+
+      navigator.sendBeacon(`${apiBaseUrl}${API_URL}/track`, blob);
       return true;
-    } catch (error) {
+    } catch {
       return null;
     }
   },

@@ -1,6 +1,6 @@
 import { Coins, Crown, CheckCircle2, Clock3, MessageSquareMore, Image as ImageIcon } from "lucide-react";
 
-const ONLINE_5M_SECONDS = 5 * 60;
+const DEFAULT_ONLINE_SECONDS = 5 * 60;
 
 function RewardTaskCard({
   task,
@@ -10,34 +10,45 @@ function RewardTaskCard({
   onlineElapsedSeconds = 0,
 }) {
   const finalCoin =
-    task.category === "DAILY" && task.vipMultiplierEnabled && isVip
+    ["DAILY", "DAILY_LOGIN", "ONLINE_DURATION"].includes(task.category) && task.vipMultiplierEnabled && isVip
       ? Number(task.coinReward || 0) * 2
       : Number(task.coinReward || 0);
 
   const getIcon = () => {
     if (task.taskCode === "DAILY_LOGIN") return <CheckCircle2 size={18} />;
-    if (task.taskCode === "ONLINE_5M") return <Clock3 size={18} />;
-    if (task.taskCode === "REVIEW_NO_IMAGE") return <MessageSquareMore size={18} />;
-    if (task.taskCode === "REVIEW_WITH_IMAGE") return <ImageIcon size={18} />;
+    if (task.taskCode === "ONLINE_5M" || task.category === "ONLINE_DURATION") return <Clock3 size={18} />;
+    if (task.taskCode === "REVIEW_NO_IMAGE" || task.category === "REVIEW_NO_IMAGE") return <MessageSquareMore size={18} />;
+    if (task.taskCode === "REVIEW_WITH_IMAGE" || task.category === "REVIEW_WITH_IMAGE") return <ImageIcon size={18} />;
     return <Coins size={18} />;
   };
 
-  const isDaily = task.category === "DAILY";
-  const isOnline5m = task.taskCode === "ONLINE_5M";
-  const onlineReady = onlineElapsedSeconds >= ONLINE_5M_SECONDS;
-  const remainSeconds = Math.max(0, ONLINE_5M_SECONDS - onlineElapsedSeconds);
+  const getCategoryLabel = (category) => {
+    if (category === "DAILY_LOGIN") return "Đăng nhập hằng ngày";
+    if (category === "ONLINE_DURATION") return `Hoạt động ${task.requiredActiveMinutes || 5} phút`;
+    if (category === "REVIEW_NO_IMAGE") return "Đánh giá không hình";
+    if (category === "REVIEW_WITH_IMAGE") return "Đánh giá có hình";
+    if (category === "DAILY") return "Hằng ngày";
+    if (category === "REVIEW") return "Đánh giá";
+    return category || "Nhiệm vụ";
+  };
+
+  const isDaily = ["DAILY", "DAILY_LOGIN", "ONLINE_DURATION"].includes(task.category);
+  const isOnlineDuration = task.category === "ONLINE_DURATION" || task.taskCode === "ONLINE_5M";
+  const requiredOnlineSeconds = Number(task.requiredActiveMinutes || 5) * 60 || DEFAULT_ONLINE_SECONDS;
+  const onlineReady = onlineElapsedSeconds >= requiredOnlineSeconds;
+  const remainSeconds = Math.max(0, requiredOnlineSeconds - onlineElapsedSeconds);
   const remainMinutesText = String(Math.floor(remainSeconds / 60)).padStart(2, "0");
   const remainSecondsText = String(remainSeconds % 60).padStart(2, "0");
 
   const disabled =
     actionLoading ||
     (isDaily && task.claimedToday) ||
-    (isOnline5m && !onlineReady);
+    (isOnlineDuration && !onlineReady);
 
   const buttonText = (() => {
     if (actionLoading) return "Đang xử lý...";
     if (isDaily && task.claimedToday) return "Đã nhận";
-    if (isOnline5m && !onlineReady) return `Còn ${remainMinutesText}:${remainSecondsText}`;
+    if (isOnlineDuration && !onlineReady) return `Còn ${remainMinutesText}:${remainSecondsText}`;
     return task.ctaLabel || "Nhận ngay";
   })();
 
@@ -55,7 +66,7 @@ function RewardTaskCard({
 
             <div className="mt-3 flex flex-wrap gap-2">
               <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 border border-slate-200">
-                {task.category === "DAILY" ? "Hằng ngày" : "Đánh giá"}
+                {getCategoryLabel(task.category)}
               </span>
 
               {task.limitText ? (
@@ -64,7 +75,7 @@ function RewardTaskCard({
                 </span>
               ) : null}
 
-              {task.category === "DAILY" && task.vipMultiplierEnabled && isVip ? (
+              {["DAILY", "DAILY_LOGIN", "ONLINE_DURATION"].includes(task.category) && task.vipMultiplierEnabled && isVip ? (
                 <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-700 border border-amber-200 flex items-center gap-1">
                   <Crown size={12} />
                   VIP x2
@@ -77,7 +88,7 @@ function RewardTaskCard({
                 </span>
               ) : null}
 
-              {isOnline5m && !task.claimedToday && !onlineReady ? (
+              {isOnlineDuration && !task.claimedToday && !onlineReady ? (
                 <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-700 border border-amber-200">
                   Còn {remainMinutesText}:{remainSecondsText} để nhận
                 </span>

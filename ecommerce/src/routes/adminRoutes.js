@@ -17,6 +17,7 @@ import ReviewManagementPage from "@/pages/admin/ReviewManagementPage";
 import CoinTaskManagementPage from "@/pages/admin/CoinTaskManagementPage";
 import BehaviorManagementPage from "@/pages/admin/BehaviorManagementPage";
 import AnnouncementBarManagementPage from "@/pages/admin/AnnouncementBarManagementPage";
+import AccountCancellationManagementPage from "@/pages/admin/AccountCancellationManagementPage";
 
 export const adminRoutes = [
   {
@@ -78,6 +79,11 @@ export const adminRoutes = [
     path: "customers",
     component: CustomerManagementPage,
     permissions: ["CUSTOMER_VIEW", "USER_VIEW"],
+  },
+  {
+    path: "account-cancellations",
+    component: AccountCancellationManagementPage,
+    permissions: ["USER_VIEW", "USER_DELETE"],
   },
   {
     path: "staff",

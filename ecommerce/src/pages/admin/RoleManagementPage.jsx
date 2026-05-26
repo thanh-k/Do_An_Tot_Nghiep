@@ -7,6 +7,7 @@ import PageHeader from "@/components/common/PageHeader";
 import DataTable from "@/components/admin/DataTable";
 import roleService from "@/services/admin/roleService";
 import { formatModuleLabel, formatPermissionLabel } from "@/utils/permissionLabels";
+import { sortNewestFirst } from "@/utils/sortNewest";
 
 function slugifyRoleCode(value = "") {
   return value
@@ -107,7 +108,7 @@ function RoleManagementPage() {
         actions={<Button onClick={openCreate}>Tạo role mới</Button>}
       />
 
-      <DataTable columns={columns} data={roles} pagination={{ enabled: true, pageSize: 8, itemLabel: "vai trò" }} />
+      <DataTable columns={columns} data={sortNewestFirst(roles)} pagination={{ enabled: true, pageSize: 8, itemLabel: "vai trò" }} />
 
       <Modal
         isOpen={open}

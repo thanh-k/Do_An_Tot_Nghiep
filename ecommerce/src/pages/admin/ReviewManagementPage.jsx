@@ -10,6 +10,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import useAuth from "@/hooks/useAuth";
 import { hasAnyPermission } from "@/utils/permission";
 import adminReviewService from "@/services/admin/reviewService";
+import { sortNewestFirst } from "@/utils/sortNewest";
 
 const RATING_OPTIONS = [
   { value: "", label: "Tất cả số sao" },
@@ -272,7 +273,7 @@ function ReviewManagementPage() {
       {loading ? (
         <div className="card p-8 text-center text-sm text-slate-500">Đang tải danh sách đánh giá...</div>
       ) : (
-        <DataTable columns={columns} data={reviews} pagination={{ enabled: true, pageSize: 8, itemLabel: "đánh giá" }} />
+        <DataTable columns={columns} data={sortNewestFirst(reviews)} pagination={{ enabled: true, pageSize: 8, itemLabel: "đánh giá" }} />
       )}
 
       <ReviewDetailModal

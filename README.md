@@ -495,3 +495,151 @@ Nội dung thực hiện:
 - Kiểm tra lại hiển thị trên giao diện mobile sau khi deploy web
 
 ✍️ Người thực hiện: Thanh
+
+📅 Ngày: 24/05/2026
+🧩 Nội dung công việc:
+1. FE:
+
+- Hoàn thiện chức năng yêu cầu hủy tài khoản cho người dùng
+- Thêm nút "Yêu cầu hủy tài khoản" trong trang hồ sơ cá nhân
+- Xây dựng giao diện gửi yêu cầu hủy tài khoản
+- Thêm trang quản lý yêu cầu hủy tài khoản cho quản trị viên
+- Hiển thị danh sách yêu cầu hủy tài khoản và trạng thái xử lý
+- Hiển thị thông tin người dùng gửi yêu cầu hủy tài khoản
+- Bổ sung cảnh báo khi người dùng còn đơn hàng chưa hoàn thành
+- Ẩn nút duyệt yêu cầu hủy tài khoản nếu khách hàng còn đơn hàng đang xử lý
+- Loại bỏ chức năng ngưng hoạt động trực tiếp khỏi trang quản lý khách hàng
+- Chỉ cho phép ngưng hoạt động tài khoản thông qua luồng yêu cầu hủy tài khoản
+
+- Hoàn thiện giao diện trang Xu thưởng
+- Tối ưu lại bố cục hiển thị tổng xu hiện có
+- Tách riêng khu vực nhiệm vụ nhận xu theo từng nhóm nghiệp vụ
+- Bổ sung nút "Đổi quà" trực tiếp trong khu vực ví xu
+- Xây dựng modal đổi voucher bằng xu
+- Hoàn thiện giao diện đổi voucher theo số dư xu hiện có
+- Điều chỉnh giao diện nhiệm vụ nhận xu theo hướng trực quan và dễ sử dụng hơn
+
+- Chuẩn hóa hiển thị dữ liệu quản trị theo thời gian tạo mới nhất
+- Áp dụng sắp xếp mới nhất → cũ nhất cho:
+    + Quản lý khách hàng
+    + Yêu cầu hủy tài khoản
+    + Quản lý nhân sự
+    + Vai trò & quyền
+    + Đầu số điện thoại
+    + Gói VIP
+    + Nhiệm vụ nhận xu
+    + Đánh giá
+    + Chủ đề tin tức
+    + Bài viết tin tức
+    + Liên hệ
+    + Theo dõi hành vi người dùng
+
+- Rà soát và sửa lỗi theo dõi hành vi người dùng trên môi trường deploy
+- Kiểm tra cấu hình service tracking giữa môi trường local và production
+- Chuẩn hóa cách gọi API ghi nhận hành vi theo cấu trúc service chung của hệ thống
+- Loại bỏ cấu hình localhost cố định gây lỗi khi deploy
+- Kiểm tra lại các hành vi:
+    + Xem sản phẩm
+    + Tìm kiếm sản phẩm
+    + Thêm vào giỏ hàng
+    + Mua ngay
+    + Bắt đầu thanh toán
+    + Bỏ dở thanh toán
+    + Đặt hàng thành công
+- Kiểm tra lại hiển thị dữ liệu trong trang quản lý hành vi người dùng
+
+2. BE:
+
+- Hoàn thiện chức năng ngưng hoạt động tài khoản theo cơ chế Soft Delete
+- Không xóa vật lý dữ liệu người dùng khỏi cơ sở dữ liệu
+- Bảo toàn:
+    + Đơn hàng
+    + Đánh giá sản phẩm
+    + Lịch sử giao dịch
+    + Dữ liệu hành vi người dùng
+- Chặn đăng nhập đối với tài khoản đã ngưng hoạt động
+- Chuẩn hóa hiển thị đánh giá của tài khoản đã ngưng hoạt động với tên:
+    + "Tài khoản đã ngưng hoạt động"
+
+- Xây dựng luồng xử lý yêu cầu hủy tài khoản
+- Thêm API gửi yêu cầu hủy tài khoản
+- Thêm API quản lý yêu cầu hủy tài khoản cho admin
+- Kiểm tra điều kiện duyệt yêu cầu:
+    + Không cho phép ngưng hoạt động nếu còn đơn hàng chưa hoàn thành
+- Trả về trạng thái kiểm tra đơn hàng để frontend hiển thị cảnh báo
+
+- Hoàn thiện hệ thống nhiệm vụ nhận xu
+- Tách nhiệm vụ thành các nhóm độc lập:
+    + DAILY_LOGIN
+    + ONLINE_DURATION
+    + REVIEW_NO_IMAGE
+    + REVIEW_WITH_IMAGE
+- Bổ sung cấu hình thời gian hoạt động cho nhiệm vụ ONLINE_DURATION
+- Hoàn thiện xử lý chỉ nhận nhiệm vụ hoạt động đủ thời gian một lần mỗi ngày
+- Hoàn thiện xử lý nhận xu cho đánh giá sản phẩm có hình ảnh
+- Hoàn thiện xử lý nhận xu cho đánh giá sản phẩm không có hình ảnh
+- Đảm bảo đánh giá có hình không nhận trùng phần thưởng của đánh giá không hình
+
+3. Fix lỗi phát sinh:
+
+- Fix lỗi chức năng theo dõi hành vi người dùng không hoạt động trên môi trường deploy
+- Fix lỗi service tracking sử dụng localhost cố định
+- Fix lỗi đồng bộ dữ liệu hành vi giữa frontend và backend
+- Fix lỗi hiển thị nhiệm vụ nhận xu chưa phân loại đúng nhóm
+- Fix lỗi giao diện đổi voucher bằng xu trên màn hình nhỏ
+- Fix lỗi hiển thị danh sách quản trị chưa sắp xếp theo thời gian tạo mới nhất
+- Kiểm tra và tối ưu lại trải nghiệm người dùng trên các chức năng mới
+
+✍️ Người thực hiện: Thanh
+
+📅 Ngày: 25/05/2026
+🧩 Nội dung công việc:
+1. FE:
+
+- Hoàn thiện chức năng quản lý địa chỉ giao hàng cho người dùng
+- Cho phép người dùng lưu nhiều địa chỉ giao hàng trong hồ sơ cá nhân
+- Bổ sung trường Người nhận độc lập với tên tài khoản đăng nhập
+- Cho phép người dùng đặt tên người nhận tùy ý cho từng địa chỉ
+- Hỗ trợ thiết lập địa chỉ mặc định
+
+- Tối ưu quy trình thanh toán (Checkout)
+- Loại bỏ yêu cầu nhập lại toàn bộ thông tin giao hàng khi thanh toán
+- Tự động lấy thông tin địa chỉ đã lưu từ hồ sơ người dùng
+- Hiển thị địa chỉ mặc định trong trang thanh toán
+- Bổ sung chức năng chọn địa chỉ giao hàng đã lưu
+- Cho phép thêm địa chỉ mới trực tiếp tại trang thanh toán
+- Đồng bộ dữ liệu địa chỉ giữa hồ sơ cá nhân và trang thanh toán
+- Thiết kế giao diện lựa chọn địa chỉ theo hướng tương tự các sàn thương mại điện tử
+
+- Hoàn thiện component AddressSelector
+- Tích hợp API địa giới hành chính Việt Nam
+- Tự động tải:
+    + Tỉnh/Thành phố
+    + Quận/Huyện
+    + Phường/Xã
+- Tự động ghép địa chỉ đầy đủ từ dữ liệu đã chọn
+
+- Khắc phục lỗi vòng lặp render React
+- Sửa lỗi:
+    Maximum update depth exceeded
+- Tối ưu useEffect và callback xử lý địa chỉ
+- Ngăn component AddressSelector cập nhật state lặp vô hạn
+- Tối ưu hiệu năng cập nhật địa chỉ giao hàng
+
+2. BE:
+
+- Kiểm tra và đồng bộ API địa chỉ giao hàng
+- Kiểm tra luồng lưu địa chỉ mặc định
+- Kiểm tra luồng lấy danh sách địa chỉ người dùng
+- Kiểm tra dữ liệu checkout sử dụng địa chỉ đã lưu
+- Đảm bảo tương thích với chức năng nhiều địa chỉ giao hàng
+
+3. Fix lỗi phát sinh:
+
+- Fix lỗi AddressSelector gây render vô hạn
+- Fix lỗi cập nhật địa chỉ giao hàng lặp liên tục
+- Fix lỗi đồng bộ dữ liệu địa chỉ giữa Profile và Checkout
+- Fix lỗi callback địa chỉ gây re-render nhiều lần
+- Kiểm tra và tối ưu lại trải nghiệm nhập địa chỉ giao hàng
+
+✍️ Người thực hiện: Thanh

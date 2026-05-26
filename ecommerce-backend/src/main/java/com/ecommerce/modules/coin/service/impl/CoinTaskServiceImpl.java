@@ -203,7 +203,7 @@ public class CoinTaskServiceImpl implements CoinTaskService {
         if (!Boolean.TRUE.equals(task.getIsActive()) || ORDER_CASHBACK_TASK_CODE.equalsIgnoreCase(task.getTaskCode())) {
             throw new AppException(ErrorCode.COIN_TASK_INVALID);
         }
-        if (task.getCategory() != CoinTaskCategory.DAILY) {
+        if (!isManualDailyTask(task)) {
             throw new AppException(ErrorCode.COIN_TASK_INVALID);
         }
 
@@ -292,12 +292,14 @@ public class CoinTaskServiceImpl implements CoinTaskService {
     @Transactional
     public void rewardReviewCreated(User user, ProductReview review, boolean hasImages) {
         if (user == null || review == null || review.getId() == null) return;
-        String taskCode = hasImages ? "REVIEW_WITH_IMAGE" : "REVIEW_NO_IMAGE";
-        CoinTask task = coinTaskRepository.findByTaskCodeIgnoreCase(taskCode).orElse(null);
+        CoinTaskCategory category = hasImages ? CoinTaskCategory.REVIEW_WITH_IMAGE : CoinTaskCategory.REVIEW_NO_IMAGE;
+        String fallbackTaskCode = hasImages ? "REVIEW_WITH_IMAGE" : "REVIEW_NO_IMAGE";
+        CoinTask task = coinTaskRepository.findFirstByCategoryAndIsActiveTrueOrderBySortOrderAscIdAsc(category)
+                .orElseGet(() -> coinTaskRepository.findByTaskCodeIgnoreCase(fallbackTaskCode).orElse(null));
         if (task == null || !Boolean.TRUE.equals(task.getIsActive())) return;
 
         String sourceRef = "REVIEW:" + review.getId();
-        if (coinTransactionRepository.existsByUserIdAndTaskTaskCodeIgnoreCaseAndSourceRef(user.getId(), taskCode, sourceRef)) {
+        if (coinTransactionRepository.existsByUserIdAndTaskTaskCodeIgnoreCaseAndSourceRef(user.getId(), task.getTaskCode(), sourceRef)) {
             return;
         }
 
@@ -375,6 +377,11 @@ public class CoinTaskServiceImpl implements CoinTaskService {
         if (duplicated) {
             throw new AppException(ErrorCode.COIN_TASK_CODE_EXISTS);
         }
+
+        if (request.getCategory() == CoinTaskCategory.ONLINE_DURATION
+                && (request.getRequiredActiveMinutes() == null || request.getRequiredActiveMinutes() <= 0)) {
+            throw new AppException(ErrorCode.COIN_TASK_INVALID);
+        }
     }
 
     private void map(CoinTaskUpsertRequest request, CoinTask entity) {
@@ -383,6 +390,7 @@ public class CoinTaskServiceImpl implements CoinTaskService {
         entity.setDescription(request.getDescription());
         entity.setCategory(request.getCategory());
         entity.setCoinReward(request.getCoinReward());
+        entity.setRequiredActiveMinutes(resolveRequiredActiveMinutes(request));
         entity.setIsActive(request.getIsActive() == null ? Boolean.TRUE : request.getIsActive());
         entity.setVipMultiplierEnabled(request.getVipMultiplierEnabled() == null ? Boolean.FALSE : request.getVipMultiplierEnabled());
         entity.setLimitText(request.getLimitText());
@@ -398,6 +406,7 @@ public class CoinTaskServiceImpl implements CoinTaskService {
                 .description(entity.getDescription())
                 .category(entity.getCategory())
                 .coinReward(entity.getCoinReward())
+                .requiredActiveMinutes(entity.getRequiredActiveMinutes())
                 .isActive(entity.getIsActive())
                 .vipMultiplierEnabled(entity.getVipMultiplierEnabled())
                 .limitText(entity.getLimitText())
@@ -411,7 +420,7 @@ public class CoinTaskServiceImpl implements CoinTaskService {
 
     private CoinTaskResponse toResponse(CoinTask entity, Long userId, LocalDate today) {
         boolean claimedToday = false;
-        if (entity.getCategory() == CoinTaskCategory.DAILY) {
+        if (isManualDailyTask(entity)) {
             String sourceRef = entity.getTaskCode().toUpperCase() + ":" + today;
             claimedToday = coinTransactionRepository.existsByUserIdAndTaskTaskCodeIgnoreCaseAndSourceRef(userId, entity.getTaskCode(), sourceRef);
         }
@@ -422,6 +431,7 @@ public class CoinTaskServiceImpl implements CoinTaskService {
                 .description(entity.getDescription())
                 .category(entity.getCategory())
                 .coinReward(entity.getCoinReward())
+                .requiredActiveMinutes(entity.getRequiredActiveMinutes())
                 .isActive(entity.getIsActive())
                 .vipMultiplierEnabled(entity.getVipMultiplierEnabled())
                 .limitText(entity.getLimitText())
@@ -431,6 +441,20 @@ public class CoinTaskServiceImpl implements CoinTaskService {
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .build();
+    }
+
+    private boolean isManualDailyTask(CoinTask task) {
+        if (task == null || task.getCategory() == null) return false;
+        return task.getCategory() == CoinTaskCategory.DAILY_LOGIN
+                || task.getCategory() == CoinTaskCategory.ONLINE_DURATION
+                || task.getCategory() == CoinTaskCategory.DAILY;
+    }
+
+    private Integer resolveRequiredActiveMinutes(CoinTaskUpsertRequest request) {
+        if (request.getCategory() == CoinTaskCategory.ONLINE_DURATION) {
+            return request.getRequiredActiveMinutes() == null ? 5 : Math.max(1, request.getRequiredActiveMinutes());
+        }
+        return null;
     }
 
     private UserCoinWallet getOrCreateWallet(User user) {
