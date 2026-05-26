@@ -1,5 +1,5 @@
 import axios from "axios";
-const API_URL = "http://localhost:8080/api/v1/products";
+const API_URL = `${import.meta.env.VITE_API_BASE_URL}/products`;
 
 export const userProductService = {
   // Hàm lấy danh sách sản phẩm có xử lý Lọc, Sắp xếp và Phân trang
@@ -152,7 +152,7 @@ export const userProductService = {
   async getSearchSuggestions(keyword, limit = 5) {
     try {
       if (!keyword || !keyword.trim()) return [];
-      
+
       const response = await axios.get(API_URL);
       const allProducts = response.data.result || [];
 
@@ -199,13 +199,13 @@ export const userProductService = {
       // Ép kiểu JSON cho các chuỗi cấu hình để UI render không bị lỗi
       items = items.map((product) => {
         if (product.specifications && typeof product.specifications === "string") {
-          try { product.specifications = JSON.parse(product.specifications); } 
+          try { product.specifications = JSON.parse(product.specifications); }
           catch (e) { product.specifications = {}; }
         }
         if (product.variants && Array.isArray(product.variants)) {
           product.variants = product.variants.map((v) => {
             if (v.attributes && typeof v.attributes === "string") {
-              try { v.attributes = JSON.parse(v.attributes); } catch (e) {}
+              try { v.attributes = JSON.parse(v.attributes); } catch (e) { }
             }
             return v;
           });
@@ -312,9 +312,11 @@ export const userProductService = {
   async getAvailableFilters() {
     try {
       // Lấy danh sách thương hiệu THẬT từ Backend
-      const brandRes = await axios.get("http://localhost:8080/api/v1/brands");
-      const brandNames = brandRes.data.result
-        ? brandRes.data.result.map((b) => b.name)
+      const brandRes = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/brands`
+      );
+      const brandNames = brandRes.result
+        ? brandRes.result.map((b) => b.name)
         : [];
 
       // Trả về dạng mảng String trơn để FilterSidebar của bạn map() không bị lỗi Object
@@ -349,7 +351,7 @@ export const userProductService = {
       formData.append("file", file);
       formData.append("k", String(k));
 
-      const baseUrl = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1")
+      const baseUrl = import.meta.env.VITE_API_BASE_URL
         .replace("/api/v1", "");
       const visionUrl = import.meta.env.DEV
         ? "http://localhost:8001"

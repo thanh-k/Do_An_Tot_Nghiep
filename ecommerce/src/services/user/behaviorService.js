@@ -73,8 +73,7 @@ export const behaviorService = {
         return this.track(data);
       }
 
-      const apiBaseUrl =
-        import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
       const blob = new Blob([JSON.stringify(data)], {
         type: "application/json",
