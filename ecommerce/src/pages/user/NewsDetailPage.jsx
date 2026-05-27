@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Calendar, ChevronLeft, Eye, Tag } from "lucide-react";
+import { Calendar, ChevronLeft, ExternalLink, Eye, Tag } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import newsService from "@/services/user/newsService";
 import { formatDate } from "@/utils/format";
@@ -44,7 +44,7 @@ export default function NewsDetailPage() {
           <img src={post.thumbnail} alt={post.title} className="h-[360px] w-full object-cover" />
           <div className="p-8 lg:p-12">
             <div className="flex flex-wrap items-center gap-4 text-sm font-semibold text-slate-500">
-              <span className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-2 text-rose-600"><Tag size={14} /> {post.topicName}</span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-2 text-rose-600"><Tag size={14} /> {post.isExternal ? post.sourceName || 'Nguồn ngoài' : post.topicName}</span>
               <span className="inline-flex items-center gap-2"><Calendar size={14} /> {formatDate(post.publishedAt || post.createdAt)}</span>
               <span className="inline-flex items-center gap-2"><Eye size={14} /> {post.viewCount || 0} lượt xem</span>
             </div>
@@ -57,12 +57,29 @@ export default function NewsDetailPage() {
                 {post.authorAvatar ? <img src={post.authorAvatar} alt={post.authorName} className="h-full w-full object-cover" /> : null}
               </div>
               <div>
-                <p className="font-semibold text-slate-900">{post.authorName || 'NovaShop Editor'}</p>
-                <p className="text-sm text-slate-500">Tác giả bài viết</p>
+                <p className="font-semibold text-slate-900">{post.isExternal ? post.sourceName || 'Nguồn ngoài' : post.authorName || 'InsightShop Editor'}</p>
+                <p className="text-sm text-slate-500">{post.isExternal ? 'Nguồn tin công nghệ' : 'Tác giả bài viết'}</p>
               </div>
             </div>
 
+            {post.isExternal && post.sourceUrl ? (
+              <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-6 text-amber-800">
+                Tin này được đồng bộ từ nguồn RSS công nghệ Việt Nam. InsightShop chỉ hiển thị tóm tắt và dẫn nguồn bài gốc.
+              </div>
+            ) : null}
+
             <div className="prose prose-slate mt-10 max-w-none" dangerouslySetInnerHTML={{ __html: post.content }} />
+
+            {post.isExternal && post.sourceUrl ? (
+              <a
+                href={post.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-8 inline-flex items-center gap-2 rounded-full bg-rose-600 px-6 py-3 text-sm font-black text-white transition hover:bg-rose-700"
+              >
+                Đọc bài gốc <ExternalLink size={16} />
+              </a>
+            ) : null}
           </div>
         </div>
 
@@ -73,7 +90,7 @@ export default function NewsDetailPage() {
               <Link key={item.id} to={`/news/${item.slug}`} className="overflow-hidden rounded-[1.75rem] border border-slate-100 bg-white shadow-sm">
                 <img src={item.thumbnail} alt={item.title} className="h-40 w-full object-cover" />
                 <div className="p-5">
-                  <p className="text-xs font-bold uppercase tracking-wide text-rose-600">{item.topicName}</p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-rose-600">{item.isExternal ? item.sourceName || 'Nguồn ngoài' : item.topicName}</p>
                   <h3 className="mt-3 line-clamp-2 text-base font-bold text-slate-900">{item.title}</h3>
                   <p className="mt-3 line-clamp-3 text-sm text-slate-500">{item.summary}</p>
                 </div>

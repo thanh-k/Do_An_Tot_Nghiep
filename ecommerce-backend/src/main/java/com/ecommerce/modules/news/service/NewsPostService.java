@@ -9,13 +9,14 @@ import java.io.IOException;
 import java.util.List;
 
 public interface NewsPostService {
-    List<NewsPostResponse> getPublicPosts(String topicSlug, String keyword);
+    List<NewsPostResponse> getPublicPosts(String topicSlug, String keyword, String sourceType);
     NewsPostResponse getFeaturedPost();
     List<NewsPostResponse> getTrendingPosts();
     NewsPostResponse getPublicPostDetail(String slug);
     List<NewsPostResponse> getRelatedPosts(Long id);
 
-    List<NewsPostResponse> getAdminPosts(String keyword, String topicSlug, String status);
+    List<NewsPostResponse> getAdminPosts(String keyword, String topicSlug, String status, String sourceType);
+    List<NewsPostResponse> syncExternalTechnologyNews();
     NewsPostResponse create(NewsPostRequest request, MultipartFile file) throws IOException;
     NewsPostResponse update(Long id, NewsPostRequest request, MultipartFile file) throws IOException;
     NewsPostResponse updateStatus(Long id, NewsPostStatusRequest request);

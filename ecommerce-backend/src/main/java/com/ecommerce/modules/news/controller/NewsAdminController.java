@@ -66,9 +66,19 @@ public class NewsAdminController {
     public ApiResponse<List<NewsPostResponse>> getAdminPosts(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String topicSlug,
-            @RequestParam(required = false) String status
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String sourceType
     ) {
-        return ApiResponse.<List<NewsPostResponse>>builder().result(newsPostService.getAdminPosts(keyword, topicSlug, status)).build();
+        return ApiResponse.<List<NewsPostResponse>>builder().result(newsPostService.getAdminPosts(keyword, topicSlug, status, sourceType)).build();
+    }
+
+    @PreAuthorize("hasAuthority('NEWS_POST_CREATE')")
+    @PostMapping("/posts/external/sync")
+    public ApiResponse<List<NewsPostResponse>> syncExternalPosts() {
+        return ApiResponse.<List<NewsPostResponse>>builder()
+                .message("Đã đồng bộ tin công nghệ từ nguồn RSS Việt Nam")
+                .result(newsPostService.syncExternalTechnologyNews())
+                .build();
     }
 
     @PreAuthorize("hasAuthority('NEWS_POST_CREATE')")

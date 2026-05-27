@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Pencil, Plus, Star, Trash2, Power } from "lucide-react";
+import { DownloadCloud, Pencil, Plus, Star, Trash2, Power } from "lucide-react";
 import Button from "@/components/common/Button";
 import Input from "@/components/common/Input";
 import PageHeader from "@/components/common/PageHeader";
@@ -19,6 +19,8 @@ function NewsPostManagementPage() {
   const [keyword, setKeyword] = useState("");
   const [status, setStatus] = useState("");
   const [topicSlug, setTopicSlug] = useState("");
+  const [sourceType, setSourceType] = useState("");
+  const [syncingExternal, setSyncingExternal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [modalState, setModalState] = useState({ open: false, post: null });
   const [selectedIds, setSelectedIds] = useState([]);
@@ -34,7 +36,7 @@ function NewsPostManagementPage() {
     try {
       const [topicData, postData] = await Promise.all([
         newsService.getTopics(),
-        newsService.getPosts({ keyword, status, topicSlug }),
+        newsService.getPosts({ keyword, status, topicSlug, sourceType }),
       ]);
 
       setTopics(topicData || []);
@@ -51,14 +53,14 @@ function NewsPostManagementPage() {
     if (canView) {
       loadData();
     }
-  }, [canView, status, topicSlug]);
+  }, [canView, status, topicSlug, sourceType]);
 
   const filtered = useMemo(() => {
     const search = keyword.trim().toLowerCase();
     return posts.filter((post) => {
       return (
         !search ||
-        [post.title, post.summary, post.topicName, post.topic?.name]
+        [post.title, post.summary, post.topicName, post.topic?.name, post.sourceName]
           .filter(Boolean)
           .join(" ")
           .toLowerCase()
@@ -180,6 +182,15 @@ function NewsPostManagementPage() {
       key: "topic",
       title: "Chủ đề",
       render: (row) => row.topicName || row.topic?.name || "Chưa có",
+    },
+    {
+      key: "sourceType",
+      title: "Nguồn",
+      render: (row) => row.sourceType === "EXTERNAL" ? (
+        <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-bold text-sky-700">{row.sourceName || "RSS"}</span>
+      ) : (
+        <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700">InsightShop</span>
+      ),
     },
     {
       key: "status",
@@ -319,6 +330,19 @@ function NewsPostManagementPage() {
     }
   };
 
+  const handleSyncExternal = async () => {
+    try {
+      setSyncingExternal(true);
+      const synced = await newsService.syncExternalPosts();
+      toast.success(`Đã đồng bộ ${synced.length} tin công nghệ mới`);
+      await loadData();
+    } catch (error) {
+      toast.error(error?.message || "Đồng bộ tin RSS thất bại");
+    } finally {
+      setSyncingExternal(false);
+    }
+  };
+
   if (!canView) {
     return (
       <div className="card p-8 text-center text-sm font-medium text-rose-600">
@@ -334,15 +358,21 @@ function NewsPostManagementPage() {
         description="Quản lý bài viết hiển thị tại trang Tin tức ngoài client, bao gồm trạng thái và bài viết nổi bật."
         actions={
           canCreate ? (
-            <Button onClick={() => setModalState({ open: true, post: null })}>
-              <Plus size={16} />
-              Thêm bài viết
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={handleSyncExternal} loading={syncingExternal}>
+                <DownloadCloud size={16} />
+                Đồng bộ tin công nghệ
+              </Button>
+              <Button onClick={() => setModalState({ open: true, post: null })}>
+                <Plus size={16} />
+                Thêm bài viết
+              </Button>
+            </div>
           ) : null
         }
       />
 
-      <div className="card grid gap-4 p-4 lg:grid-cols-[1fr_220px_220px]">
+      <div className="card grid gap-4 p-4 lg:grid-cols-[1fr_220px_220px_220px]">
         <Input
           placeholder="Tìm theo tiêu đề, mô tả hoặc chủ đề..."
           value={keyword}
@@ -371,6 +401,16 @@ function NewsPostManagementPage() {
           <option value="DRAFT">Bản nháp</option>
           <option value="PUBLISHED">Đã xuất bản</option>
           <option value="HIDDEN">Đã ẩn</option>
+        </select>
+
+        <select
+          value={sourceType}
+          onChange={(e) => setSourceType(e.target.value)}
+          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
+        >
+          <option value="">Tất cả nguồn</option>
+          <option value="INTERNAL">Tin InsightShop</option>
+          <option value="EXTERNAL">Tin RSS công nghệ</option>
         </select>
       </div>
 
