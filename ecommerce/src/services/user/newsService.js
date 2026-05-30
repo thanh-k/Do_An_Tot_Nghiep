@@ -13,10 +13,14 @@ const mapPost = (post) => ({
     name: post.topicName,
     slug: post.topicSlug,
   },
-  author: post.authorName,
+  author: post.authorName || post.sourceName || "InsightShop",
   image: post.thumbnail,
   date: post.publishedAt || post.createdAt,
   views: post.viewCount || 0,
+  sourceType: post.sourceType || "INTERNAL",
+  isExternal: post.sourceType === "EXTERNAL",
+  sourceName: post.sourceName,
+  sourceUrl: post.sourceUrl || post.originalUrl,
 });
 
 const userNewsService = {
@@ -30,6 +34,7 @@ const userNewsService = {
     if (params.keyword) query.set("keyword", params.keyword);
     if (params.page !== undefined) query.set("page", params.page);
     if (params.size !== undefined) query.set("size", params.size);
+    if (params.sourceType) query.set("sourceType", params.sourceType);
 
     const suffix = query.toString() ? `?${query.toString()}` : "";
     const response = await apiClient.request(`/news/posts${suffix}`);

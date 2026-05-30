@@ -15,6 +15,7 @@ spring:
           google:
             client-id: ${GOOGLE_CLIENT_ID}
             client-secret: ${GOOGLE_CLIENT_SECRET}
+
             scope: [openid, profile, email]
 
   mail:
@@ -33,6 +34,7 @@ app:
   jwt:
     secret: ${JWT_SECRET}
     expiration: 86400000
+
   upload-dir: uploads
   base-url: https://hitcinsight.id.vn
   frontend-url: https://hitcinsight.id.vn
@@ -42,10 +44,12 @@ app:
     from: ${MAIL_USERNAME}
   otp:
     expiration-minutes: 10
+
   cloudinary:
     cloud-name: ${CLOUDINARY_CLOUD_NAME}
     api-key: ${CLOUDINARY_API_KEY}
     api-secret: ${CLOUDINARY_API_SECRET}
+
   gemini:
     api:
       key: ${GEMINI_API_KEY}

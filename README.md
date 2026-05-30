@@ -643,3 +643,72 @@ Nội dung thực hiện:
 - Kiểm tra và tối ưu lại trải nghiệm nhập địa chỉ giao hàng
 
 ✍️ Người thực hiện: Thanh
+
+📅 Ngày: 27/05/2026
+🧩 Nội dung công việc:
+
+1. FE:
+
+- Hoàn thiện module tin tức công nghệ tự động trên website
+- Tích hợp luồng lấy dữ liệu tin tức từ nguồn bên ngoài thông qua RSS Feed
+- Kết nối dữ liệu tin tức vào trang danh sách tin tức phía người dùng
+- Hoàn thiện trang chi tiết tin tức từ dữ liệu đồng bộ bên ngoài
+- Hiển thị nguồn bài viết và thời gian đăng tương ứng
+
+- Tối ưu trải nghiệm xem tin tức
+- Cho phép người dùng nhấn vào bất kỳ vị trí nào trên thẻ bài viết để xem chi tiết
+- Giữ lại nút "Xem chi tiết" để tăng khả năng nhận biết thao tác
+- Điều chỉnh hiệu ứng hover cho toàn bộ card bài viết
+
+- Tối ưu giao diện tin tức trên thiết bị di động
+- Chuyển bố cục hiển thị bài viết từ:
+    + 1 bài viết / hàng
+  thành:
+    + 2 bài viết / hàng
+- Điều chỉnh kích thước ảnh và nội dung hiển thị phù hợp màn hình nhỏ
+- Tối ưu khoảng cách và chiều cao card tin tức
+
+- Hoàn thiện giao diện trang đăng nhập và xác thực tài khoản
+- Đồng bộ màu sắc giao diện Auth với bộ nhận diện InsightShop
+- Đồng bộ logo trang xác thực với Header hệ thống
+- Loại bỏ các thành phần điều hướng không cần thiết gây rối giao diện
+- Tinh chỉnh bố cục giữa khung giới thiệu và khung đăng nhập
+- Rút gọn nội dung giới thiệu để người dùng dễ tiếp cận hơn
+- Thay đổi thông điệp chào mừng phù hợp với trải nghiệm mua sắm
+
+- Tối ưu giao diện Home
+- Tách khu vực:
+    + Thông tin thị trường
+    + Tin mới cập nhật
+- Hiển thị danh sách tin mới theo thời gian xuất bản mới nhất
+- Đồng bộ giao diện danh sách tin tức với dữ liệu đồng bộ tự động
+
+2. BE:
+
+- Hoàn thiện module đồng bộ tin tức công nghệ từ nguồn bên ngoài
+- Bổ sung hỗ trợ lưu bài viết nguồn ngoài vào hệ thống
+- Thêm các trường dữ liệu:
+    + sourceType
+    + sourceName
+    + sourceUrl
+    + originalUrl
+    + syncedAt
+- Hoàn thiện cơ chế kiểm tra dữ liệu trùng lặp khi đồng bộ
+- Tối ưu xử lý dữ liệu RSS trước khi lưu vào cơ sở dữ liệu
+
+- Kiểm tra và sửa lỗi API đồng bộ tin tức
+- Xử lý lỗi 500 tại:
+    + /api/v1/admin/external-news/sync
+- Kiểm tra Entity, Repository và Service liên quan
+- Hoàn thiện cơ chế ghi nhận và trả về kết quả đồng bộ chính xác
+
+3. Fix lỗi phát sinh:
+
+- Fix lỗi đồng bộ tin tức trả về 500 Internal Server Error
+- Fix lỗi kiểm tra dữ liệu bài viết nguồn ngoài
+- Fix lỗi không hiển thị bài viết mới sau khi đồng bộ
+- Fix lỗi danh sách tin mới cập nhật không thay đổi theo dữ liệu mới
+- Fix lỗi hiển thị card tin tức trên thiết bị di động
+- Kiểm tra và tối ưu lại trải nghiệm người dùng trên module tin tức
+
+✍️ Người thực hiện: Thanh

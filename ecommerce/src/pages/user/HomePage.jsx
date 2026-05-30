@@ -81,7 +81,7 @@ function HomePage() {
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
   const [news, setNews] = useState([]);
-  const [trendingNews, setTrendingNews] = useState([]);
+  const [latestNews, setLatestNews] = useState([]);
   const [highlightIndex, setHighlightIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState(8 * 60); // 8 phút
 
@@ -90,10 +90,9 @@ function HomePage() {
       productService.getHomeCollections(),
       categoryService.getCategories(),
       brandService.getBrands(),
-      newsService.getPosts({ page: 0, size: 6 }),
-      newsService.getTrendingPosts(),
+      newsService.getPosts({ page: 0, size: 12 }),
     ])
-      .then(([homeCollections, categoriesData, brandsData, newsData, trendingData]) => {
+      .then(([homeCollections, categoriesData, brandsData, newsData]) => {
         setCollections(
           homeCollections || {
             banners: [],
@@ -112,8 +111,14 @@ function HomePage() {
           ? newsData
           : [];
 
-        setNews(posts);
-        setTrendingNews(Array.isArray(trendingData) ? trendingData : []);
+        const sortedNews = [...posts].sort((a, b) => {
+          const dateA = new Date(a.publishedAt || a.createdAt || 0).getTime();
+          const dateB = new Date(b.publishedAt || b.createdAt || 0).getTime();
+          return dateB - dateA;
+        });
+
+        setNews(sortedNews);
+        setLatestNews(sortedNews);
       })
       .catch((err) => {
         console.error("Lỗi load trang chủ:", err);
@@ -623,11 +628,11 @@ function HomePage() {
               </Link>
             </div>
 
-            {trendingNews.length === 0 ? (
-              <p className="text-sm text-slate-500">Chưa có bài viết nổi bật.</p>
+            {latestNews.length === 0 ? (
+              <p className="text-sm text-slate-500">Chưa có bài viết mới.</p>
             ) : (
               <div className="space-y-4">
-                {trendingNews.slice(0, 4).map((item) => (
+                {latestNews.slice(0, 4).map((item) => (
                   <Link
                     key={item.id}
                     to={`/news/${item.slug}`}
