@@ -14,7 +14,7 @@ import com.ecommerce.modules.order.repository.OrderDetailRepository;
 import com.ecommerce.modules.product.service.ProductService;
 import com.ecommerce.modules.product.service.ProductValidatorService;
 import com.ecommerce.modules.review.repository.ProductReviewRepository;
-import com.ecommerce.modules.upload.service.CloudinaryService;
+import com.ecommerce.modules.upload.service.LocalStorageService;
 import com.ecommerce.service.VisionServiceClient;
 import lombok.RequiredArgsConstructor;
 
@@ -49,7 +49,7 @@ public class ProductServiceImpl implements ProductService {
         private final CategoryRepository categoryRepository;
         private final BrandRepository brandRepository;
         private final ProductValidatorService productValidator;
-        private final CloudinaryService cloudinaryService;
+        private final LocalStorageService localStorageService;
         private final ProductReviewRepository productReviewRepository;
         private final OrderDetailRepository orderDetailRepository;
         private final VisionServiceClient visionServiceClient;
@@ -170,7 +170,7 @@ public class ProductServiceImpl implements ProductService {
                                 String publicId = extractPublicId(oldUrl);
                                 if (publicId != null) {
                                         try {
-                                                cloudinaryService.deleteFile(publicId);
+                                                localStorageService.deleteFile(publicId);
                                         } catch (Exception ignored) {
                                         }
                                 }
@@ -576,9 +576,9 @@ public class ProductServiceImpl implements ProductService {
 
                 for (String publicId : publicIdsToDelete) {
                         try {
-                                cloudinaryService.deleteFile(publicId);
+                                localStorageService.deleteFile(publicId);
                         } catch (Exception e) {
-                                System.err.println("Lỗi xóa ảnh Cloudinary ID " + publicId + ": " + e.getMessage());
+                                System.err.println("Lỗi xóa ảnh Local ID " + publicId + ": " + e.getMessage());
                         }
                 }
         }

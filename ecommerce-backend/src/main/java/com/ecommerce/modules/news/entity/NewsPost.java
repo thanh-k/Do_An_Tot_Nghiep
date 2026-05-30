@@ -37,8 +37,10 @@ public class NewsPost {
     @Enumerated(EnumType.STRING)
     private NewsPostStatus status;
 
+    @Builder.Default
     private Boolean featured = false;
 
+    @Builder.Default
     private Long viewCount = 0L;
 
     @Enumerated(EnumType.STRING)

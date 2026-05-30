@@ -1,6 +1,5 @@
 package com.ecommerce.entity;
 
-import com.ecommerce.entity.ProductVariant;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -20,6 +19,7 @@ public class OrderDetail {
     private Order order;
 
     @ManyToOne
+    @JoinColumn(name = "product_variant_id")
     private ProductVariant productVariant;
 
     private Integer quantity;

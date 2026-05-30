@@ -4,7 +4,7 @@ import com.ecommerce.common.response.ApiResponse;
 import com.ecommerce.modules.brand.dto.request.BrandRequest;
 import com.ecommerce.modules.brand.dto.response.BrandResponse;
 import com.ecommerce.modules.brand.service.BrandService;
-import com.ecommerce.modules.upload.service.CloudinaryService;
+import com.ecommerce.modules.upload.service.LocalStorageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +20,7 @@ import java.util.List;
 public class BrandController {
 
     private final BrandService brandService;
-    private final CloudinaryService cloudinaryService;
+    private final LocalStorageService localStorageService;
     private final BrandValidatorService brandValidator; // Inject cái validator
 
     @GetMapping
@@ -45,7 +45,7 @@ public class BrandController {
         // 1. PHẢI VALIDATE TRƯỚC (Để nếu trùng tên thì dừng luôn, đỡ tốn công upload)
         brandValidator.validate(request, file, null);
 
-        String logoUrl = cloudinaryService.uploadFile(file, "brands");
+        String logoUrl = localStorageService.uploadFile(file, "brands");
         request.setLogo(logoUrl);
 
 

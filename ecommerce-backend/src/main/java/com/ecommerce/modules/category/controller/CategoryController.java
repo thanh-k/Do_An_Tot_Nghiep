@@ -5,7 +5,7 @@ import com.ecommerce.modules.category.dto.request.CategoryRequest;
 import com.ecommerce.modules.category.dto.response.CategoryResponse;
 import com.ecommerce.modules.category.service.CategoryService;
 import com.ecommerce.modules.category.service.CategoryValidatorService;
-import com.ecommerce.modules.upload.service.CloudinaryService;
+import com.ecommerce.modules.upload.service.LocalStorageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +20,7 @@ public class CategoryController {
 
     private final CategoryValidatorService categoryValidatorService;
     private final CategoryService categoryService;
-    private final CloudinaryService cloudinaryService;
+    private final LocalStorageService localStorageService;
 
     
 
@@ -75,8 +75,8 @@ public class CategoryController {
             @RequestPart("file") MultipartFile file) throws IOException {
 
         categoryValidatorService.validate(request, file, null);
-        // 1. Gọi CloudinaryService để đẩy ảnh lên mây và lấy link về
-        String imageUrl = cloudinaryService.uploadFile(file, "categories");
+        // 1. Gọi LocalStorageService để đẩy ảnh lên storage và lấy link về
+        String imageUrl = localStorageService.uploadFile(file, "categories");
 
         // 2. Gán link ảnh vào request trước khi lưu vào DB
         request.setIcon(imageUrl);
