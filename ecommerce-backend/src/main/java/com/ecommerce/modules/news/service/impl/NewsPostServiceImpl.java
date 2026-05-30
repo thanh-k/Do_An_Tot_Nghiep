@@ -13,7 +13,7 @@ import com.ecommerce.modules.news.entity.NewsTopic;
 import com.ecommerce.modules.news.repository.NewsPostRepository;
 import com.ecommerce.modules.news.repository.NewsTopicRepository;
 import com.ecommerce.modules.news.service.NewsPostService;
-import com.ecommerce.modules.upload.service.CloudinaryService;
+import com.ecommerce.modules.upload.service.LocalStorageService;
 import com.ecommerce.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,7 +33,7 @@ public class NewsPostServiceImpl implements NewsPostService {
     private final NewsTopicRepository newsTopicRepository;
     private final UserRepository userRepository;
     private final NewsMapper newsMapper;
-    private final CloudinaryService cloudinaryService;
+    private final LocalStorageService localStorageService;
 
     @Override
     public List<NewsPostResponse> getPublicPosts(String topicSlug, String keyword) {
@@ -179,8 +179,8 @@ public class NewsPostServiceImpl implements NewsPostService {
         NewsPost post = findPostById(id);
         if (post.getThumbnail() != null && !post.getThumbnail().isBlank() && post.getThumbnail().startsWith("http")) {
             try {
-                cloudinaryService.deleteFile(post.getThumbnail());
-            } catch (IOException ignored) {
+                localStorageService.deleteFile(post.getThumbnail());
+            } catch (Exception ignored) {
             }
         }
         newsPostRepository.delete(post);
@@ -204,11 +204,11 @@ public class NewsPostServiceImpl implements NewsPostService {
         }
         if (oldUrl != null && !oldUrl.isBlank() && oldUrl.startsWith("http")) {
             try {
-                cloudinaryService.deleteFile(oldUrl);
-            } catch (IOException ignored) {
+                localStorageService.deleteFile(oldUrl);
+            } catch (Exception ignored) {
             }
         }
-        return cloudinaryService.uploadFile(file, "news");
+        return localStorageService.uploadFile(file, "news");
     }
 
     private void handleFeatured(NewsPost target) {

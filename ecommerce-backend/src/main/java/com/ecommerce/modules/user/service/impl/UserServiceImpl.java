@@ -11,7 +11,7 @@ import com.ecommerce.modules.coin.repository.UserCoinWalletRepository;
 import com.ecommerce.modules.phoneprefix.service.PhonePrefixService;
 import com.ecommerce.modules.productCompare.repository.ProductCompareRepository;
 import com.ecommerce.modules.role.entity.RoleName;
-import com.ecommerce.modules.upload.service.CloudinaryService;
+import com.ecommerce.modules.upload.service.LocalStorageService;
 import com.ecommerce.modules.user.dto.request.AdminUserUpdateRequest;
 import com.ecommerce.modules.user.dto.request.UserAddressRequest;
 import com.ecommerce.modules.user.dto.request.UserUpdateRequest;
@@ -41,7 +41,7 @@ public class UserServiceImpl implements UserService {
     private final UserAddressRepository userAddressRepository;
     private final UserMapper userMapper;
     private final InputValidator inputValidator;
-    private final CloudinaryService cloudinaryService;
+    private final LocalStorageService localStorageService;
     private final PhonePrefixService phonePrefixService;
     private final UserVoucherRepository userVoucherRepository;
     private final ProductCompareRepository productCompareRepository;
@@ -87,10 +87,10 @@ public class UserServiceImpl implements UserService {
         User user = getCurrentAuthenticatedUser();
 
         if (user.getAvatar() != null && !user.getAvatar().isBlank() && user.getAvatar().startsWith("http")) {
-            cloudinaryService.deleteFile(user.getAvatar());
+            localStorageService.deleteFile(user.getAvatar());
         }
 
-        user.setAvatar(cloudinaryService.uploadFile(file, "avatars"));
+        user.setAvatar(localStorageService.uploadFile(file, "avatars"));
         User saved = userRepository.save(user);
         return userMapper.toResponse(saved);
     }
@@ -190,8 +190,8 @@ public class UserServiceImpl implements UserService {
 
         if (user.getAvatar() != null && !user.getAvatar().isBlank() && user.getAvatar().startsWith("http")) {
             try {
-                cloudinaryService.deleteFile(user.getAvatar());
-            } catch (IOException ignored) {
+                localStorageService.deleteFile(user.getAvatar());
+            } catch (Exception ignored) {
             }
         }
 

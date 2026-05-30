@@ -9,7 +9,7 @@ import com.ecommerce.modules.membership.entity.MembershipSubscription;
 import com.ecommerce.modules.membership.entity.MembershipSubscriptionStatus;
 import com.ecommerce.modules.membership.repository.MembershipSubscriptionRepository;
 import com.ecommerce.modules.user.repository.UserRepository;
-import com.ecommerce.modules.upload.service.CloudinaryService;
+import com.ecommerce.modules.upload.service.LocalStorageService;
 import com.ecommerce.modules.voucher.dto.request.VoucherRequest;
 import com.ecommerce.modules.voucher.dto.response.VoucherResponse;
 import com.ecommerce.modules.voucher.mapper.VoucherMapper;
@@ -41,7 +41,7 @@ public class VoucherServiceImpl implements VoucherService {
     private final MembershipSubscriptionRepository membershipSubscriptionRepository;
     private final UserRepository userRepository;
     private final VoucherMapper voucherMapper;
-    private final CloudinaryService cloudinaryService;
+    private final LocalStorageService localStorageService;
 
     private String getPublicIdFromUrl(String url) {
         if (url == null || url.isEmpty()) return null;
@@ -174,7 +174,7 @@ public class VoucherServiceImpl implements VoucherService {
             try {
                 String publicId = getPublicIdFromUrl(oldImageUrl);
                 if (publicId != null) {
-                    cloudinaryService.deleteFile(publicId);
+                    localStorageService.deleteFile(publicId);
                 }
             } catch (Exception ignored) {
             }
@@ -238,7 +238,7 @@ public class VoucherServiceImpl implements VoucherService {
             try {
                 String publicId = getPublicIdFromUrl(imageUrl);
                 if (publicId != null) {
-                    cloudinaryService.deleteFile(publicId);
+                    localStorageService.deleteFile(publicId);
                 }
             } catch (Exception ignored) {
             }

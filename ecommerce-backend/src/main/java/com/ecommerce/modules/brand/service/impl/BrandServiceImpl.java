@@ -9,7 +9,7 @@ import com.ecommerce.modules.brand.dto.response.BrandResponse;
 import com.ecommerce.modules.brand.mapper.BrandMapper;
 import com.ecommerce.modules.brand.repository.BrandRepository;
 import com.ecommerce.modules.brand.service.BrandService;
-import com.ecommerce.modules.upload.service.CloudinaryService;
+import com.ecommerce.modules.upload.service.LocalStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BrandServiceImpl implements BrandService {
 
-    private final CloudinaryService cloudinaryService;
+    private final LocalStorageService localStorageService;
     private final BrandRepository brandRepository;
     private final BrandMapper brandMapper;
 
@@ -79,10 +79,10 @@ public class BrandServiceImpl implements BrandService {
         // if (hasProducts) {
         //     throw new AppException(ErrorCode.BRAND_HAS_PRODUCTS);
         // }
-        // 1. Xóa ảnh trên Cloudinary trước
+        // 1. Xóa ảnh trên Local Storage trước
         try {
-            cloudinaryService.deleteFile(brand.getLogo());
-        } catch (IOException e) {
+            localStorageService.deleteFile(brand.getLogo());
+        } catch(Exception e) {
             System.err.println("Lỗi xóa logo thương hiệu: " + e.getMessage());
         }
 
@@ -105,13 +105,13 @@ public class BrandServiceImpl implements BrandService {
 
         // 3. Xử lý ảnh logo
         if (file != null && !file.isEmpty()) {
-            // Xóa logo cũ trên Cloudinary để đỡ rác
+            // Xóa logo cũ trên Local Storage để đỡ rác
             if (brand.getLogo() != null) {
-                cloudinaryService.deleteFile(brand.getLogo());
+                localStorageService.deleteFile(brand.getLogo());
             }
 
             // Upload logo mới vào folder 'brands'
-            String newLogoUrl = cloudinaryService.uploadFile(file, "brands");
+            String newLogoUrl = localStorageService.uploadFile(file, "brands");
             brand.setLogo(newLogoUrl);
         }
 

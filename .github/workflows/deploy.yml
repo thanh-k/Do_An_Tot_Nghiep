@@ -2,7 +2,7 @@ name: Deploy to Production
 
 on:
   push:
-    branches: [ dev ]
+    branches: [dev]
 
 jobs:
   deploy:
@@ -15,7 +15,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
 
       - name: Install Frontend Dependencies
         working-directory: ecommerce
@@ -33,7 +33,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT }}
           script: |
-            echo "SSH connected successfully"
+            echo "SSH connected!"
             whoami
             pwd
 
@@ -58,25 +58,17 @@ jobs:
           port: ${{ secrets.SERVER_PORT }}
           script: |
             cd ~/Do_An_Tot_Nghiep
-
             git pull origin dev
-
             sudo mkdir -p /var/www/ecommerce
             sudo rm -rf /var/www/ecommerce/*
             sudo cp -r /tmp/ecommerce-dist/* /var/www/ecommerce/
-
             CHANGED=$(git diff HEAD~1 HEAD --name-only | grep "ecommerce-backend" | wc -l)
-
             if [ "$CHANGED" -gt "0" ]; then
               cd ecommerce-backend
-              docker compose down
-              docker compose up -d --build
+              docker compose down && docker compose up -d --build
               sleep 30
             fi
-
             sudo chmod -R 755 /var/www/ecommerce
             sudo find /var/www/ecommerce -type f -exec chmod 644 {} \;
-
             sudo systemctl reload nginx
-
-            echo "Deploy xong!"
+            echo "Deploy xong!" 
