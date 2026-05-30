@@ -14,12 +14,8 @@ import com.ecommerce.modules.news.entity.NewsTopic;
 import com.ecommerce.modules.news.repository.NewsPostRepository;
 import com.ecommerce.modules.news.repository.NewsTopicRepository;
 import com.ecommerce.modules.news.service.NewsPostService;
-<<<<<<< HEAD
-import com.ecommerce.modules.upload.service.LocalStorageService;
-=======
 import com.ecommerce.modules.role.entity.RoleName;
-import com.ecommerce.modules.upload.service.CloudinaryService;
->>>>>>> origin/dev
+import com.ecommerce.modules.upload.service.LocalStorageService;
 import com.ecommerce.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
