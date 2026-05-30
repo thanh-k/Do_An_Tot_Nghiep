@@ -15,7 +15,11 @@ import com.ecommerce.modules.news.repository.NewsPostRepository;
 import com.ecommerce.modules.news.repository.NewsTopicRepository;
 import com.ecommerce.modules.news.service.NewsPostService;
 import com.ecommerce.modules.role.entity.RoleName;
+<<<<<<< HEAD
 import com.ecommerce.modules.upload.service.CloudinaryService;
+=======
+import com.ecommerce.modules.upload.service.LocalStorageService;
+>>>>>>> 23d2fb4 (edit LocalStorageService for NewsPostServiceImp.java)
 import com.ecommerce.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
