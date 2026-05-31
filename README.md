@@ -712,3 +712,93 @@ Nội dung thực hiện:
 - Kiểm tra và tối ưu lại trải nghiệm người dùng trên module tin tức
 
 ✍️ Người thực hiện: Thanh
+
+📅 Ngày: 01/06/2026
+🧩 Nội dung công việc:
+
+1. FE:
+- Hoàn thiện và đồng bộ giao diện xác thực người dùng (Authentication)
+- Thiết kế lại giao diện:
+    + Đăng nhập
+    + Đăng ký
+    + Quên mật khẩu
+- Đồng bộ màu sắc, logo và bố cục với giao diện InsightShop
+- Tối ưu hiển thị trên Desktop, Laptop và Mobile
+- Điều chỉnh kích thước các khung hiển thị để phù hợp nhiều độ phân giải màn hình
+- Tối ưu giao diện trang chủ (Home)
+- Thiết kế lại khu vực Banner chính theo hướng hiện đại và trực quan hơn
+- Bổ sung các khối thông tin khuyến mãi và ưu đãi bên dưới Banner
+- Điều chỉnh kích thước và bố cục Banner nhằm tối ưu không gian hiển thị
+- Thêm khu vực quảng bá chương trình thành viên và ưu đãi dành cho khách hàng
+- Tối ưu hiển thị sản phẩm đề xuất ở trang chủ
+- Khắc phục lỗi thanh cuộn phát sinh trên giao diện Home
+- Kiểm tra Header, Banner và các Product Card
+- Fix lỗi xuất hiện nhiều thanh cuộn gây ảnh hưởng trải nghiệm người dùng
+- Xử lý hiện tượng tràn kích thước ngoài vùng hiển thị
+- Tối ưu lại bố cục Banner để tương thích trên Desktop và Mobile
+- Loại bỏ các hiệu ứng gây phát sinh vùng cuộn không cần thiết
+- Hoàn thiện chức năng đề xuất sản phẩm theo hành vi người dùng
+- Chuyển cơ chế theo dõi hành vi sang sử dụng Cookie và Session Storage
+- Ghi nhận các thao tác:
+    + Xem sản phẩm
+    + Tìm kiếm sản phẩm
+    + Thêm sản phẩm vào giỏ hàng
+    + Bỏ dở thanh toán
+    + Đặt hàng thành công
+    + Sản phẩm có điểm quan tâm cao
+- Đồng bộ dữ liệu hành vi với hệ thống AI tư vấn sản phẩm
+- Hiển thị khu vực "Gợi ý dành riêng cho bạn" dựa trên hành vi người dùng
+- Tăng khả năng đề xuất sản phẩm liên quan đến sản phẩm đã xem hoặc đã tìm kiếm
+
+2. BE:
+- Nâng cấp hệ thống AI Chat hỗ trợ khách hàng
+- Bổ sung khả năng tư vấn sản phẩm theo thương hiệu
+- AI có thể nhận diện các thương hiệu:
+    + Apple
+    + Samsung
+    + ASUS
+    + Logitech
+    + Xiaomi
+    + MSI
+    + Acer
+    + Dell
+- Tìm kiếm và đề xuất sản phẩm theo thương hiệu người dùng yêu cầu
+- Bổ sung khả năng tư vấn sản phẩm theo danh mục
+- AI có thể nhận diện các nhóm sản phẩm:
+    + Điện thoại
+    + Laptop
+    + Máy tính bảng
+    + Đồng hồ thông minh
+    + Âm thanh
+    + Phụ kiện
+- Kết hợp dữ liệu Category để đưa ra gợi ý chính xác hơn
+- Hoàn thiện chức năng so sánh sản phẩm
+- Hỗ trợ so sánh từ 2 đến 3 sản phẩm cùng danh mục
+- So sánh dựa trên:
+    + Giá bán
+    + Thông số kỹ thuật
+    + Thương hiệu
+    + Mô tả sản phẩm
+    + Điểm mạnh nổi bật
+- Điều chỉnh luồng xử lý:
+    + So sánh 2 sản phẩm → chỉ trả về 2 sản phẩm
+    + So sánh 3 sản phẩm → chỉ trả về 3 sản phẩm
+- Loại bỏ hiện tượng AI tự động thêm sản phẩm ngoài yêu cầu người dùng
+- Tối ưu dữ liệu phản hồi để người dùng dễ đưa ra quyết định mua hàng hơn
+- Bổ sung chức năng tư vấn sản phẩm theo ngân sách
+- AI có thể nhận diện mức ngân sách người dùng cung cấp
+- Tự động đề xuất các sản phẩm phù hợp trong khoảng giá tương ứng
+- Ưu tiên hiển thị các sản phẩm có hiệu năng tốt nhất trong tầm giá
+- Bổ sung nội dung tư vấn và gợi ý nâng cấp sản phẩm khi mức chênh lệch không quá lớn
+- Tăng khả năng chuyển đổi đơn hàng thông qua tư vấn sản phẩm phù hợp nhu cầu và ngân sách
+
+3. Fix lỗi phát sinh:
+
+- Fix lỗi giao diện Authentication chưa đồng bộ với giao diện trang chủ
+- Fix lỗi Banner gây xuất hiện nhiều thanh cuộn trên trình duyệt
+- Fix lỗi tràn kích thước vùng hiển thị sản phẩm nổi bật
+- Fix lỗi AI tự động thêm sản phẩm ngoài yêu cầu khi thực hiện so sánh
+- Fix lỗi đọc dữ liệu hành vi người dùng chưa chính xác trong quá trình đề xuất sản phẩm
+- Kiểm tra và tối ưu lại luồng tư vấn sản phẩm theo thương hiệu, danh mục và ngân sách
+
+✍️ Người thực hiện: Thanh

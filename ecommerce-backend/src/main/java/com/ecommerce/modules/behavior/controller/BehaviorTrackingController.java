@@ -7,6 +7,7 @@ import com.ecommerce.modules.behavior.service.BehaviorTrackingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -15,11 +16,19 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 public class BehaviorTrackingController {
 
+    private static final String BEHAVIOR_COOKIE_NAME = "insightshop_behavior_session";
+
     private final BehaviorTrackingService behaviorTrackingService;
 
     @PostMapping("/track")
-    public ApiResponse<BehaviorTrackResponse> track(@RequestBody @Valid BehaviorTrackRequest request) {
+    public ApiResponse<BehaviorTrackResponse> track(
+            @RequestBody @Valid BehaviorTrackRequest request,
+            @CookieValue(name = BEHAVIOR_COOKIE_NAME, required = false) String cookieSessionId) {
         try {
+            if (!StringUtils.hasText(request.getSessionId()) && StringUtils.hasText(cookieSessionId)) {
+                request.setSessionId(cookieSessionId);
+            }
+
             return ApiResponse.<BehaviorTrackResponse>builder()
                     .result(behaviorTrackingService.track(request))
                     .build();
