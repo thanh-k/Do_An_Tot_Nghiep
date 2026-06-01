@@ -121,6 +121,53 @@ function ProductFormModal({
     }
   }, [initialProduct, isOpen]);
 
+  // TỰ ĐỘNG CẬP NHẬT TRẠNG THÁI "GIẢM GIÁ" (isSale)
+  useEffect(() => {
+    const hasDiscount = form.variants.some((v) => {
+      const price = Number(v.price) || 0;
+      const compareAtPrice = Number(v.compareAtPrice) || 0;
+      return price > 0 && compareAtPrice > price;
+    });
+
+    setForm((prev) => {
+      if (prev.isSale !== hasDiscount) return { ...prev, isSale: hasDiscount };
+      return prev;
+    });
+  }, [form.variants]);
+
+  // TỰ ĐỘNG KIỂM TRA TRÙNG LẶP THUỘC TÍNH BIẾN THỂ (MÀU SẮC, RAM, ROM...)
+  useEffect(() => {
+    setErrors((prev) => {
+      let changed = false;
+      const newErrors = { ...prev };
+      const variantSignatures = new Set();
+      const duplicateIds = new Set();
+
+      form.variants.forEach((v) => {
+        const signature = activeAttributes.map((attr) => String(v[attr.key] || "").trim().toLowerCase()).join("|");
+        const isComplete = activeAttributes.every((attr) => String(v[attr.key] || "").trim() !== "");
+        if (isComplete) {
+          if (variantSignatures.has(signature)) duplicateIds.add(v.id);
+          else variantSignatures.add(signature);
+        }
+      });
+
+      form.variants.forEach((v) => {
+        const errKey = `variant_${v.id}_duplicate`;
+        if (duplicateIds.has(v.id)) {
+          if (!newErrors[errKey]) {
+            newErrors[errKey] = "Biến thể này bị trùng lặp phân loại ( RAM, ROM, kích thước, chất liệu...) với một biến thể phía trên.";
+            changed = true;
+          }
+        } else if (newErrors[errKey]) {
+          delete newErrors[errKey];
+          changed = true;
+        }
+      });
+      return changed ? newErrors : prev;
+    });
+  }, [form.variants, activeAttributes]);
+
   const uploadImage = async (file) => {
     if (!file) return null;
     const formData = new FormData();
@@ -308,6 +355,18 @@ function ProductFormModal({
       return hasAttrError || !String(v.price || "").trim() || Number(v.price) < 1 || !String(v.compareAtPrice || "").trim() || Number(v.compareAtPrice) <= 0 || (v.price && Number(v.compareAtPrice) < Number(v.price)) || Number(v.stock) < 0 || v.stock === "" || (v.imageFile && v.imageFile.size > 1024 * 1024);
     });
     if (hasVariantErrors) return true;
+
+    // Ràng buộc không cho submit nếu có biến thể trùng lặp
+    const variantSignatures = new Set();
+    for (const v of form.variants) {
+      const signature = activeAttributes.map((attr) => String(v[attr.key] || "").trim().toLowerCase()).join("|");
+      const isComplete = activeAttributes.every((attr) => String(v[attr.key] || "").trim() !== "");
+      if (isComplete) {
+        if (variantSignatures.has(signature)) return true;
+        variantSignatures.add(signature);
+      }
+    }
+
     return Object.values(errors).some((err) => !!err);
   }, [form, errors, activeAttributes]);
 
@@ -466,6 +525,36 @@ function ProductFormModal({
     setForm((prev) => ({ ...prev, variants: prev.variants.filter((v) => v.id !== variantId) }));
   };
 
+  // Tự động làm sạch khoảng trắng thừa, TRỪ giá bán, giá gốc
+  const handleVariantBlur = (variantId, field, value) => {
+    if (field === "price" || field === "compareAtPrice") return;
+    if (typeof value === "string") {
+      const cleaned = value.trim().replace(/\s+/g, " ");
+      if (cleaned !== value) {
+        updateVariant(variantId, field, cleaned);
+      }
+    }
+  };
+
+  // Nhân bản biến thể: GIỮ NGUYÊN thông số (Màu, RAM, ROM...), CHỈ làm rỗng Giá và Ảnh
+  const cloneVariant = (variantToClone) => {
+    const newVariant = { 
+      ...variantToClone, 
+      id: "temp-" + Math.random().toString(36).substr(2, 9), 
+      price: "", 
+      compareAtPrice: "", 
+      image: "", 
+      imageFile: null, 
+      sku: "", 
+      hasOrders: false 
+    };
+    setForm((prev) => {
+      const newForm = { ...prev, variants: [...prev.variants, newVariant] };
+      validateAll(newForm);
+      return newForm;
+    });
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={initialProduct ? "Cập nhật" : "Thêm mới"} size="xl">
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -510,12 +599,16 @@ function ProductFormModal({
         </div>
 
         <div className="flex gap-4">
-          {["isFeatured", "isNew", "isSale"].map((key) => (
+          {["isFeatured", "isNew"].map((key) => (
             <label key={key} className="flex items-center gap-2 border p-3 rounded-xl cursor-pointer hover:bg-slate-50">
               <input type="checkbox" checked={form[key]} onChange={(e) => updateField(key, e.target.checked)} className="w-4 h-4 text-brand-600" />
-              <span className="text-sm">{key === "isFeatured" ? "Nổi bật" : key === "isNew" ? "Mới" : "Giảm giá"}</span>
+              <span className="text-sm">{key === "isFeatured" ? "Nổi bật" : "Mới"}</span>
             </label>
           ))}
+          <label className="flex items-center gap-2 border p-3 rounded-xl bg-slate-50 opacity-80 cursor-not-allowed" title="Hệ thống tự động tích khi có ít nhất 1 biến thể có Giá gốc lớn hơn Giá bán">
+            <input type="checkbox" checked={form.isSale} disabled readOnly className="w-4 h-4 text-brand-600 disabled:cursor-not-allowed" />
+            <span className="text-sm">Giảm giá <span className="ml-1 text-[10px] font-semibold text-brand-600">(Tự động)</span></span>
+          </label>
         </div>
 
         <div className="border p-4 rounded-3xl space-y-4 bg-white">
@@ -524,10 +617,16 @@ function ProductFormModal({
             <Button type="button" variant="outline" size="sm" onClick={addVariant}>+ Thêm variant</Button>
           </div>
           {form.variants.map((variant) => (
-            <div key={variant.id} className="border p-4 rounded-xl bg-slate-50 grid gap-3 md:grid-cols-7 relative">
+            <div key={variant.id} className={`border p-4 rounded-xl bg-slate-50 grid gap-3 md:grid-cols-7 relative transition-colors ${errors[`variant_${variant.id}_duplicate`] ? "border-red-500 bg-red-50 shadow-sm" : ""}`}>
               {activeAttributes.map((attr) => (
                 <div key={attr.key}>
-                  <Input label={`${attr.label} *`} list={`${attr.key}-list`} value={variant[attr.key] || ""} onChange={(e) => updateVariant(variant.id, attr.key, e.target.value)} />
+                  <Input 
+                    label={`${attr.label} *`} 
+                    list={`${attr.key}-list`} 
+                    value={variant[attr.key] || ""} 
+                    onChange={(e) => updateVariant(variant.id, attr.key, e.target.value)} 
+                    onBlur={(e) => handleVariantBlur(variant.id, attr.key, e.target.value)}
+                  />
                   {errors[`variant_${variant.id}_${attr.key}`] && <p className="mt-1 text-[10px] text-red-500 font-medium leading-tight">{errors[`variant_${variant.id}_${attr.key}`]}</p>}
                 </div>
               ))}
@@ -552,8 +651,18 @@ function ProductFormModal({
                 {errors[`variant_${variant.id}_imageFile`] && <p className="text-[10px] text-red-500 font-medium">{errors[`variant_${variant.id}_imageFile`]}</p>}
               </div>
               <div className="flex items-end justify-end">
-                {form.variants.length > 1 && <button type="button" onClick={() => removeVariant(variant.id)} className="text-rose-500 text-xs font-medium hover:underline">Xóa variant</button>}
+                <div className="flex gap-4">
+                  <button type="button" onClick={() => cloneVariant(variant)} className="text-blue-600 text-xs font-medium hover:underline">
+                    Nhân bản
+                  </button>
+                  {form.variants.length > 1 && <button type="button" onClick={() => removeVariant(variant.id)} className="text-rose-500 text-xs font-medium hover:underline">Xóa</button>}
+                </div>
               </div>
+              {errors[`variant_${variant.id}_duplicate`] && (
+                <div className="md:col-span-7 bg-red-100 border border-red-200 text-red-700 text-[11px] font-bold p-2.5 rounded-lg mt-1 flex items-center gap-2">
+                  <span className="text-base">⚠️</span> {errors[`variant_${variant.id}_duplicate`]}
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -38,7 +38,7 @@ import userVoucherService from "@/services/user/voucherService";
 import { orderService } from "@/services/user/orderService";
 import membershipService from "@/services/user/membershipService";
 import userProductService from "@/services/user/productService";
-import { formatCurrency, formatDate, formatOrderStatus } from "@/utils/format";
+import { formatCurrency, formatDate, formatOrderStatus, formatOrderCode } from "@/utils/format";
 import ProductGrid from "@/components/product/ProductGrid";
 import coinRewardService from "@/services/user/coinRewardService";
 
@@ -586,7 +586,7 @@ export default function UserDashboard() {
                       </div>
                       <div>
                         <p className="font-black text-sm text-slate-900 group-hover:text-indigo-700 transition-colors">
-                          Đơn hàng #{order.id}
+                          Đơn hàng {formatOrderCode(order)}
                         </p>
                         <p className="text-xs text-slate-500 mt-0.5">
                           {formatDate(order.createdAt || order.orderDate)}

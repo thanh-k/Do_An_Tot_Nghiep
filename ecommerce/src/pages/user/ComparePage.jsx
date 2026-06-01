@@ -16,6 +16,7 @@ import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { compareService } from "@/services/user/compareService";
 import { userProductService } from "@/services/user/productService";
+import { aiService } from "@/services/user/aiService";
 import { categoryService } from "@/services/admin/categoryService";
 import Input from "@/components/common/Input";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -37,6 +38,10 @@ export default function ComparePage() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [categories, setCategories] = useState([]);
   const [modalCategory, setModalCategory] = useState("");
+  
+  // State cho AI Phân tích
+  const [aiAnalysis, setAiAnalysis] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     categoryService.getCategories().then(setCategories).catch(console.error);
@@ -175,6 +180,44 @@ export default function ComparePage() {
   const handleOpenAdd = (index) => {
     setActiveSlotIndex(index);
     setIsModalOpen(true);
+  };
+
+  // --- TRIGGER AI KHI CÓ ĐỦ 2 SẢN PHẨM ---
+  const slotIds = slots.map(p => p?.id).join("-");
+  useEffect(() => {
+    const validProducts = slots.filter(Boolean);
+    if (validProducts.length === MAX_SLOTS) {
+      const fetchAi = async () => {
+        setAiLoading(true);
+        setAiAnalysis("");
+        try {
+          const ids = validProducts.map(p => p.id);
+          const response = await aiService.getCompareAnalysis(ids);
+          setAiAnalysis(response.analysis || "AI không trả về kết quả.");
+        } catch (error) {
+          console.error("Lỗi khi gọi AI phân tích:", error);
+          setAiAnalysis("Hệ thống AI đang bận hoặc gặp lỗi. Vui lòng thử lại sau.");
+        } finally {
+          setAiLoading(false);
+        }
+      };
+      fetchAi();
+    } else {
+      setAiAnalysis("");
+    }
+  }, [slotIds]);
+
+  // Hàm tự động convert Markdown của Gemini sang HTML để render
+  const formatAIResponse = (text) => {
+    if (!text) return { __html: "" };
+    let formatted = text
+      .replace(/### (.*?)(?:\n|$)/g, '<h3 class="text-lg font-black text-rose-600 mt-5 mb-2">$1</h3>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-black text-slate-900">$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em class="text-slate-700">$1</em>')
+      .replace(/- (.*?)(?:\n|$)/g, '<li class="ml-6 list-disc list-inside mb-1.5">$1</li>')
+      .replace(/\n/g, '<br/>');
+    formatted = formatted.replace(/(<br\/>){2,}/g, '<br/><br/>');
+    return { __html: formatted };
   };
 
   const allSpecKeys = useMemo(() => {
@@ -328,44 +371,24 @@ export default function ComparePage() {
                           </span>
                         </div>
                       </td>
-                      {slots.map((p, i) => {
-                        const otherProduct = slots[i === 0 ? 1 : 0];
-                        const myPrice = p.variants?.[0]?.price || 0;
-                        const otherPrice = otherProduct.variants?.[0]?.price || 0;
-
-                        let aiText = "";
-                        let badge = "";
-                        let isWinner = false;
-
-                        // Thuật toán AI phân tích dựa trên giá trị và phân khúc
-                        if (myPrice < otherPrice) {
-                          isWinner = true;
-                          badge = "🏆 Lựa chọn Tiết kiệm";
-                          aiText = `Hệ thống AI đánh giá đây là thiết bị có tỷ lệ P/P (Hiệu năng/Giá thành) tối ưu nhất. Rẻ hơn đối thủ ${formatPrice(otherPrice - myPrice)}, đây là sự lựa chọn cực kỳ thông minh cho ngân sách của bạn mà vẫn đảm bảo trải nghiệm tốt.`;
-                        } else if (myPrice > otherPrice) {
-                          badge = "💎 Lựa chọn Cao cấp";
-                          aiText = `Hệ thống AI nhận diện đây là thiết bị thuộc phân khúc cao cấp hơn. Dù có mức giá nhỉnh hơn ${formatPrice(myPrice - otherPrice)}, sản phẩm này hứa hẹn mang lại trải nghiệm toàn diện, vật liệu hoàn thiện tốt và công nghệ vượt trội hơn.`;
-                        } else {
-                          badge = "⚖️ Cân tài cân sức";
-                          aiText = `Cả hai thiết bị đều có mức giá hoàn toàn tương đương nhau. Quyết định sẽ phụ thuộc vào việc bạn yêu thích thương hiệu ${p.brand?.name || "này"} hay đối thủ hơn.`;
-                        }
-
-                        return (
-                          <td key={`ai-${i}`} className="p-8 border-l border-rose-100/50 relative">
-                            <div className="bg-white rounded-3xl p-6 border border-rose-100 shadow-sm relative overflow-hidden group-hover:shadow-md transition-shadow">
-                              <div className="absolute top-0 right-0 w-24 h-24 bg-rose-50 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
-                              <div className="relative z-10">
-                                <span className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[11px] font-black uppercase mb-4 shadow-sm ${isWinner ? "bg-rose-600 text-white" : "bg-slate-900 text-white"}`}>
-                                  {badge}
-                                </span>
-                                <p className="text-sm font-medium text-slate-700 leading-relaxed italic">
-                                  "{aiText}"
-                                </p>
+                      <td colSpan={MAX_SLOTS} className="p-8 border-l border-rose-100/50 relative">
+                        <div className="bg-white rounded-3xl p-8 border border-rose-100 shadow-sm relative overflow-hidden group-hover:shadow-md transition-shadow min-h-[150px]">
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+                          <div className="relative z-10 text-sm font-medium text-slate-700 leading-relaxed">
+                            {aiLoading ? (
+                              <div className="flex flex-col items-center justify-center space-y-4 py-8">
+                                <Sparkles className="animate-spin text-rose-400" size={32} />
+                                <span className="text-rose-600 font-bold animate-pulse text-base">Nova AI đang đọc thông số và đánh giá...</span>
                               </div>
-                            </div>
-                          </td>
-                        );
-                      })}
+                            ) : (
+                              <div 
+                                className="space-y-1"
+                                dangerouslySetInnerHTML={formatAIResponse(aiAnalysis)} 
+                              />
+                            )}
+                          </div>
+                        </div>
+                      </td>
                     </tr>
                   )}
 

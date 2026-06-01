@@ -12,6 +12,7 @@ import {
   formatDate,
   formatOrderStatus,
   formatPaymentStatus,
+  formatOrderCode,
 } from "@/utils/format";
 import { ATTRIBUTE_OPTIONS } from "@/utils/categoryConfig";
 import { ArchiveX, PackageOpen, Star, Truck, Wallet, List } from "lucide-react";
@@ -83,12 +84,26 @@ function OrderHistoryPage() {
       .finally(() => setLoading(false));
   }, [currentUser]);
 
+  const sortedOrders = useMemo(() => {
+    return [...orders].sort((a, b) => {
+      const idA = Number(a.id) || 0;
+      const idB = Number(b.id) || 0;
+      if (idA !== idB) {
+        return idB - idA;
+      }
+      
+      const dateA = new Date(a.createdAt || a.orderDate || 0);
+      const dateB = new Date(b.createdAt || b.orderDate || 0);
+      return dateB - dateA;
+    });
+  }, [orders]);
+
   const filteredOrders = useMemo(() => {
     if (activeStatus === "ALL") {
-      return orders;
+      return sortedOrders;
     }
 
-    return orders.filter((o) => {
+    return sortedOrders.filter((o) => {
       const status = String(o.status || "").toUpperCase();
       if (activeStatus === "DELIVERED") {
         return ["DELIVERED", "COMPLETED", "PAID"].includes(status);
@@ -101,7 +116,7 @@ function OrderHistoryPage() {
       }
       return status === activeStatus;
     });
-  }, [orders, activeStatus]);
+  }, [sortedOrders, activeStatus]);
 
   const handleCancelOrder = async (orderId) => {
     if (
@@ -195,7 +210,7 @@ function OrderHistoryPage() {
                     to={`/orders/${order.id}`}
                     className="text-xl font-bold text-brand-600 hover:text-brand-700 transition"
                   >
-                    #{order.id}
+                    {formatOrderCode(order)}
                   </Link>
                 </div>
 

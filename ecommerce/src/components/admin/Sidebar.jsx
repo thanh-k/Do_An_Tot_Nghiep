@@ -186,8 +186,8 @@ function Sidebar({ mobile = false, onNavigate }) {
       <div className="border-b border-slate-800 p-6">
         <img
           src={logo}
-          alt="NovaShop"
-          className="h-10 w-auto brightness-[1.7]"
+          alt="InsightShop"
+          className="h-10 w-auto"
         />
         <p className="mt-4 text-sm leading-6 text-slate-400">
           Bảng điều khiển quản trị frontend cho website thương mại điện tử.

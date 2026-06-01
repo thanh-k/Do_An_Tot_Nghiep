@@ -5,6 +5,8 @@ import DataTable from "@/components/admin/DataTable";
 import PageHeader from "@/components/common/PageHeader";
 import Input from "@/components/common/Input";
 import Button from "@/components/common/Button";
+import Pagination from "@/components/common/Pagination";
+import { useDebounce } from "@/hooks/useDebounce";
 import OrderFormModal from "@/components/admin/OrderFormModal";
 import orderService from "@/services/user/orderService";
 import { ORDER_STATUS_OPTIONS } from "@/constants";
@@ -14,6 +16,7 @@ import {
   formatOrderStatus,
   formatPaymentStatus,
   getPaymentStatusColor,
+  formatOrderCode,
 } from "@/utils/format";
 
 // Helper function để lấy class màu sắc cho trạng thái đơn hàng
@@ -42,6 +45,11 @@ function OrderManagementPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [keyword, setKeyword] = useState("");
   const [modalState, setModalState] = useState({ open: false, order: null });
+  const [lastEditedId, setLastEditedId] = useState(null);
+
+  const debouncedKeyword = useDebounce(keyword, 300);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
 
   const loadData = () => {
     setLoading(true);
@@ -55,15 +63,22 @@ function OrderManagementPage() {
     loadData();
   }, []);
 
-  const filteredOrders = useMemo(() => {
-    const search = keyword.trim().toLowerCase();
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedKeyword, statusFilter]);
 
-    return orders.filter((order) => {
+  const filteredOrders = useMemo(() => {
+    const search = debouncedKeyword.trim().toLowerCase();
+    let result = [...orders];
+
+    // 1. Lọc theo trạng thái và từ khóa
+    result = result.filter((order) => {
       const matchesStatus = statusFilter ? order.status === statusFilter : true;
       const matchesSearch =
         !search ||
         [
           order.id,
+          formatOrderCode(order),
           typeof order.shippingAddress === "string"
             ? order.shippingAddress
             : order.shippingAddress?.address,
@@ -76,7 +91,28 @@ function OrderManagementPage() {
 
       return matchesStatus && matchesSearch;
     });
-  }, [orders, statusFilter, keyword]);
+
+    // 2. Sắp xếp mặc định: Đơn hàng mới nhất lên đầu
+    result.sort((a, b) => b.id - a.id);
+
+    // 3. Đưa đơn hàng vừa sửa lên đầu
+    if (lastEditedId) {
+      const editedIndex = result.findIndex((o) => o.id === lastEditedId);
+      if (editedIndex > 0) {
+        const [editedItem] = result.splice(editedIndex, 1);
+        result.unshift(editedItem);
+      }
+    }
+
+    return result;
+  }, [orders, statusFilter, debouncedKeyword, lastEditedId]);
+
+  const paginatedOrders = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredOrders.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredOrders, currentPage]);
+
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
 
   const columns = [
     {
@@ -84,8 +120,10 @@ function OrderManagementPage() {
       title: "Đơn hàng",
       render: (row) => (
         <div>
-          <p className="font-semibold text-slate-900">{row.id}</p>
-          <p className="text-xs text-slate-500">{row.createdAt ? formatDate(row.createdAt) : "Đang cập nhật"}</p>
+          <p className="font-semibold text-slate-900">{formatOrderCode(row)}</p>
+          <p className="text-xs text-slate-500">
+            {row.createdAt ? formatDate(row.createdAt) : "Đang cập nhật"}
+          </p>
         </div>
       ),
     },
@@ -188,6 +226,8 @@ function OrderManagementPage() {
     try {
       await orderService.updateOrderStatus(id, newStatus);
       toast.success("Cập nhật trạng thái đơn hàng thành công");
+      setLastEditedId(id);
+      setCurrentPage(1); // Ép về trang 1 để xem ngay đơn hàng vừa sửa
       setModalState({ open: false, order: null });
       loadData();
     } catch (error) {
@@ -246,11 +286,21 @@ function OrderManagementPage() {
           Đang tải đơn hàng...
         </div>
       ) : (
-        <DataTable
-          columns={columns}
-          data={filteredOrders}
-          pagination={{ enabled: true, pageSize: 8, itemLabel: "đơn hàng" }}
-        />
+        <>
+          <DataTable columns={columns} data={paginatedOrders} />
+          {filteredOrders.length > 0 && (
+            <div className="mt-6 flex justify-center">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={(page) => {
+                  setCurrentPage(page);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              />
+            </div>
+          )}
+        </>
       )}
 
       <OrderFormModal

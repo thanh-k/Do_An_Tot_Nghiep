@@ -22,10 +22,11 @@ function CategoryManagementPage() {
     open: false,
     category: null,
   });
+  const [lastEditedId, setLastEditedId] = useState(null); // State lưu ID danh mục vừa sửa
 
   // --- 1. THÊM STATE PHÂN TRANG ---
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 4; // Giới hạn 7 danh mục mỗi trang theo ý ní
+  const itemsPerPage = 6; // Giới hạn 7 danh mục mỗi trang theo ý ní
 
   const loadData = async () => {
     setLoading(true);
@@ -52,10 +53,27 @@ function CategoryManagementPage() {
 
   // Lọc theo từ khóa tìm kiếm
   const filteredCategories = useMemo(() => {
-    return categories.filter((c) =>
-      c.name.toLowerCase().includes(keyword.toLowerCase()),
-    );
-  }, [categories, keyword]);
+    const search = debouncedKeyword.trim().toLowerCase();
+    let result = [...categories];
+
+    if (search) {
+      result = result.filter((c) => c.name.toLowerCase().includes(search));
+    }
+
+    // Sắp xếp mặc định: Mới nhất lên đầu (Dựa vào ID)
+    result.sort((a, b) => b.id - a.id);
+
+    // Ép danh mục vừa sửa lên đầu
+    if (lastEditedId && lastEditedId !== "NEW") {
+      const editedIndex = result.findIndex((c) => c.id === lastEditedId);
+      if (editedIndex > 0) {
+        const [editedItem] = result.splice(editedIndex, 1);
+        result.unshift(editedItem);
+      }
+    }
+
+    return result;
+  }, [categories, debouncedKeyword, lastEditedId]);
 
   // Chia nhỏ dữ liệu để hiển thị đúng trang hiện tại (7 cái)
   const paginatedCategories = useMemo(() => {
@@ -69,7 +87,7 @@ function CategoryManagementPage() {
   // Reset về trang 1 mỗi khi gõ tìm kiếm để tránh lỗi hiển thị trang trống
   useEffect(() => {
     setCurrentPage(1);
-  }, [keyword]);
+  }, [debouncedKeyword]);
 
   const columns = [
     {
@@ -174,6 +192,15 @@ function CategoryManagementPage() {
       toast.success(
         payload.id ? "Cập nhật thành công" : "Thêm mới thành công!",
       );
+
+      // Lưu lại ID vừa sửa. Nếu thêm mới thì set 'NEW'
+      if (payload.id) {
+        setLastEditedId(payload.id);
+      } else {
+        setLastEditedId("NEW");
+      }
+      setCurrentPage(1); // Ép về trang 1 để xem danh mục vừa thêm/sửa
+
       setModalState({ open: false, category: null });
       loadData();
     } catch (e) {

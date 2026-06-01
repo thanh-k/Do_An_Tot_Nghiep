@@ -10,6 +10,7 @@ import { brandService } from "@/services/admin/brandService";
 // Ní nhớ import thêm productService nếu muốn đếm số sản phẩm tham chiếu
 import productService from "@/services/admin/productService";
 import Pagination from "@/components/common/Pagination";
+import { useDebounce } from "@/hooks/useDebounce";
 
 function BrandManagementPage() {
   const [loading, setLoading] = useState(true);
@@ -17,10 +18,12 @@ function BrandManagementPage() {
   const [products, setProducts] = useState([]); // Thêm state để lưu danh sách sản phẩm
   const [keyword, setKeyword] = useState("");
   const [modalState, setModalState] = useState({ open: false, brand: null });
+  const [lastEditedId, setLastEditedId] = useState(null); // State lưu ID brand vừa sửa
+  const debouncedKeyword = useDebounce(keyword, 300); // Thêm debounce cho ô tìm kiếm
 
   // --- LOGIC PHÂN TRANG ---
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 4;
+  const itemsPerPage = 6;
 
   const loadData = async () => {
     setLoading(true);
@@ -45,10 +48,27 @@ function BrandManagementPage() {
 
   // 1. Lọc theo từ khóa trước
   const filteredBrands = useMemo(() => {
-    return brands.filter((b) =>
-      b.name.toLowerCase().includes(keyword.toLowerCase()),
-    );
-  }, [brands, keyword]);
+    const search = debouncedKeyword.trim().toLowerCase();
+    let result = [...brands];
+
+    if (search) {
+      result = result.filter((b) => b.name.toLowerCase().includes(search));
+    }
+
+    // Sắp xếp mặc định: Mới nhất lên đầu (Dựa vào ID)
+    result.sort((a, b) => b.id - a.id);
+
+    // Ép brand vừa sửa lên đầu
+    if (lastEditedId && lastEditedId !== "NEW") {
+      const editedIndex = result.findIndex((b) => b.id === lastEditedId);
+      if (editedIndex > 0) {
+        const [editedItem] = result.splice(editedIndex, 1);
+        result.unshift(editedItem);
+      }
+    }
+
+    return result;
+  }, [brands, debouncedKeyword, lastEditedId]);
 
   // 2. Tính toán dữ liệu hiển thị cho trang hiện tại
   const paginatedBrands = useMemo(() => {
@@ -62,7 +82,7 @@ function BrandManagementPage() {
   // Reset về trang 1 khi tìm kiếm
   useEffect(() => {
     setCurrentPage(1);
-  }, [keyword]);
+  }, [debouncedKeyword]);
   // Cấu hình cột hiển thị chuẩn như Category
   const columns = [
     {
@@ -169,6 +189,15 @@ function BrandManagementPage() {
       toast.success(
         payload.id ? "Cập nhật thành công" : "Thêm mới thành công!",
       );
+
+      // Lưu lại ID vừa sửa. Nếu thêm mới thì set 'NEW'
+      if (payload.id) {
+        setLastEditedId(payload.id);
+      } else {
+        setLastEditedId("NEW");
+      }
+      setCurrentPage(1); // Ép về trang 1 để xem brand vừa thêm/sửa
+
       setModalState({ open: false, brand: null });
       loadData();
     } catch (e) {

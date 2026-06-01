@@ -33,6 +33,9 @@ import { brandService } from "@/services/admin/brandService";
 import productService from "@/services/admin/productService";
 import newsService from "@/services/user/newsService";
 
+// Cấu hình chiều rộng khung hiển thị rộng lớn chuẩn các sàn TMĐT lớn (như Shopee, Lazada)
+const containerClass = "mx-auto w-full max-w-7xl xl:max-w-[1400px] px-4 sm:px-6 lg:px-8";
+
 // Hàm tự động lấy Icon theo tên danh mục
 const getCategoryIcon = (categoryName) => {
   if (!categoryName) return <LayoutGrid size={20} />;
@@ -146,7 +149,24 @@ function HomePage() {
   }, [collections.latest]);
 
   const discountedProducts = useMemo(() => {
-    return (featuredProducts || [])
+    // Gộp sản phẩm từ tất cả danh sách có sẵn để tối đa nguồn hàng giảm giá trên trang chủ
+    const merged = [
+      ...(featuredProducts || []),
+      ...(latestProducts || []),
+      ...normalizeProductsWithReview(collections.deals || [])
+    ];
+
+    // Lọc trùng lặp sản phẩm theo ID
+    const unique = [];
+    const seen = new Set();
+    for (const p of merged) {
+      if (p && p.id && !seen.has(p.id)) {
+        seen.add(p.id);
+        unique.push(p);
+      }
+    }
+
+    return unique
       .map((product) => {
         const bestVariant = (product.variants || [])
           .filter((variant) => {

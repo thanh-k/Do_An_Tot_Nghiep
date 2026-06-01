@@ -106,7 +106,7 @@ function ProductCard({ product }) {
                 Mới
               </span>
             ) : null}
-            {product.isSale && discount ? (
+            {discount > 0 ? (
               <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white sm:px-2.5 sm:py-1 sm:text-[11px]">
                 -{discount}%
               </span>
