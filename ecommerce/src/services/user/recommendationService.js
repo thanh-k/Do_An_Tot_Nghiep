@@ -1,13 +1,7 @@
 import apiClient from "@/services/apiClient";
-import { STORAGE_KEYS } from "@/constants";
 import { getGuestSessionId } from "@/utils/guestSession";
 
 const API_URL = "/recommendations";
-
-function getAuthHeaders() {
-  const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
 
 function normalizeProduct(product) {
   if (!product) return product;
@@ -33,33 +27,37 @@ function normalizeProduct(product) {
   return next;
 }
 
+function buildQuery(params = {}) {
+  const query = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      query.set(key, value);
+    }
+  });
+
+  const text = query.toString();
+  return text ? `?${text}` : "";
+}
+
 export const recommendationService = {
   async getMyRecommendations(limit = 8) {
+    const sessionId = getGuestSessionId();
     const response = await apiClient.request(
-      `${API_URL}/me`,
-      {
-        method: "GET",
-        params: {
-          sessionId: getGuestSessionId(),
-          limit,
-        },
-        headers: getAuthHeaders(),
-      }
+      `${API_URL}/me${buildQuery({ sessionId, limit })}`
     );
-    return (response?.result || []).map(normalizeProduct);
+
+    return (response?.result || response || []).map(normalizeProduct);
   },
 
   async getSimilarProducts(productId, limit = 8) {
     if (!productId) return [];
+
     const response = await apiClient.request(
-      `${API_URL}/similar/${productId}`,
-      {
-        method: "GET",
-        params: { limit },
-        headers: getAuthHeaders(),
-      }
+      `${API_URL}/similar/${productId}${buildQuery({ limit })}`
     );
-    return (response?.result || []).map(normalizeProduct);
+
+    return (response?.result || response || []).map(normalizeProduct);
   },
 };
 

@@ -15,4 +15,6 @@ public class AiProductSuggestionResponse {
     private Double price;
     private Double compareAtPrice;
     private String summary;
+    private String brandName;
+    private String categoryName;
 }
