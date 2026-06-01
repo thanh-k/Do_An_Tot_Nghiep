@@ -35,6 +35,9 @@ import { brandService } from "@/services/admin/brandService";
 import productService from "@/services/admin/productService";
 import newsService from "@/services/user/newsService";
 
+// Cấu hình chiều rộng khung hiển thị rộng lớn chuẩn các sàn TMĐT lớn (như Shopee, Lazada)
+const containerClass = "mx-auto w-full max-w-7xl xl:max-w-[1400px] px-4 sm:px-6 lg:px-8";
+
 // Hàm tự động lấy Icon theo tên danh mục
 const getCategoryIcon = (categoryName) => {
   if (!categoryName) return <LayoutGrid size={20} />;
@@ -149,7 +152,24 @@ function HomePage() {
   }, [collections.latest]);
 
   const discountedProducts = useMemo(() => {
-    return (featuredProducts || [])
+    // Gộp sản phẩm từ tất cả danh sách có sẵn để tối đa nguồn hàng giảm giá trên trang chủ
+    const merged = [
+      ...(featuredProducts || []),
+      ...(latestProducts || []),
+      ...normalizeProductsWithReview(collections.deals || [])
+    ];
+
+    // Lọc trùng lặp sản phẩm theo ID
+    const unique = [];
+    const seen = new Set();
+    for (const p of merged) {
+      if (p && p.id && !seen.has(p.id)) {
+        seen.add(p.id);
+        unique.push(p);
+      }
+    }
+
+    return unique
       .map((product) => {
         const bestVariant = (product.variants || [])
           .filter((variant) => {
@@ -183,9 +203,9 @@ function HomePage() {
         };
       })
       .filter(Boolean)
-      .sort((a, b) => b.discountPercent - a.discountPercent)
-      .slice(0, 5);
-  }, [featuredProducts]);
+      .sort((a, b) => b.id - a.id) // Đảm bảo hiển thị sản phẩm giảm giá MỚI NHẤT
+      .slice(0, 8); // Tăng giới hạn lên lấy tối đa 8 sản phẩm
+  }, [featuredProducts, latestProducts, collections.deals]);
 
   const highlightProduct =
     discountedProducts.length > 0
@@ -228,7 +248,7 @@ function HomePage() {
   return (
     <div className="bg-[#f4f4f4] min-h-screen overflow-x-hidden">
       <motion.section
-        className="container-padded py-6 overflow-hidden"
+        className={`${containerClass} py-6 overflow-hidden`}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
@@ -434,7 +454,7 @@ function HomePage() {
         </div>
       </motion.section>
 
-      <motion.section className="container-padded py-8" {...fadeInUp}>
+      <motion.section className={`${containerClass} py-8`} {...fadeInUp}>
         <RecommendedProducts
           title="Gợi ý dành riêng cho bạn"
           description="Dựa trên sản phẩm bạn đã xem, tìm kiếm, thêm vào giỏ hàng hoặc bỏ dở thanh toán."
@@ -442,38 +462,59 @@ function HomePage() {
         />
       </motion.section>
 
-      <motion.section className="container-padded py-4" {...fadeInUp}>
-        <div className="bg-gradient-to-r from-rose-400 to-orange-400 rounded-2xl p-5 sm:p-6 shadow-lg border border-rose-100">
-          <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <h2 className="text-xl sm:text-2xl font-black italic uppercase text-white flex items-center gap-2">
-                <Zap className="animate-pulse text-yellow-300 fill-yellow-300" /> Deal sốc mỗi ngày
+      <motion.section className={`${containerClass} py-4`} {...fadeInUp}>
+        <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-rose-600 via-pink-500 to-amber-500 p-6 sm:p-8 shadow-[0_20px_50px_rgba(225,29,72,0.35)] border border-white/20">
+          
+          {/* Lớp phủ sáng tạo chiều sâu (Abstract Background glow) */}
+          <div className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-yellow-400/20 blur-3xl pointer-events-none"></div>
+          <div className="absolute -left-20 -bottom-20 w-80 h-80 rounded-full bg-rose-400/20 blur-3xl pointer-events-none"></div>
+
+          <div className="relative z-10 flex flex-wrap items-center justify-between mb-8 gap-4 border-b border-white/10 pb-6">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-6">
+              <h2 className="text-2xl sm:text-3xl font-black italic uppercase text-white flex items-center gap-2 tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)]">
+                <Zap className="text-yellow-300 fill-yellow-300 drop-shadow-[0_0_12px_rgba(253,224,71,0.8)] animate-bounce" size={28} />
+                Deal sốc mỗi ngày
               </h2>
 
-              <div className="flex gap-1 sm:gap-2 text-white font-mono text-sm sm:text-lg">
-                <span className="bg-slate-900 px-2 py-1 rounded-lg font-bold shadow-inner text-center min-w-[28px]">00</span>
-                <span className="font-bold py-1 text-yellow-300">:</span>
-                <span className="bg-slate-900 px-2 py-1 rounded-lg font-bold shadow-inner text-center min-w-[28px]">{m}</span>
-                <span className="font-bold py-1 text-yellow-300">:</span>
-                <span className="bg-slate-900 px-2 py-1 rounded-lg font-bold shadow-inner text-center min-w-[28px]">{s}</span>
+              {/* Countdown Timer Luxury Glassmorphism */}
+              <div className="flex items-center gap-2 bg-black/35 backdrop-blur-md rounded-2xl px-4 py-2 border border-white/15 shadow-inner">
+                <span className="text-[10px] sm:text-xs text-rose-200 font-bold uppercase tracking-wider">Hết hạn sau</span>
+                <div className="flex items-center gap-1 sm:gap-1.5 font-mono text-base sm:text-lg text-yellow-300 font-black">
+                  <span className="bg-white/10 px-2 py-0.5 rounded-lg border border-white/5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]">00</span>
+                  <span className="animate-pulse text-white/70">:</span>
+                  <span className="bg-white/10 px-2 py-0.5 rounded-lg border border-white/5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]">{m}</span>
+                  <span className="animate-pulse text-white/70">:</span>
+                  <span className="bg-white/10 px-2 py-0.5 rounded-lg border border-white/5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]">{s}</span>
+                </div>
               </div>
             </div>
 
             <Link
               to="/products?sort=sale"
-              className="text-sm font-bold text-white hover:text-yellow-300 hover:underline transition-colors"
+              className="text-xs sm:text-sm font-black uppercase tracking-wider text-white bg-white/10 backdrop-blur-sm px-5 py-2.5 rounded-full border border-white/10 hover:bg-white hover:text-rose-600 hover:shadow-lg transition-all duration-300"
             >
               Xem tất cả &gt;
             </Link>
           </div>
 
-          <div className="bg-white/95 backdrop-blur-sm rounded-[1.5rem] p-4 sm:p-6 shadow-inner">
-            <ProductGrid products={discountedProducts.length > 0 ? discountedProducts.slice(0, 5) : featuredProducts.slice(0, 5)} />
+          <div className="relative z-10 bg-white/95 backdrop-blur-md rounded-[2rem] p-5 sm:p-8 shadow-[inset_0_2px_4px_rgba(255,255,255,0.8),_0_10px_40px_rgba(0,0,0,0.06)] border border-white/40">
+            <ProductGrid products={discountedProducts.length > 0 ? discountedProducts.slice(0, 8) : featuredProducts.slice(0, 8)} />
+            
+            {discountedProducts.length > 0 && (
+              <div className="mt-8 flex justify-center">
+                <Link
+                  to="/products?sort=sale"
+                  className="relative overflow-hidden inline-flex items-center justify-center gap-3 rounded-full bg-gradient-to-r from-rose-500 to-orange-500 px-10 py-4 text-sm font-black uppercase tracking-widest text-white shadow-lg transition-all duration-300 hover:from-rose-600 hover:to-orange-600 hover:shadow-[0_10px_25px_rgba(244,63,94,0.4)] hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
+                >
+                  Xem thêm sản phẩm giảm giá
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </motion.section>
 
-      <motion.section className="container-padded py-4" {...fadeInUp}>
+      <motion.section className={`${containerClass} py-4`} {...fadeInUp}>
         <div className="space-y-10 my-4">
           {/* DANH MỤC - 1 DÒNG SCROLL NGANG */}
           <div>
@@ -533,7 +574,7 @@ function HomePage() {
         </div>
       </motion.section>
 
-      <motion.section className="container-padded py-8" {...fadeInUp}>
+      <motion.section className={`${containerClass} py-8`} {...fadeInUp}>
         <div className="bg-white rounded-2xl p-6 shadow-sm">
           <SectionHeader
             title="Sản Phẩm Bán Chạy"
@@ -541,12 +582,12 @@ function HomePage() {
             actionLabel="Xem thêm"
           />
           <div className="mt-6">
-            <ProductGrid products={latestProducts.slice(0, 6)} />
+            <ProductGrid products={latestProducts.slice(0, 8)} />
           </div>
         </div>
       </motion.section>
 
-      <motion.section className="container-padded py-8" {...fadeInUp}>
+      <motion.section className={`${containerClass} py-8`} {...fadeInUp}>
         <div className="bg-white rounded-2xl p-6 shadow-sm">
           <SectionHeader
             title="Sản Phẩm Mới Nhất"
@@ -554,12 +595,12 @@ function HomePage() {
             actionLabel="Xem thêm"
           />
           <div className="mt-6">
-            <ProductGrid products={featuredProducts.slice(2, 8)} />
+            <ProductGrid products={featuredProducts.slice(0, 8)} />
           </div>
         </div>
       </motion.section>
 
-      <motion.section className="container-padded py-10" {...fadeInUp}>
+      <motion.section className={`${containerClass} py-10`} {...fadeInUp}>
         <div className="flex flex-col xl:flex-row gap-6">
           <div className="flex-1 bg-white rounded-2xl p-6 shadow-sm">
             <div className="flex items-center justify-between mb-6">
@@ -661,7 +702,7 @@ function HomePage() {
         </div>
       </motion.section>
 
-      <motion.section className="container-padded py-10" {...fadeInUp}>
+      <motion.section className={`${containerClass} py-10`} {...fadeInUp}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
             "https://images.unsplash.com/photo-1607083206968-13611e3d76db?auto=format&fit=crop&w=600&q=60",

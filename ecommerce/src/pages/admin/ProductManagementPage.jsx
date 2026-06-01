@@ -25,9 +25,10 @@ function ProductManagementPage() {
     open: false,
     product: null,
   });
+  const [lastEditedId, setLastEditedId] = useState(null); // State lưu ID sản phẩm vừa sửa
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 4;
+  const itemsPerPage = 6;
 
   const loadData = () => {
     setLoading(true);
@@ -60,14 +61,33 @@ function ProductManagementPage() {
 
   const filteredProducts = useMemo(() => {
     const search = debouncedKeyword.trim().toLowerCase();
-    if (!search) return products;
-    return products.filter((product) =>
-      [product.name, product.brand?.name, product.slug] // Backend trả brand là Object
-        .join(" ")
-        .toLowerCase()
-        .includes(search),
-    );
-  }, [debouncedKeyword, products]);
+    let result = [...products];
+
+    // 1. Lọc theo từ khóa
+    if (search) {
+      result = result.filter((product) =>
+        [product.name, product.brand?.name, product.slug]
+          .join(" ")
+          .toLowerCase()
+          .includes(search),
+      );
+    }
+
+    // 2. Sắp xếp mặc định: Sản phẩm mới nhất lên đầu (Dựa vào ID) -> Xử lý case Thêm mới
+    result.sort((a, b) => b.id - a.id);
+
+    // 3. Nếu vừa SỬA một sản phẩm, ép sản phẩm đó lên đầu tiên của mảng
+    if (lastEditedId && lastEditedId !== "NEW") {
+      const editedIndex = result.findIndex((p) => p.id === lastEditedId);
+      if (editedIndex > 0) {
+        // Nếu tìm thấy và nó đang không ở vị trí đầu
+        const [editedItem] = result.splice(editedIndex, 1);
+        result.unshift(editedItem);
+      }
+    }
+
+    return result;
+  }, [debouncedKeyword, products, lastEditedId]);
 
   const paginatedProducts = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -179,6 +199,16 @@ function ProductManagementPage() {
           ? "Cập nhật sản phẩm thành công!"
           : "Thêm mới sản phẩm thành công!",
       );
+
+      // Lưu lại ID vừa sửa. Nếu thêm mới thì set 'NEW' để xóa trạng thái Sửa cũ
+      if (payload.id) {
+        setLastEditedId(payload.id);
+      } else {
+        setLastEditedId("NEW");
+      }
+
+      // Bắt buộc quay về trang 1 để Admin nhìn thấy sản phẩm vừa thao tác
+      setCurrentPage(1);
 
       // Gọi lại hàm tải danh sách sản phẩm (tên hàm có thể là loadData, fetchProducts...)
       loadData();

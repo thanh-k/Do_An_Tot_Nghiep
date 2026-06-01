@@ -2,6 +2,7 @@ package com.ecommerce.modules.news.repository;
 
 import com.ecommerce.modules.news.entity.NewsPost;
 import com.ecommerce.modules.news.entity.NewsPostStatus;
+import com.ecommerce.modules.news.entity.NewsPostSourceType;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -14,6 +15,7 @@ public interface NewsPostRepository extends JpaRepository<NewsPost, Long> {
 
     boolean existsBySlugIgnoreCase(String slug);
     boolean existsBySlugIgnoreCaseAndIdNot(String slug, Long id);
+    boolean existsBySourceUrlIgnoreCase(String sourceUrl);
     @Query("select count(p) from NewsPost p where p.topic.id = :topicId")
     long countByTopicId(@Param("topicId") Long topicId);
 
@@ -49,15 +51,22 @@ public interface NewsPostRepository extends JpaRepository<NewsPost, Long> {
 
     @Query("""
         select p from NewsPost p
-        join fetch p.topic t
-        join fetch p.author a
+        left join fetch p.topic t
+        left join fetch p.author a
         where (:status is null or p.status = :status)
           and (:topicSlug is null or lower(t.slug) = lower(:topicSlug))
+          and (:sourceType is null or p.sourceType = :sourceType)
           and (:keyword is null or lower(p.title) like lower(concat('%', :keyword, '%'))
-               or lower(coalesce(p.summary, '')) like lower(concat('%', :keyword, '%')))
+               or lower(coalesce(p.summary, '')) like lower(concat('%', :keyword, '%'))
+               or lower(coalesce(p.sourceName, '')) like lower(concat('%', :keyword, '%')))
         order by
           case when p.featured = true then 0 else 1 end,
           coalesce(p.publishedAt, p.createdAt) desc
     """)
-    List<NewsPost> searchPosts(@Param("status") NewsPostStatus status, @Param("topicSlug") String topicSlug, @Param("keyword") String keyword);
+    List<NewsPost> searchPosts(
+            @Param("status") NewsPostStatus status,
+            @Param("topicSlug") String topicSlug,
+            @Param("keyword") String keyword,
+            @Param("sourceType") NewsPostSourceType sourceType
+    );
 }

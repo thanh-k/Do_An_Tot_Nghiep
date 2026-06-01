@@ -41,6 +41,20 @@ public class NewsPost {
 
     private Long viewCount = 0L;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source_type")
+    private NewsPostSourceType sourceType = NewsPostSourceType.INTERNAL;
+
+    private String sourceName;
+
+    @Column(length = 1000, unique = true)
+    private String sourceUrl;
+
+    @Column(length = 1000)
+    private String originalUrl;
+
+    private LocalDateTime syncedAt;
+
     private LocalDateTime publishedAt;
 
     @CreationTimestamp

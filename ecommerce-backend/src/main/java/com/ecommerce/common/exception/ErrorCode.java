@@ -115,6 +115,10 @@ public enum ErrorCode {
     REVIEW_INVALID(1702, "Dữ liệu đánh giá không hợp lệ", HttpStatus.BAD_REQUEST),
     REVIEW_NOT_ALLOWED(1703, "Bạn chỉ có thể đánh giá sau khi đã mua và nhận sản phẩm", HttpStatus.BAD_REQUEST),
     REVIEW_ALREADY_EXISTS(1704, "Bạn đã đánh giá sản phẩm này rồi", HttpStatus.BAD_REQUEST),
+
+    // Lỗi về AI Compare
+    NOT_ENOUGH_PRODUCTS_TO_COMPARE(1801, "Vui lòng chọn ít nhất 2 sản phẩm để thực hiện so sánh", HttpStatus.BAD_REQUEST),
+    AI_ANALYSIS_FAILED(1802, "Hệ thống AI đang bận hoặc không thể phân tích lúc này, vui lòng thử lại", HttpStatus.INTERNAL_SERVER_ERROR),
     ;
 
     private final int code;

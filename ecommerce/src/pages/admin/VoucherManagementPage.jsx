@@ -35,10 +35,11 @@ const CATEGORY_MAP = {
   },
 };
 
-const getCategoryConfig = (category) => CATEGORY_MAP[category || "DISCOUNT"] || {
-  label: category || "Giảm giá",
-  style: "bg-slate-100 text-slate-700 border-slate-200",
-};
+const getCategoryConfig = (category) =>
+  CATEGORY_MAP[category || "DISCOUNT"] || {
+    label: category || "Giảm giá",
+    style: "bg-slate-100 text-slate-700 border-slate-200",
+  };
 
 function VoucherManagementPage() {
   const [loading, setLoading] = useState(true);
@@ -47,9 +48,10 @@ function VoucherManagementPage() {
   const [categoryFilter, setCategoryFilter] = useState(""); // Thêm state cho bộ lọc
   const debouncedKeyword = useDebounce(keyword, 300);
   const [modalState, setModalState] = useState({ open: false, voucher: null });
+  const [lastEditedId, setLastEditedId] = useState(null); // State lưu ID voucher vừa sửa
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 2;
+  const itemsPerPage = 6;
 
   const loadData = async () => {
     setLoading(true);
@@ -71,7 +73,7 @@ function VoucherManagementPage() {
   const filteredVouchers = useMemo(() => {
     const search = debouncedKeyword.trim().toLowerCase();
 
-    return vouchers.filter((v) => {
+    let result = vouchers.filter((v) => {
       const matchesSearch = !search || v.code.toLowerCase().includes(search);
       // Mặc định những voucher cũ chưa có category sẽ coi là DISCOUNT
       const currentCategory = v.category || "DISCOUNT";
@@ -80,7 +82,21 @@ function VoucherManagementPage() {
 
       return matchesSearch && matchesCategory;
     });
-  }, [vouchers, debouncedKeyword, categoryFilter]);
+
+    // Sắp xếp mặc định: Mới nhất lên đầu (Dựa vào ID)
+    result.sort((a, b) => b.id - a.id);
+
+    // Ép voucher vừa sửa lên đầu
+    if (lastEditedId && lastEditedId !== "NEW") {
+      const editedIndex = result.findIndex((v) => v.id === lastEditedId);
+      if (editedIndex > 0) {
+        const [editedItem] = result.splice(editedIndex, 1);
+        result.unshift(editedItem);
+      }
+    }
+
+    return result;
+  }, [vouchers, debouncedKeyword, categoryFilter, lastEditedId]);
 
   const paginatedVouchers = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -222,6 +238,15 @@ function VoucherManagementPage() {
           ? "Cập nhật voucher thành công"
           : "Thêm mới voucher thành công!",
       );
+
+      // Lưu lại ID vừa sửa. Nếu thêm mới thì set 'NEW'
+      if (payload.id) {
+        setLastEditedId(payload.id);
+      } else {
+        setLastEditedId("NEW");
+      }
+      setCurrentPage(1); // Ép về trang 1 để xem voucher vừa thêm/sửa
+
       setModalState({ open: false, voucher: null });
       loadData();
     } catch (e) {

@@ -30,9 +30,10 @@ public class NewsPublicController {
     @GetMapping("/posts")
     public ApiResponse<List<NewsPostResponse>> getPosts(
             @RequestParam(required = false) String topicSlug,
-            @RequestParam(required = false) String keyword
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String sourceType
     ) {
-        return ApiResponse.<List<NewsPostResponse>>builder().result(newsPostService.getPublicPosts(topicSlug, keyword)).build();
+        return ApiResponse.<List<NewsPostResponse>>builder().result(newsPostService.getPublicPosts(topicSlug, keyword, sourceType)).build();
     }
 
     @GetMapping("/posts/featured")

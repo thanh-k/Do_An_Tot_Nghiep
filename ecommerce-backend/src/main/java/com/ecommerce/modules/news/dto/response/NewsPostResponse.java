@@ -1,6 +1,7 @@
 package com.ecommerce.modules.news.dto.response;
 
 import com.ecommerce.modules.news.entity.NewsPostStatus;
+import com.ecommerce.modules.news.entity.NewsPostSourceType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,6 +23,11 @@ public class NewsPostResponse {
     private NewsPostStatus status;
     private Boolean featured;
     private Long viewCount;
+    private NewsPostSourceType sourceType;
+    private String sourceName;
+    private String sourceUrl;
+    private String originalUrl;
+    private LocalDateTime syncedAt;
     private LocalDateTime publishedAt;
     private LocalDateTime createdAt;
     private Long topicId;

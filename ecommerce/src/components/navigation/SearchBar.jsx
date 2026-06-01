@@ -4,6 +4,15 @@ import { useNavigate } from "react-router-dom";
 import { useDebounce } from "@/hooks/useDebounce";
 import userProductService from "@/services/user/productService";
 
+const popularSearchTerms = [
+  "Tìm iPhone 15 Pro Max chính hãng giá tốt...",
+  "Tai nghe Bluetooth chụp tai cực sống động...",
+  "Laptop Gaming cấu hình khủng chiến game...",
+  "Cực hot Voucher giảm 50% hoàn xu hôm nay...",
+  "Củ sạc nhanh Type-C 20W chống cháy nổ...",
+  "Đồng hồ thông minh đo nhịp tim thế hệ mới..."
+];
+
 function SearchBar({
   initialValue = "",
   placeholder = "Tìm kiếm sản phẩm, thương hiệu...",
@@ -14,6 +23,11 @@ function SearchBar({
   const [loading, setLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
+  // Các state phục vụ chạy placeholder động kiểu Shopee
+  const [currentTermIndex, setCurrentTermIndex] = useState(0);
+  const [animatingState, setAnimatingState] = useState("normal"); // "normal", "exit", "enter"
+  const [isFocused, setIsFocused] = useState(false);
+
   const navigate = useNavigate();
   const wrapperRef = useRef(null);
   const debouncedKeyword = useDebounce(keyword, 300); // Đợi 300ms sau khi ngừng gõ mới gọi API
@@ -21,6 +35,29 @@ function SearchBar({
   useEffect(() => {
     setKeyword(initialValue);
   }, [initialValue]);
+
+  // Hiệu ứng chạy placeholder chuyển động giống các sàn TMĐT lớn (Shopee, Lazada)
+  useEffect(() => {
+    if (isFocused || keyword) return;
+
+    const interval = setInterval(() => {
+      // 1. Kích hoạt hiệu ứng bay lên phía trên và mờ dần
+      setAnimatingState("exit");
+
+      // 2. Sau 500ms (khi đã bay khuất), đổi từ khóa và đưa xuống phía dưới (không có hiệu ứng transition)
+      setTimeout(() => {
+        setCurrentTermIndex((prev) => (prev + 1) % popularSearchTerms.length);
+        setAnimatingState("enter");
+
+        // 3. Sau 50ms (đợi DOM ghi nhận vị trí dưới cùng), kéo lên vị trí trung tâm một cách mượt mà
+        setTimeout(() => {
+          setAnimatingState("normal");
+        }, 50);
+      }, 500);
+    }, 3500); // 3.5 giây đổi từ khóa một lần
+
+    return () => clearInterval(interval);
+  }, [isFocused, keyword]);
 
   // Tự động đóng Dropdown khi click ra ngoài thanh tìm kiếm
   useEffect(() => {
@@ -92,10 +129,30 @@ function SearchBar({
             setKeyword(event.target.value);
             setShowDropdown(true);
           }}
-          onFocus={() => keyword.trim() && setShowDropdown(true)}
-          placeholder={placeholder}
+          onFocus={() => {
+            setIsFocused(true);
+            if (keyword.trim()) setShowDropdown(true);
+          }}
+          onBlur={() => setIsFocused(false)}
+          placeholder={isFocused ? placeholder : ""}
           className="h-10 w-full rounded-full border border-slate-200 bg-white pl-11 pr-24 text-sm shadow-soft transition placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-100 sm:h-11 lg:h-12"
         />
+
+        {/* Placeholder chuyển động động kiểu Shopee/Lazada */}
+        {!isFocused && !keyword && (
+          <div className="pointer-events-none absolute left-11 right-24 top-1/2 z-10 -translate-y-1/2 flex items-center select-none text-slate-400 text-sm overflow-hidden h-6">
+            <span
+              className={`block w-full truncate ${animatingState === "normal"
+                  ? "translate-y-0 opacity-100 transition-all duration-500"
+                  : animatingState === "exit"
+                    ? "-translate-y-4 opacity-0 transition-all duration-500"
+                    : "translate-y-4 opacity-0 transition-none"
+                }`}
+            >
+              {popularSearchTerms[currentTermIndex]}
+            </span>
+          </div>
+        )}
 
         {/* Nút Xóa Text (Chỉ hiện khi có chữ) */}
         {keyword && (

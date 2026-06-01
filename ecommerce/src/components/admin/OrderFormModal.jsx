@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Modal from "@/components/common/Modal";
 import Button from "@/components/common/Button";
-import { formatCurrency, formatOrderStatus } from "@/utils/format";
+import { formatCurrency, formatOrderStatus, formatOrderCode } from "@/utils/format";
 
 // Helper function để lấy class màu sắc cho trạng thái đơn hàng
 const getStatusColorClass = (status) => {
@@ -47,7 +47,7 @@ function OrderFormModal({ isOpen, onClose, order, onUpdateStatus, onDelete }) {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Chi tiết đơn hàng #${order.id}`}
+      title={`Chi tiết đơn hàng ${formatOrderCode(order)}`}
       size="2xl"
     >
       <div className="space-y-6">

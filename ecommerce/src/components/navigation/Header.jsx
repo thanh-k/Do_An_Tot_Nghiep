@@ -80,30 +80,29 @@ function Header() {
         Mobile: logo + search + nút 3 gạch
       */}
       <div className="container-padded flex items-center gap-2 py-3 sm:gap-3 sm:py-4 lg:gap-4">
-        {/* LOGO */}
+        {/* LOGO - Chỉ hiển thị icon trên mobile và tablet, hiển thị đầy đủ trên desktop */}
         <Link to="/" className="shrink-0" onClick={() => setMobileOpen(false)}>
           <img
             src={logo}
             alt="InsightShop"
-            className="h-8 w-auto invert brightness-200 sm:h-9 lg:h-10"
+            className="w-10 h-10 sm:w-11 sm:h-11 lg:w-auto lg:h-12 object-cover object-left lg:object-contain"
           />
         </Link>
 
         {/* 
           SEARCH BAR
-          Mobile cũng hiển thị search.
-          Icon tìm kiếm hình ảnh nên đặt bên trong SearchBar.jsx.
+          Tự động dãn rộng tối đa trên mobile/tablet nhờ flex-1 min-w-0 sau khi ẩn các phần tử khác.
         */}
         <SearchBar className="min-w-0 flex-1 lg:max-w-xl xl:max-w-2xl lg:mx-3" />
 
         {/* 
-          ACTIONS
+          ACTIONS - Ẩn toàn bộ trên mobile và tablet
         */}
-        <div className="ml-auto flex items-center gap-1.5 sm:gap-3">
+        <div className="hidden lg:flex ml-auto items-center gap-1.5 sm:gap-3">
           {isAdmin && (
             <Link
               to="/admin"
-              className="hidden lg:block rounded-full bg-rose-400/30 p-3 text-white transition hover:bg-white hover:text-rose-600"
+              className="rounded-full bg-rose-400/30 p-3 text-white transition hover:bg-white hover:text-rose-600"
               title="Trang quản trị"
             >
               <LayoutDashboard size={20} />
@@ -139,7 +138,7 @@ function Header() {
           </Link>
 
           {/* ACCOUNT DROPDOWN */}
-          <div className="group relative hidden lg:block">
+          <div className="group relative">
             <div className="flex cursor-pointer items-center gap-1 sm:gap-2 rounded-full border border-rose-400 bg-rose-400/20 p-1 sm:px-3 sm:py-1.5 text-white transition hover:bg-white hover:text-rose-600 group-hover:bg-white group-hover:text-rose-600">
               {currentUser?.avatar ? (
                 <img

@@ -10,6 +10,7 @@ import {
   formatDate,
   formatOrderStatus,
   formatPaymentStatus,
+  formatOrderCode,
 } from "@/utils/format";
 import useAuth from "@/hooks/useAuth";
 import useCart from "@/hooks/useCart";
@@ -151,7 +152,7 @@ function OrderDetailPage() {
       </div>
 
       <PageHeader
-        title={`Chi tiết đơn hàng #${order.id}`}
+        title={`Chi tiết đơn hàng ${formatOrderCode(order)}`}
         description="Theo dõi thông tin vận chuyển và chi tiết các sản phẩm đã đặt."
       />
 
