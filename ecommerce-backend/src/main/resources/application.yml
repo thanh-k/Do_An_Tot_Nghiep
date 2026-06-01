@@ -15,8 +15,10 @@ spring:
           google:
             client-id: ${GOOGLE_CLIENT_ID}
             client-secret: ${GOOGLE_CLIENT_SECRET}
-
-            scope: [openid, profile, email]
+            scope:
+              - openid
+              - profile
+              - email
 
   mail:
     host: smtp.gmail.com
@@ -36,21 +38,21 @@ app:
     expiration: 86400000
 
   upload-dir: uploads
-  base-url: https://hitcinsight.id.vn
+    # frontend-url: http://localhost:5173
   frontend-url: https://hitcinsight.id.vn
   oauth2:
     authorized-redirect-uri: https://hitcinsight.id.vn/auth/oauth2/callback
   mail:
     from: ${MAIL_USERNAME}
+
   otp:
     expiration-minutes: 10
-
   cloudinary:
-    cloud-name: ${CLOUDINARY_CLOUD_NAME}
-    api-key: ${CLOUDINARY_API_KEY}
-    api-secret: ${CLOUDINARY_API_SECRET}
+    cloud-name: daz76ckfi
+    api-key: 539561267477747
+    api-secret: bC3fPgCaWAu6nlsk5Si699o4peM
 
   gemini:
     api:
       key: ${GEMINI_API_KEY}
-      model: ${GEMINI_API_MODEL:gemini-1.5-flash}
+      model: ${GEMINI_API_MODEL}
