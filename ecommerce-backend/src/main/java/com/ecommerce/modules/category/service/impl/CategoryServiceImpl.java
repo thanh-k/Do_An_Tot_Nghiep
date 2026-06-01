@@ -9,7 +9,7 @@ import com.ecommerce.modules.category.dto.response.CategoryResponse;
 import com.ecommerce.modules.category.mapper.CategoryMapper;
 import com.ecommerce.modules.category.repository.CategoryRepository;
 import com.ecommerce.modules.category.service.CategoryService;
-import com.ecommerce.modules.upload.service.CloudinaryService;
+import com.ecommerce.modules.upload.service.LocalStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor // Lombok tự tạo constructor cho 3 biến final ở dưới
 public class CategoryServiceImpl implements CategoryService {
 
-    private final CloudinaryService cloudinaryService;
+    private final LocalStorageService localStorageService;
     private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
 
@@ -70,10 +70,10 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
 
-        // Xóa ảnh trên Cloudinary trước khi xóa data trong DB
+        // Xóa ảnh trên Local Storage trước khi xóa data trong DB
         try {
-            cloudinaryService.deleteFile(category.getIcon());
-        } catch (IOException e) {
+            localStorageService.deleteFile(category.getIcon());
+        } catch (Exception e) {
             System.err.println("Lỗi xóa file: " + e.getMessage());
         }
 
@@ -95,13 +95,13 @@ public class CategoryServiceImpl implements CategoryService {
 
         // 3. Xử lý ảnh
         if (file != null && !file.isEmpty()) {
-            // Xóa ảnh cũ trên Cloudinary để tránh rác storage
+            // Xóa ảnh cũ trên Local Storage để tránh rác storage
             if (category.getIcon() != null) {
-                cloudinaryService.deleteFile(category.getIcon());
+                localStorageService.deleteFile(category.getIcon());
             }
 
             // Upload ảnh mới lên folder 'categories'
-            String newImageUrl = cloudinaryService.uploadFile(file, "categories");
+            String newImageUrl = localStorageService.uploadFile(file, "categories");
             category.setIcon(newImageUrl);
         }
 

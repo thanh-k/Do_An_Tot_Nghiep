@@ -643,3 +643,162 @@ Nội dung thực hiện:
 - Kiểm tra và tối ưu lại trải nghiệm nhập địa chỉ giao hàng
 
 ✍️ Người thực hiện: Thanh
+
+📅 Ngày: 27/05/2026
+🧩 Nội dung công việc:
+
+1. FE:
+
+- Hoàn thiện module tin tức công nghệ tự động trên website
+- Tích hợp luồng lấy dữ liệu tin tức từ nguồn bên ngoài thông qua RSS Feed
+- Kết nối dữ liệu tin tức vào trang danh sách tin tức phía người dùng
+- Hoàn thiện trang chi tiết tin tức từ dữ liệu đồng bộ bên ngoài
+- Hiển thị nguồn bài viết và thời gian đăng tương ứng
+
+- Tối ưu trải nghiệm xem tin tức
+- Cho phép người dùng nhấn vào bất kỳ vị trí nào trên thẻ bài viết để xem chi tiết
+- Giữ lại nút "Xem chi tiết" để tăng khả năng nhận biết thao tác
+- Điều chỉnh hiệu ứng hover cho toàn bộ card bài viết
+
+- Tối ưu giao diện tin tức trên thiết bị di động
+- Chuyển bố cục hiển thị bài viết từ:
+    + 1 bài viết / hàng
+  thành:
+    + 2 bài viết / hàng
+- Điều chỉnh kích thước ảnh và nội dung hiển thị phù hợp màn hình nhỏ
+- Tối ưu khoảng cách và chiều cao card tin tức
+
+- Hoàn thiện giao diện trang đăng nhập và xác thực tài khoản
+- Đồng bộ màu sắc giao diện Auth với bộ nhận diện InsightShop
+- Đồng bộ logo trang xác thực với Header hệ thống
+- Loại bỏ các thành phần điều hướng không cần thiết gây rối giao diện
+- Tinh chỉnh bố cục giữa khung giới thiệu và khung đăng nhập
+- Rút gọn nội dung giới thiệu để người dùng dễ tiếp cận hơn
+- Thay đổi thông điệp chào mừng phù hợp với trải nghiệm mua sắm
+
+- Tối ưu giao diện Home
+- Tách khu vực:
+    + Thông tin thị trường
+    + Tin mới cập nhật
+- Hiển thị danh sách tin mới theo thời gian xuất bản mới nhất
+- Đồng bộ giao diện danh sách tin tức với dữ liệu đồng bộ tự động
+
+2. BE:
+
+- Hoàn thiện module đồng bộ tin tức công nghệ từ nguồn bên ngoài
+- Bổ sung hỗ trợ lưu bài viết nguồn ngoài vào hệ thống
+- Thêm các trường dữ liệu:
+    + sourceType
+    + sourceName
+    + sourceUrl
+    + originalUrl
+    + syncedAt
+- Hoàn thiện cơ chế kiểm tra dữ liệu trùng lặp khi đồng bộ
+- Tối ưu xử lý dữ liệu RSS trước khi lưu vào cơ sở dữ liệu
+
+- Kiểm tra và sửa lỗi API đồng bộ tin tức
+- Xử lý lỗi 500 tại:
+    + /api/v1/admin/external-news/sync
+- Kiểm tra Entity, Repository và Service liên quan
+- Hoàn thiện cơ chế ghi nhận và trả về kết quả đồng bộ chính xác
+
+3. Fix lỗi phát sinh:
+
+- Fix lỗi đồng bộ tin tức trả về 500 Internal Server Error
+- Fix lỗi kiểm tra dữ liệu bài viết nguồn ngoài
+- Fix lỗi không hiển thị bài viết mới sau khi đồng bộ
+- Fix lỗi danh sách tin mới cập nhật không thay đổi theo dữ liệu mới
+- Fix lỗi hiển thị card tin tức trên thiết bị di động
+- Kiểm tra và tối ưu lại trải nghiệm người dùng trên module tin tức
+
+✍️ Người thực hiện: Thanh
+
+📅 Ngày: 01/06/2026
+🧩 Nội dung công việc:
+
+1. FE:
+- Hoàn thiện và đồng bộ giao diện xác thực người dùng (Authentication)
+- Thiết kế lại giao diện:
+    + Đăng nhập
+    + Đăng ký
+    + Quên mật khẩu
+- Đồng bộ màu sắc, logo và bố cục với giao diện InsightShop
+- Tối ưu hiển thị trên Desktop, Laptop và Mobile
+- Điều chỉnh kích thước các khung hiển thị để phù hợp nhiều độ phân giải màn hình
+- Tối ưu giao diện trang chủ (Home)
+- Thiết kế lại khu vực Banner chính theo hướng hiện đại và trực quan hơn
+- Bổ sung các khối thông tin khuyến mãi và ưu đãi bên dưới Banner
+- Điều chỉnh kích thước và bố cục Banner nhằm tối ưu không gian hiển thị
+- Thêm khu vực quảng bá chương trình thành viên và ưu đãi dành cho khách hàng
+- Tối ưu hiển thị sản phẩm đề xuất ở trang chủ
+- Khắc phục lỗi thanh cuộn phát sinh trên giao diện Home
+- Kiểm tra Header, Banner và các Product Card
+- Fix lỗi xuất hiện nhiều thanh cuộn gây ảnh hưởng trải nghiệm người dùng
+- Xử lý hiện tượng tràn kích thước ngoài vùng hiển thị
+- Tối ưu lại bố cục Banner để tương thích trên Desktop và Mobile
+- Loại bỏ các hiệu ứng gây phát sinh vùng cuộn không cần thiết
+- Hoàn thiện chức năng đề xuất sản phẩm theo hành vi người dùng
+- Chuyển cơ chế theo dõi hành vi sang sử dụng Cookie và Session Storage
+- Ghi nhận các thao tác:
+    + Xem sản phẩm
+    + Tìm kiếm sản phẩm
+    + Thêm sản phẩm vào giỏ hàng
+    + Bỏ dở thanh toán
+    + Đặt hàng thành công
+    + Sản phẩm có điểm quan tâm cao
+- Đồng bộ dữ liệu hành vi với hệ thống AI tư vấn sản phẩm
+- Hiển thị khu vực "Gợi ý dành riêng cho bạn" dựa trên hành vi người dùng
+- Tăng khả năng đề xuất sản phẩm liên quan đến sản phẩm đã xem hoặc đã tìm kiếm
+
+2. BE:
+- Nâng cấp hệ thống AI Chat hỗ trợ khách hàng
+- Bổ sung khả năng tư vấn sản phẩm theo thương hiệu
+- AI có thể nhận diện các thương hiệu:
+    + Apple
+    + Samsung
+    + ASUS
+    + Logitech
+    + Xiaomi
+    + MSI
+    + Acer
+    + Dell
+- Tìm kiếm và đề xuất sản phẩm theo thương hiệu người dùng yêu cầu
+- Bổ sung khả năng tư vấn sản phẩm theo danh mục
+- AI có thể nhận diện các nhóm sản phẩm:
+    + Điện thoại
+    + Laptop
+    + Máy tính bảng
+    + Đồng hồ thông minh
+    + Âm thanh
+    + Phụ kiện
+- Kết hợp dữ liệu Category để đưa ra gợi ý chính xác hơn
+- Hoàn thiện chức năng so sánh sản phẩm
+- Hỗ trợ so sánh từ 2 đến 3 sản phẩm cùng danh mục
+- So sánh dựa trên:
+    + Giá bán
+    + Thông số kỹ thuật
+    + Thương hiệu
+    + Mô tả sản phẩm
+    + Điểm mạnh nổi bật
+- Điều chỉnh luồng xử lý:
+    + So sánh 2 sản phẩm → chỉ trả về 2 sản phẩm
+    + So sánh 3 sản phẩm → chỉ trả về 3 sản phẩm
+- Loại bỏ hiện tượng AI tự động thêm sản phẩm ngoài yêu cầu người dùng
+- Tối ưu dữ liệu phản hồi để người dùng dễ đưa ra quyết định mua hàng hơn
+- Bổ sung chức năng tư vấn sản phẩm theo ngân sách
+- AI có thể nhận diện mức ngân sách người dùng cung cấp
+- Tự động đề xuất các sản phẩm phù hợp trong khoảng giá tương ứng
+- Ưu tiên hiển thị các sản phẩm có hiệu năng tốt nhất trong tầm giá
+- Bổ sung nội dung tư vấn và gợi ý nâng cấp sản phẩm khi mức chênh lệch không quá lớn
+- Tăng khả năng chuyển đổi đơn hàng thông qua tư vấn sản phẩm phù hợp nhu cầu và ngân sách
+
+3. Fix lỗi phát sinh:
+
+- Fix lỗi giao diện Authentication chưa đồng bộ với giao diện trang chủ
+- Fix lỗi Banner gây xuất hiện nhiều thanh cuộn trên trình duyệt
+- Fix lỗi tràn kích thước vùng hiển thị sản phẩm nổi bật
+- Fix lỗi AI tự động thêm sản phẩm ngoài yêu cầu khi thực hiện so sánh
+- Fix lỗi đọc dữ liệu hành vi người dùng chưa chính xác trong quá trình đề xuất sản phẩm
+- Kiểm tra và tối ưu lại luồng tư vấn sản phẩm theo thương hiệu, danh mục và ngân sách
+
+✍️ Người thực hiện: Thanh

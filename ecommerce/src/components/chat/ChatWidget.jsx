@@ -16,7 +16,7 @@ const initialMessages = [
   {
     id: 1,
     role: "assistant",
-    text: "Xin chào, tôi là AI hỗ trợ mua sắm NovaShop. Bạn cần tìm sản phẩm nào?",
+    text: "Xin chào, tôi là AI hỗ trợ mua sắm NovaShop. Tôi có thể tìm sản phẩm theo thương hiệu/danh mục, so sánh sản phẩm cùng loại và gợi ý theo ngân sách của bạn.",
   },
 ];
 
@@ -304,6 +304,15 @@ function getInlineProducts(message) {
 
   if (!products.length) return [];
 
+  const limit = [
+    "PRODUCT_SUGGESTION",
+    "BUDGET_SUGGESTION",
+    "COMPARE_PRODUCTS",
+    "GENERAL",
+  ].includes(message?.intent)
+    ? 4
+    : 2;
+
   if (message?.action?.productId) {
     const primary = products.find(
       (item) => Number(item.id) === Number(message.action.productId),
@@ -311,10 +320,10 @@ function getInlineProducts(message) {
     const rest = products.filter(
       (item) => Number(item.id) !== Number(message.action.productId),
     );
-    return primary ? [primary, ...rest.slice(0, 1)] : products.slice(0, 2);
+    return primary ? [primary, ...rest.slice(0, limit - 1)] : products.slice(0, limit);
   }
 
-  return products.slice(0, 2);
+  return products.slice(0, limit);
 }
 
 function InlineProductPreview({ message }) {
@@ -340,6 +349,11 @@ function InlineProductPreview({ message }) {
             <p className="line-clamp-2 text-sm font-semibold text-slate-800">
               {product.name}
             </p>
+            {(product.brandName || product.categoryName) && (
+              <p className="mt-1 truncate text-xs text-slate-500">
+                {[product.brandName, product.categoryName].filter(Boolean).join(" • ")}
+              </p>
+            )}
             <p className="mt-1 text-sm font-bold text-brand-600">
               {Number(product.price || 0).toLocaleString("vi-VN")} ₫
             </p>

@@ -1,12 +1,37 @@
 import apiClient from "@/services/apiClient";
 import { STORAGE_KEYS } from "@/constants";
-import { getGuestSessionId } from "@/utils/guestSession";
+import { getGuestSessionId, getBehaviorCookieName } from "@/utils/guestSession";
 
 const API_URL = "/behaviors";
 
 function normalizeLong(value) {
   const numberValue = Number(value);
   return Number.isFinite(numberValue) && numberValue > 0 ? numberValue : undefined;
+}
+
+function getPageUrl() {
+  if (typeof window === "undefined") return "";
+  return window.location.pathname + window.location.search;
+}
+
+function buildMetadata(payload = {}) {
+  const baseMetadata = payload.metadata || {};
+  const metadata = {
+    ...baseMetadata,
+    cookieName: getBehaviorCookieName(),
+    trackedAt: new Date().toISOString(),
+  };
+
+  if (typeof document !== "undefined" && document.referrer) {
+    metadata.referrer = document.referrer;
+  }
+
+  if (typeof navigator !== "undefined") {
+    metadata.userAgent = navigator.userAgent;
+    metadata.language = navigator.language;
+  }
+
+  return JSON.stringify(metadata);
 }
 
 function normalizePayload(payload = {}) {
@@ -20,8 +45,11 @@ function normalizePayload(payload = {}) {
   const data = {
     ...payload,
     sessionId: payload.sessionId || getGuestSessionId(),
-    pageUrl: payload.pageUrl || window.location.pathname + window.location.search,
+    pageUrl: payload.pageUrl || getPageUrl(),
+    metadataJson: payload.metadataJson || buildMetadata(payload),
   };
+
+  delete data.metadata;
 
   if (productId) data.productId = productId;
   else delete data.productId;
@@ -73,8 +101,7 @@ export const behaviorService = {
         return this.track(data);
       }
 
-      const apiBaseUrl =
-        import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
       const blob = new Blob([JSON.stringify(data)], {
         type: "application/json",

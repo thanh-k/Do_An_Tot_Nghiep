@@ -17,7 +17,7 @@ import com.ecommerce.modules.review.dto.response.ProductReviewItemResponse;
 import com.ecommerce.modules.review.dto.response.ProductReviewSummaryResponse;
 import com.ecommerce.modules.review.repository.ProductReviewRepository;
 import com.ecommerce.modules.review.service.ProductReviewService;
-import com.ecommerce.modules.upload.service.CloudinaryService;
+import com.ecommerce.modules.upload.service.LocalStorageService;
 import com.ecommerce.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -27,7 +27,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -46,7 +45,7 @@ public class ProductReviewServiceImpl implements ProductReviewService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
-    private final CloudinaryService cloudinaryService;
+    private final LocalStorageService localStorageService;
     private final CoinTaskService coinTaskService;
 
     @Override
@@ -240,8 +239,8 @@ public class ProductReviewServiceImpl implements ProductReviewService {
                 continue;
             }
             try {
-                imageUrls.add(cloudinaryService.uploadFile(file, "reviews"));
-            } catch (IOException e) {
+                imageUrls.add(localStorageService.uploadFile(file, "reviews"));
+            } catch (Exception e) {
                 throw new RuntimeException("Không thể tải ảnh đánh giá lên hệ thống", e);
             }
         }

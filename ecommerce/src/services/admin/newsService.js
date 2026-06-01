@@ -13,10 +13,14 @@ const mapPost = (post) => ({
     name: post.topicName,
     slug: post.topicSlug,
   },
-  author: post.authorName,
+  author: post.authorName || post.sourceName || "InsightShop",
   image: post.thumbnail,
   date: post.publishedAt || post.createdAt,
   views: post.viewCount || 0,
+  sourceType: post.sourceType || "INTERNAL",
+  isExternal: post.sourceType === "EXTERNAL",
+  sourceName: post.sourceName,
+  sourceUrl: post.sourceUrl || post.originalUrl,
 });
 
 function buildPostFormData(payload) {
@@ -53,6 +57,7 @@ const adminNewsService = {
     if (params.topicSlug) query.set("topicSlug", params.topicSlug);
     if (params.keyword) query.set("keyword", params.keyword);
     if (params.status) query.set("status", params.status);
+    if (params.sourceType) query.set("sourceType", params.sourceType);
     const suffix = query.toString() ? `?${query.toString()}` : "";
     return (await apiClient.request(`/admin/news/posts${suffix}`)).map(mapPost);
   },
@@ -71,6 +76,10 @@ const adminNewsService = {
 
   async toggleFeatured(id) {
     return mapPost(await apiClient.request(`/admin/news/posts/${id}/featured`, { method: "PATCH" }));
+  },
+
+  async syncExternalPosts() {
+    return (await apiClient.request("/admin/external-news/sync", { method: "POST" })).map(mapPost);
   },
 
   async deletePost(id) {

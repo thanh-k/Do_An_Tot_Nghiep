@@ -4,6 +4,7 @@ import com.ecommerce.common.response.ApiResponse;
 import com.ecommerce.modules.product.dto.response.ProductResponse;
 import com.ecommerce.modules.recommendation.service.RecommendationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,14 +14,19 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RecommendationController {
 
+    private static final String BEHAVIOR_COOKIE_NAME = "insightshop_behavior_session";
+
     private final RecommendationService recommendationService;
 
     @GetMapping("/me")
     public ApiResponse<List<ProductResponse>> getMyRecommendations(
             @RequestParam(required = false) String sessionId,
+            @CookieValue(name = BEHAVIOR_COOKIE_NAME, required = false) String cookieSessionId,
             @RequestParam(defaultValue = "8") int limit) {
+        String resolvedSessionId = StringUtils.hasText(sessionId) ? sessionId : cookieSessionId;
+
         return ApiResponse.<List<ProductResponse>>builder()
-                .result(recommendationService.getPersonalizedRecommendations(sessionId, limit))
+                .result(recommendationService.getPersonalizedRecommendations(resolvedSessionId, limit))
                 .build();
     }
 
