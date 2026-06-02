@@ -78,4 +78,8 @@ app:
   gemini:
     api:
       key: ${GEMINI_API_KEY}
-      model: ${GEMINI_API_MODEL}
+      model: ${GEMINI_API_MODEL} 
+
+vision:
+  service:
+    url: http://localhost:8001
