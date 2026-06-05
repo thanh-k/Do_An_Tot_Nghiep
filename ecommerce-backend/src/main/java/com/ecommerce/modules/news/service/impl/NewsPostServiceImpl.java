@@ -15,9 +15,7 @@ import com.ecommerce.modules.news.repository.NewsPostRepository;
 import com.ecommerce.modules.news.repository.NewsTopicRepository;
 import com.ecommerce.modules.news.service.NewsPostService;
 import com.ecommerce.modules.role.entity.RoleName;
-import com.ecommerce.modules.upload.service.LocalStorageService;
 import com.ecommerce.modules.upload.service.CloudinaryService;
-import com.ecommerce.modules.upload.service.LocalStorageService;
 import com.ecommerce.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -72,7 +70,7 @@ public class NewsPostServiceImpl implements NewsPostService {
     private final NewsTopicRepository newsTopicRepository;
     private final UserRepository userRepository;
     private final NewsMapper newsMapper;
-    private final LocalStorageService localStorageService;
+    private final CloudinaryService cloudinaryService;
 
     private record RssSource(String name, String url) {
     }
@@ -263,8 +261,8 @@ public class NewsPostServiceImpl implements NewsPostService {
         NewsPost post = findPostById(id);
         if (post.getThumbnail() != null && !post.getThumbnail().isBlank() && post.getThumbnail().startsWith("http")) {
             try {
-                localStorageService.deleteFile(post.getThumbnail());
-            } catch (Exception ignored) {
+                cloudinaryService.deleteFile(post.getThumbnail());
+            } catch (IOException ignored) {
             }
         }
         newsPostRepository.delete(post);
@@ -626,11 +624,11 @@ public class NewsPostServiceImpl implements NewsPostService {
         }
         if (oldUrl != null && !oldUrl.isBlank() && oldUrl.startsWith("http")) {
             try {
-                localStorageService.deleteFile(oldUrl);
-            } catch (Exception ignored) {
+                cloudinaryService.deleteFile(oldUrl);
+            } catch (IOException ignored) {
             }
         }
-        return localStorageService.uploadFile(file, "news");
+        return cloudinaryService.uploadFile(file, "news");
     }
 
     private void handleFeatured(NewsPost target) {
