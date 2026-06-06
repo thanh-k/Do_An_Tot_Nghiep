@@ -57,19 +57,27 @@ jobs:
       - name: Deploy Backend & Reload Nginx
         run: |
           ssh ${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            set -e  # THÊM DÒNG NÀY: exit ngay khi có lỗi
             cd ~/Do_An_Tot_Nghiep
+            OLD_COMMIT=$(git rev-parse HEAD)
             git pull origin dev
+            NEW_COMMIT=$(git rev-parse HEAD)
+            echo "=== Commit: $OLD_COMMIT → $NEW_COMMIT ==="
             sudo mkdir -p /var/www/ecommerce
             sudo rm -rf /var/www/ecommerce/*
             sudo cp -r /tmp/ecommerce-dist/* /var/www/ecommerce/
-            CHANGED=$(git diff HEAD~1 HEAD --name-only | grep "ecommerce-backend" | wc -l)
+            echo "=== Frontend copied ==="
+            CHANGED=$(git diff $OLD_COMMIT $NEW_COMMIT --name-only | grep "ecommerce-backend" | wc -l)
             if [ "$CHANGED" -gt "0" ]; then
+              echo "=== Backend changed → rebuilding ==="
               cd ecommerce-backend
               docker compose down && docker compose up -d --build
               sleep 30
+            else
+              echo "=== Backend unchanged ==="
             fi
             sudo chmod -R 755 /var/www/ecommerce
             sudo find /var/www/ecommerce -type f -exec chmod 644 {} \;
             sudo systemctl reload nginx
-            echo "Deploy xong!"
+            echo "=== Deploy xong! $(date) ==="
           ENDSSH
