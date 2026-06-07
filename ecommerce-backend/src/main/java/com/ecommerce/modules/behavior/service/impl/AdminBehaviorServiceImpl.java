@@ -5,6 +5,8 @@ import com.ecommerce.entity.User;
 import com.ecommerce.modules.behavior.dto.admin.AdminBehaviorEventResponse;
 import com.ecommerce.modules.behavior.dto.admin.AdminBehaviorInterestResponse;
 import com.ecommerce.modules.behavior.dto.admin.AdminBehaviorSummaryResponse;
+import com.ecommerce.modules.behavior.dto.admin.AdminBehaviorProductReportItem;
+import com.ecommerce.modules.behavior.dto.admin.AdminBehaviorProductReportResponse;
 import com.ecommerce.modules.behavior.dto.admin.EventCountResponse;
 import com.ecommerce.modules.behavior.entity.BehaviorEventType;
 import com.ecommerce.modules.behavior.entity.UserBehaviorEvent;
@@ -13,6 +15,13 @@ import com.ecommerce.modules.behavior.repository.UserBehaviorEventRepository;
 import com.ecommerce.modules.behavior.repository.UserProductInterestRepository;
 import com.ecommerce.modules.behavior.service.AdminBehaviorService;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -21,6 +30,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.io.ByteArrayOutputStream;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -99,6 +109,133 @@ public class AdminBehaviorServiceImpl implements AdminBehaviorService {
                 .stream()
                 .map(this::toInterestResponse)
                 .toList();
+    }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public AdminBehaviorProductReportResponse getProductReport(LocalDate fromDate, LocalDate toDate, int limit) {
+        LocalDateTime from = fromDate == null ? null : fromDate.atStartOfDay();
+        LocalDateTime to = toDate == null ? null : toDate.plusDays(1).atStartOfDay();
+        Pageable pageable = PageRequest.of(0, normalizeReportLimit(limit));
+
+        return AdminBehaviorProductReportResponse.builder()
+                .topViewed(mapEventProductRows(behaviorEventRepository.findTopProductsByEventType(BehaviorEventType.VIEW_PRODUCT, from, to, pageable)))
+                .topSearched(mapEventProductRows(behaviorEventRepository.findTopProductsByEventType(BehaviorEventType.SEARCH_PRODUCT, from, to, pageable)))
+                .topAddedToCart(mapEventProductRows(behaviorEventRepository.findTopProductsByEventType(BehaviorEventType.ADD_TO_CART, from, to, pageable)))
+                .topAbandonedCheckout(mapEventProductRows(behaviorEventRepository.findTopProductsByEventType(BehaviorEventType.ABANDON_CHECKOUT, from, to, pageable)))
+                .topPurchased(mapEventProductRows(behaviorEventRepository.findTopProductsByEventType(BehaviorEventType.PLACE_ORDER, from, to, pageable)))
+                .topInterest(mapInterestProductRows(productInterestRepository.findTopInterestedProducts(from, to, pageable)))
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] exportProductReportExcel(LocalDate fromDate, LocalDate toDate, int limit) {
+        AdminBehaviorProductReportResponse report = getProductReport(fromDate, toDate, limit);
+
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            CellStyle headerStyle = workbook.createCellStyle();
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerStyle.setFont(headerFont);
+
+            createReportSheet(workbook, headerStyle, "Top xem san pham", report.getTopViewed(), "Lượt xem");
+            createReportSheet(workbook, headerStyle, "Top tim kiem", report.getTopSearched(), "Lượt tìm kiếm");
+            createReportSheet(workbook, headerStyle, "Top them gio", report.getTopAddedToCart(), "Lượt thêm giỏ");
+            createReportSheet(workbook, headerStyle, "Top bo do checkout", report.getTopAbandonedCheckout(), "Lượt bỏ dở");
+            createReportSheet(workbook, headerStyle, "Top mua nhieu", report.getTopPurchased(), "Lượt mua");
+            createReportSheet(workbook, headerStyle, "Top diem quan tam", report.getTopInterest(), "Số bản ghi");
+
+            workbook.write(outputStream);
+            return outputStream.toByteArray();
+        } catch (Exception e) {
+            throw new IllegalStateException("Không thể xuất báo cáo hành vi sản phẩm", e);
+        }
+    }
+
+    private void createReportSheet(Workbook workbook,
+                                   CellStyle headerStyle,
+                                   String sheetName,
+                                   List<AdminBehaviorProductReportItem> items,
+                                   String countLabel) {
+        Sheet sheet = workbook.createSheet(sheetName);
+        String[] headers = {"STT", "ID sản phẩm", "Tên sản phẩm", "Danh mục", "Thương hiệu", countLabel, "Điểm quan tâm"};
+        Row headerRow = sheet.createRow(0);
+        for (int i = 0; i < headers.length; i++) {
+            Cell cell = headerRow.createCell(i);
+            cell.setCellValue(headers[i]);
+            cell.setCellStyle(headerStyle);
+        }
+
+        for (int i = 0; i < items.size(); i++) {
+            AdminBehaviorProductReportItem item = items.get(i);
+            Row row = sheet.createRow(i + 1);
+            row.createCell(0).setCellValue(i + 1);
+            row.createCell(1).setCellValue(item.getProductId() == null ? 0 : item.getProductId());
+            row.createCell(2).setCellValue(nullToEmpty(item.getProductName()));
+            row.createCell(3).setCellValue(nullToEmpty(item.getCategoryName()));
+            row.createCell(4).setCellValue(nullToEmpty(item.getBrandName()));
+            row.createCell(5).setCellValue(item.getTotalCount() == null ? 0 : item.getTotalCount());
+            row.createCell(6).setCellValue(item.getTotalScore() == null ? 0D : item.getTotalScore());
+        }
+
+        for (int i = 0; i < headers.length; i++) {
+            sheet.autoSizeColumn(i);
+        }
+    }
+
+    private List<AdminBehaviorProductReportItem> mapEventProductRows(List<Object[]> rows) {
+        return rows.stream()
+                .map(row -> AdminBehaviorProductReportItem.builder()
+                        .productId(toLong(row[0]))
+                        .productName(toStringValue(row[1]))
+                        .productThumbnail(toStringValue(row[2]))
+                        .categoryName(toStringValue(row[3]))
+                        .brandName(toStringValue(row[4]))
+                        .totalCount(toLong(row[5]))
+                        .totalScore(0D)
+                        .build())
+                .toList();
+    }
+
+    private List<AdminBehaviorProductReportItem> mapInterestProductRows(List<Object[]> rows) {
+        return rows.stream()
+                .map(row -> AdminBehaviorProductReportItem.builder()
+                        .productId(toLong(row[0]))
+                        .productName(toStringValue(row[1]))
+                        .productThumbnail(toStringValue(row[2]))
+                        .categoryName(toStringValue(row[3]))
+                        .brandName(toStringValue(row[4]))
+                        .totalCount(toLong(row[5]))
+                        .totalScore(toDouble(row[6]))
+                        .build())
+                .toList();
+    }
+
+    private Long toLong(Object value) {
+        if (value == null) return 0L;
+        if (value instanceof Number number) return number.longValue();
+        return Long.parseLong(value.toString());
+    }
+
+    private Double toDouble(Object value) {
+        if (value == null) return 0D;
+        if (value instanceof Number number) return number.doubleValue();
+        return Double.parseDouble(value.toString());
+    }
+
+    private String toStringValue(Object value) {
+        return value == null ? null : value.toString();
+    }
+
+    private String nullToEmpty(String value) {
+        return value == null ? "" : value;
+    }
+
+    private int normalizeReportLimit(int limit) {
+        if (limit <= 0) return 10;
+        return Math.min(limit, 50);
     }
 
     private AdminBehaviorEventResponse toEventResponse(UserBehaviorEvent event) {

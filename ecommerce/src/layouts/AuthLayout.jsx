@@ -15,11 +15,35 @@ function AuthLayout() {
       <main className="mx-auto flex min-h-[calc(100vh-150px)] max-w-6xl items-center px-4 py-5 lg:px-6">
         <div className="grid w-full grid-cols-1 gap-5 lg:grid-cols-[0.88fr_0.82fr] lg:items-stretch">
           <section className="hidden lg:block">
-            <div className="relative flex h-full min-h-[500px] max-h-[560px] overflow-hidden rounded-[28px] border border-rose-400 bg-rose-500 p-7 text-white shadow-2xl shadow-rose-900/20">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.22),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(190,18,60,0.35),transparent_38%)]" />
+           <div className="
+              relative
+              flex
+              h-full
+              min-h-[500px]
+              max-h-[560px]
+              overflow-hidden
+              rounded-[28px]
+              border
+              border-rose-300/60
+              bg-gradient-to-br
+              from-rose-400
+              via-pink-500
+              to-rose-600
+              p-7
+              text-white
+              shadow-xl
+              shadow-rose-500/20
+              ">
+              <div
+                className="
+                absolute
+                inset-0
+                bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.28),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.08),transparent_50%)]
+              "
+              />
 
               <div className="relative flex w-full flex-col justify-center">
-                <span className="w-fit rounded-full border border-white/25 bg-white/15 px-4 py-2 text-[11px] font-black uppercase tracking-wide">
+                <span className="w-fit rounded-full border border-white/25 bg-white/20 px-4 py-2 text-[11px] font-black uppercase tracking-wide">
                   Thành viên InsightShop
                 </span>
 
