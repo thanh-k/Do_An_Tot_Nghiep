@@ -15,6 +15,7 @@ import com.ecommerce.modules.news.repository.NewsPostRepository;
 import com.ecommerce.modules.news.repository.NewsTopicRepository;
 import com.ecommerce.modules.news.service.NewsPostService;
 import com.ecommerce.modules.role.entity.RoleName;
+import com.ecommerce.modules.upload.service.LocalStorageService;
 import com.ecommerce.modules.upload.service.CloudinaryService;
 import com.ecommerce.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;

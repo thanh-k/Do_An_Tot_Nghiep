@@ -73,6 +73,7 @@ public class AiChatServiceImpl implements AiChatService {
                     .intent(intent)
                     .suggestedProducts(suggestions)
                     .action(null)
+                    .actions(List.of())
                     .build();
         }
 
@@ -83,13 +84,15 @@ public class AiChatServiceImpl implements AiChatService {
             reply = buildFallbackReply(intent, candidateProducts, color, quantity, normalizedMessage, budget);
         }
 
-        AiActionResponse action = buildAction(intent, candidateProducts, color, quantity);
+        List<AiActionResponse> actions = buildActions(intent, candidateProducts, color, quantity);
+        AiActionResponse action = actions.isEmpty() ? null : actions.get(0);
 
         return AiChatResponse.builder()
                 .reply(reply)
                 .intent(intent)
                 .suggestedProducts(suggestions)
                 .action(action)
+                .actions(actions)
                 .build();
     }
 
@@ -140,7 +143,11 @@ public class AiChatServiceImpl implements AiChatService {
             return findComparableProducts(message, color, compareLimit, products);
         }
 
-        if ("PRODUCT_DETAIL".equals(intent) || "ADD_TO_CART".equals(intent)) {
+        if ("ADD_TO_CART".equals(intent)) {
+            return findProductsForAddToCart(message, color, products);
+        }
+
+        if ("PRODUCT_DETAIL".equals(intent)) {
             return products.stream()
                     .sorted((a, b) -> Integer.compare(scoreProductForExactMatch(b, message, color), scoreProductForExactMatch(a, message, color)))
                     .filter(p -> scoreProductForExactMatch(p, message, color) > 0)
@@ -157,6 +164,45 @@ public class AiChatServiceImpl implements AiChatService {
         }
 
         return products.stream().limit(4).toList();
+    }
+
+    private List<ProductResponse> findProductsForAddToCart(String message, String color, List<ProductResponse> products) {
+        int requestedCount = extractRequestedProductCount(message);
+        int limit = Math.max(1, Math.min(5, requestedCount));
+
+        List<ProductResponse> explicitlyMentioned = products.stream()
+                .map(product -> Map.entry(product, scoreProductMentionForCompare(product, message, color)))
+                .filter(entry -> entry.getValue() >= 80)
+                .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
+                .map(Map.Entry::getKey)
+                .limit(limit)
+                .toList();
+
+        if (!explicitlyMentioned.isEmpty()) {
+            return explicitlyMentioned;
+        }
+
+        List<ProductResponse> exactMatched = products.stream()
+                .sorted((a, b) -> Integer.compare(
+                        scoreProductForExactMatch(b, message, color),
+                        scoreProductForExactMatch(a, message, color)
+                ))
+                .filter(p -> scoreProductForExactMatch(p, message, color) > 0)
+                .limit(limit)
+                .toList();
+
+        if (!exactMatched.isEmpty()) {
+            return exactMatched;
+        }
+
+        return products.stream()
+                .sorted((a, b) -> Integer.compare(
+                        scoreProductForNeed(b, message, color),
+                        scoreProductForNeed(a, message, color)
+                ))
+                .filter(p -> scoreProductForNeed(p, message, color) > 0)
+                .limit(limit)
+                .toList();
     }
 
     private List<ProductResponse> findProductsByBudget(String message, String color, long budget, List<ProductResponse> products) {
@@ -805,34 +851,24 @@ public class AiChatServiceImpl implements AiChatService {
         return sb.toString();
     }
 
-    private AiActionResponse buildAction(String intent, List<ProductResponse> products, String color, int quantity) {
-        if (products == null || products.isEmpty()) return null;
-
-        ProductResponse top = products.get(0);
-
-        if ("ADD_TO_CART".equals(intent)) {
-            return AiActionResponse.builder()
-                    .type("ADD_TO_CART")
-                    .productId(top.getId())
-                    .productSlug(top.getSlug())
-                    .quantity(quantity)
-                    .color(color)
-                    .note("Frontend có thể dùng productId, productSlug, quantity và color để thêm sản phẩm vào giỏ hàng.")
-                    .build();
+    private List<AiActionResponse> buildActions(String intent, List<ProductResponse> products, String color, int quantity) {
+        if (!"ADD_TO_CART".equals(intent) || products == null || products.isEmpty()) {
+            return List.of();
         }
 
-        if ("PRODUCT_DETAIL".equals(intent)) {
-            return AiActionResponse.builder()
-                    .type("VIEW_PRODUCT")
-                    .productId(top.getId())
-                    .productSlug(top.getSlug())
-                    .quantity(quantity)
-                    .color(color)
-                    .note("Frontend có thể mở trang chi tiết sản phẩm.")
-                    .build();
-        }
+        int productLimit = Math.max(1, Math.min(5, products.size()));
 
-        return null;
+        return products.stream()
+                .limit(productLimit)
+                .map(product -> AiActionResponse.builder()
+                        .type("ADD_TO_CART")
+                        .productId(product.getId())
+                        .productSlug(product.getSlug())
+                        .quantity(quantity)
+                        .color(color)
+                        .note("Frontend có thể dùng productId, productSlug, quantity và color để thêm sản phẩm vào giỏ hàng.")
+                        .build())
+                .toList();
     }
 
     private String buildFallbackReply(String intent, List<ProductResponse> products, String color, int quantity, String normalizedMessage, long budget) {
@@ -872,13 +908,19 @@ public class AiChatServiceImpl implements AiChatService {
         }
 
         if ("ADD_TO_CART".equals(intent)) {
+            String names = products.stream()
+                    .limit(Math.max(1, Math.min(5, products.size())))
+                    .map(ProductResponse::getName)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.joining(", "));
+
             StringBuilder sb = new StringBuilder();
             sb.append("Tôi đã xác định được sản phẩm phù hợp để thêm vào giỏ hàng: ")
-                    .append(safe(top.getName()));
+                    .append(names);
             if (color != null) {
                 sb.append(" (màu ").append(color).append(")");
             }
-            sb.append(", số lượng ").append(quantity).append(".");
+            sb.append(", số lượng mỗi sản phẩm ").append(quantity).append(".");
             return sb.toString();
         }
 
@@ -896,6 +938,45 @@ public class AiChatServiceImpl implements AiChatService {
     private int normalizeCompareLimit(int compareLimit) {
         if (compareLimit >= 3) return 3;
         return 2;
+    }
+
+    private int extractRequestedProductCount(String message) {
+        if (message == null || message.isBlank()) return 1;
+
+        String cleaned = (" " + message + " ")
+                .replace(" them vao gio hang ", " ")
+                .replace(" them vao gio ", " ")
+                .replace(" them gio hang ", " ")
+                .replace(" cho vao gio ", " ")
+                .replace(" mua ngay ", " ")
+                .replace(" dat mua ", " ")
+                .replace(" so luong ", " ")
+                .replace(" 1 cai ", " ")
+                .replace(" mot cai ", " ")
+                .replace(" một cái ", " ")
+                .replace(" 2 cai ", " ")
+                .replace(" hai cai ", " ")
+                .replace(" 3 cai ", " ")
+                .replace(" ba cai ", " ")
+                .replace(" voi ", " | ")
+                .replace(" va ", " | ")
+                .replace(" vs ", " | ")
+                .replace(" voi lai ", " | ")
+                .replace(",", " | ")
+                .replace("/", " | ")
+                .replace("&", " | ")
+                .replaceAll("\\s+", " ")
+                .trim();
+
+        long parts = Pattern.compile("\\|")
+                .splitAsStream(cleaned)
+                .map(String::trim)
+                .filter(part -> part.length() >= 3)
+                .count();
+
+        if (parts >= 3) return 3;
+        if (parts >= 2) return 2;
+        return 1;
     }
 
     private int extractCompareLimit(String message) {
