@@ -802,3 +802,56 @@ Nội dung thực hiện:
 - Kiểm tra và tối ưu lại luồng tư vấn sản phẩm theo thương hiệu, danh mục và ngân sách
 
 ✍️ Người thực hiện: Thanh
+
+📅 07/06/2026
+Nội dung thực hiện:
+1  FE:
+- Tối ưu giao diện trang AuthLayout
+    + Giảm tông màu nền khu vực giới thiệu
+    + Chuyển nền sang gradient nhạt dần
+    + Điều chỉnh độ nổi của các thẻ chức năng
+    + Đồng bộ giao diện với chủ đề InsightShop
+- Tối ưu giao diện quản lý hành vi người dùng
+    + Sắp xếp lại các khối thống kê
+    + Hiển thị sản phẩm được quan tâm nhiều nhất
+    + Hiển thị sản phẩm được xem nhiều nhất
+    + Hiển thị sản phẩm được thêm giỏ hàng nhiều nhất
+    + Hiển thị sản phẩm bị bỏ dở thanh toán nhiều nhất
+    + Hiển thị sản phẩm được mua nhiều nhất
+    + Thêm chức năng xuất file Excel thống kê top sản phẩm
+- Tái cấu trúc module Chat AI
+    + Tách ChatWidget thành nhiều file theo chức năng
+    + Tách phần giao diện chat
+    + Tách phần xử lý tin nhắn
+    + Tách phần xử lý hành động AI
+    + Tách phần xử lý thêm sản phẩm vào giỏ hàng
+    + Thêm comment mô tả chức năng và luồng gọi
+    + Chuẩn hóa import phục vụ tự động deploy
+
+2  BE:
+- Tối ưu AI Chat hỗ trợ khách hàng
+    + Thêm xử lý câu chào hỏi cơ bản
+    + Thêm lời chào mặc định cho người dùng
+    + Thêm gợi ý thao tác nhanh
+- Tối ưu nhận diện từ khóa người dùng
+    + Hỗ trợ từ khóa không dấu
+    + Hỗ trợ từ khóa nhập sai
+    + Hỗ trợ từ khóa đồng nghĩa
+    + Tự động nhận diện category theo dữ liệu hệ thống
+- Tối ưu tìm kiếm sản phẩm theo ngân sách
+    + Hỗ trợ tìm kiếm theo khoảng giá
+    + Hỗ trợ tìm kiếm theo category
+    + Hỗ trợ tìm kiếm theo thương hiệu
+    + Chỉ trả về sản phẩm đúng danh mục yêu cầu
+- Bổ sung trả lời thông tin sản phẩm
+    + Trả lời thông số sản phẩm
+    + Trả lời cấu hình sản phẩm
+    + Trả lời mô tả sản phẩm
+    + Trả lời thông tin chi tiết sản phẩm
+    + Trả lời giá sản phẩm
+- Sửa lỗi hệ thống AI
+    + Fix AI hiểu nhầm câu chào thành tìm kiếm sản phẩm
+    + Fix trả về sai danh mục khi tìm sản phẩm theo giá
+    + Fix truy vấn laptop dưới 20 triệu không tìm thấy dữ liệu
+    + Fix AI trả lời chưa đầy đủ khi hỏi thông số sản phẩm
+    + Tối ưu cấu trúc module AI phục vụ mở rộng sau này

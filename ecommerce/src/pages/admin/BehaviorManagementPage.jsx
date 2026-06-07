@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Activity, BarChart3, Eye, RefreshCcw, Search, ShoppingCart, Sparkles, WalletCards } from "lucide-react";
+import {
+  BarChart3,
+  Download,
+  Eye,
+  RefreshCcw,
+  ShoppingCart,
+  Trophy,
+  WalletCards,
+} from "lucide-react";
 import DataTable from "@/components/admin/DataTable";
 import Button from "@/components/common/Button";
 import Input from "@/components/common/Input";
@@ -16,29 +24,109 @@ const EVENT_OPTIONS = [
   ...Object.entries(behaviorService.EVENT_LABELS).map(([value, label]) => ({ value, label })),
 ];
 
+const REPORT_GROUPS = [
+  { key: "topViewed", label: "Xem nhiều nhất", metricLabel: "Lượt xem" },
+  { key: "topSearched", label: "Tìm kiếm nhiều nhất", metricLabel: "Lượt tìm kiếm" },
+  { key: "topAddedToCart", label: "Thêm giỏ nhiều nhất", metricLabel: "Lượt thêm giỏ" },
+  { key: "topAbandonedCheckout", label: "Bỏ dở thanh toán", metricLabel: "Lượt bỏ dở" },
+  { key: "topPurchased", label: "Mua nhiều nhất", metricLabel: "Lượt mua" },
+  { key: "topInterest", label: "Điểm quan tâm cao", metricLabel: "Điểm quan tâm" },
+];
+
+const formatNumber = (value) => Number(value || 0).toLocaleString("vi-VN");
+
+const getConversionRate = (summary) => {
+  const views = Number(summary?.totalProductViews || 0);
+  const purchases = Number(summary?.totalPurchases || 0);
+  if (!views) return "0%";
+  return `${((purchases / views) * 100).toFixed(1)}%`;
+};
+
 const StatCard = ({ title, value, icon: Icon, note }) => (
-  <div className="card p-5">
-    <div className="flex items-start justify-between gap-4">
-      <div>
-        <p className="text-sm text-slate-500">{title}</p>
-        <p className="mt-2 text-3xl font-bold text-slate-900">{value ?? 0}</p>
-        {note ? <p className="mt-1 text-xs text-slate-400">{note}</p> : null}
+  <div className="card p-4">
+    <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className="truncate text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
+        <p className="mt-2 text-2xl font-black text-slate-950">{value ?? 0}</p>
+        {note ? <p className="mt-1 truncate text-xs text-slate-400">{note}</p> : null}
       </div>
-      <div className="rounded-2xl bg-brand-50 p-3 text-brand-600">
-        <Icon size={22} />
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+        <Icon size={20} />
       </div>
     </div>
   </div>
 );
+
+const MiniMetric = ({ label, value }) => (
+  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+    <p className="text-xs text-slate-500">{label}</p>
+    <p className="mt-1 text-lg font-black text-slate-950">{value ?? 0}</p>
+  </div>
+);
+
+function ProductReportCard({ title, metricLabel, rows }) {
+  const topRows = rows || [];
+
+  return (
+    <div className="card overflow-hidden">
+      <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
+        <div className="flex items-center gap-2">
+          <Trophy size={18} className="text-brand-600" />
+          <h3 className="font-bold text-slate-900">{title}</h3>
+        </div>
+      </div>
+
+      <div className="divide-y divide-slate-100">
+        {topRows.length ? topRows.map((item, index) => (
+          <div key={`${title}-${item.productId}-${index}`} className="flex items-center gap-3 px-5 py-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-50 text-sm font-bold text-brand-700">
+              {index + 1}
+            </div>
+
+            {item.productThumbnail ? (
+              <img
+                src={item.productThumbnail}
+                alt={item.productName}
+                className="h-12 w-12 shrink-0 rounded-xl border border-slate-200 object-cover"
+              />
+            ) : (
+              <div className="h-12 w-12 shrink-0 rounded-xl border border-slate-200 bg-slate-100" />
+            )}
+
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-semibold text-slate-900">{item.productName || "Không rõ sản phẩm"}</p>
+              <p className="truncate text-xs text-slate-500">
+                {[item.categoryName, item.brandName].filter(Boolean).join(" • ") || "Chưa phân loại"}
+              </p>
+            </div>
+
+            <div className="text-right">
+              <p className="text-sm font-bold text-brand-600">
+                {metricLabel.includes("Điểm")
+                  ? Number(item.totalScore || 0).toFixed(1)
+                  : Number(item.totalCount || 0).toLocaleString("vi-VN")}
+              </p>
+              <p className="text-[11px] text-slate-400">{metricLabel}</p>
+            </div>
+          </div>
+        )) : (
+          <div className="px-5 py-8 text-center text-sm text-slate-500">Chưa có dữ liệu.</div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function BehaviorManagementPage() {
   const { currentUser } = useAuth();
   const canView = hasAnyPermission(currentUser, ["BEHAVIOR_VIEW", "RECOMMENDATION_VIEW", "RECOMMENDATION_MANAGE"]);
 
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [summary, setSummary] = useState(null);
   const [events, setEvents] = useState([]);
   const [interests, setInterests] = useState([]);
+  const [productReport, setProductReport] = useState({});
   const [activeTab, setActiveTab] = useState("events");
   const [filters, setFilters] = useState({
     eventType: "",
@@ -63,10 +151,16 @@ function BehaviorManagementPage() {
     limit: 200,
   }), [filters.eventType, filters.fromDate, filters.toDate, debouncedKeyword, debouncedUserKeyword, debouncedProductKeyword]);
 
+  const reportParams = useMemo(() => ({
+    fromDate: filters.fromDate,
+    toDate: filters.toDate,
+    limit: 10,
+  }), [filters.fromDate, filters.toDate]);
+
   const loadData = async () => {
     setLoading(true);
     try {
-      const [summaryData, eventData, interestData] = await Promise.all([
+      const [summaryData, eventData, interestData, reportData] = await Promise.all([
         behaviorService.getSummary(),
         behaviorService.getEvents(queryParams),
         behaviorService.getInterests({
@@ -75,10 +169,12 @@ function BehaviorManagementPage() {
           productKeyword: queryParams.productKeyword,
           limit: 200,
         }),
+        behaviorService.getProductReport(reportParams),
       ]);
       setSummary(summaryData || {});
       setEvents(eventData || []);
       setInterests(interestData || []);
+      setProductReport(reportData || {});
     } catch (error) {
       toast.error(error.message || "Tải dữ liệu hành vi người dùng thất bại");
     } finally {
@@ -88,7 +184,19 @@ function BehaviorManagementPage() {
 
   useEffect(() => {
     if (canView) loadData();
-  }, [canView, queryParams]);
+  }, [canView, queryParams, reportParams]);
+
+  const handleExportExcel = async () => {
+    setExporting(true);
+    try {
+      await behaviorService.exportProductReport(reportParams);
+      toast.success("Đã xuất báo cáo Excel");
+    } catch (error) {
+      toast.error(error.message || "Xuất file Excel thất bại");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const eventColumns = [
     { key: "stt", title: "STT", render: (_row, index) => index + 1 },
@@ -167,31 +275,40 @@ function BehaviorManagementPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Theo dõi hành vi người dùng"
-        description="Quản lý lịch sử thao tác, điểm quan tâm sản phẩm và dữ liệu phục vụ đề xuất cá nhân hóa."
+        description="Quản lý thao tác, điểm quan tâm sản phẩm và dữ liệu phục vụ đề xuất cá nhân hóa."
         actions={
-          <Button variant="secondary" onClick={loadData} disabled={loading}>
-            <RefreshCcw size={16} />Làm mới
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={loadData} disabled={loading}>
+              <RefreshCcw size={16} />Làm mới
+            </Button>
+            <Button onClick={handleExportExcel} disabled={exporting} loading={exporting}>
+              <Download size={16} />Xuất Excel
+            </Button>
+          </div>
         }
       />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Tổng hành vi" value={summary?.totalEvents} icon={Activity} note="Tất cả thao tác đã ghi nhận" />
-        <StatCard title="Lượt xem sản phẩm" value={summary?.totalProductViews} icon={Eye} />
-        <StatCard title="Tìm kiếm" value={summary?.totalSearches} icon={Search} />
-        <StatCard title="Bỏ dở thanh toán" value={summary?.totalAbandonedCheckouts} icon={WalletCards} />
+        <StatCard title="Lượt xem" value={formatNumber(summary?.totalProductViews)} icon={Eye} note="Sản phẩm đã được xem" />
+        <StatCard title="Thêm giỏ" value={formatNumber(summary?.totalAddToCart)} icon={ShoppingCart} note="Sản phẩm được thêm vào giỏ" />
+        <StatCard title="Đặt hàng" value={formatNumber(summary?.totalPurchases)} icon={BarChart3} note="Đơn hàng thành công" />
+        <StatCard title="Bỏ checkout" value={formatNumber(summary?.totalAbandonedCheckouts)} icon={WalletCards} note="Bỏ dở bước thanh toán" />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <StatCard title="Thêm giỏ hàng" value={summary?.totalAddToCart} icon={ShoppingCart} />
-        <StatCard title="Đặt hàng thành công" value={summary?.totalPurchases} icon={BarChart3} />
-        <StatCard title="Sản phẩm có điểm quan tâm" value={summary?.totalInterests} icon={Sparkles} />
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <MiniMetric label="Tổng hành vi" value={formatNumber(summary?.totalEvents)} />
+        <MiniMetric label="Tìm kiếm" value={formatNumber(summary?.totalSearches)} />
+        <MiniMetric label="SP có điểm quan tâm" value={formatNumber(summary?.totalInterests)} />
+        <MiniMetric
+          label="Tỷ lệ chuyển đổi"
+          value={getConversionRate(summary)}
+        />
       </div>
 
-      <div className="card p-6">
+      <div className="card p-5">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <Input label="Tìm session / từ khóa / trang" placeholder="VD: iphone, /checkout, guest..." value={filters.keyword} onChange={(e) => updateFilter("keyword", e.target.value)} />
           <Input label="Tìm người dùng" placeholder="Tên hoặc email" value={filters.userKeyword} onChange={(e) => updateFilter("userKeyword", e.target.value)} />
@@ -210,14 +327,31 @@ function BehaviorManagementPage() {
       <div className="flex flex-wrap gap-3">
         <Button variant={activeTab === "events" ? "primary" : "outline"} onClick={() => setActiveTab("events")}>Lịch sử hành vi ({events.length})</Button>
         <Button variant={activeTab === "interests" ? "primary" : "outline"} onClick={() => setActiveTab("interests")}>Điểm quan tâm ({interests.length})</Button>
+        <Button variant={activeTab === "productReport" ? "primary" : "outline"} onClick={() => setActiveTab("productReport")}>Báo cáo sản phẩm</Button>
       </div>
 
       {loading ? (
         <div className="card p-8 text-center text-sm text-slate-500">Đang tải dữ liệu hành vi...</div>
       ) : activeTab === "events" ? (
         <DataTable columns={eventColumns} data={sortNewestFirst(events)} pagination={{ enabled: true, pageSize: 10, itemLabel: "hành vi" }} />
-      ) : (
+      ) : activeTab === "interests" ? (
         <DataTable columns={interestColumns} data={sortNewestFirst(interests)} pagination={{ enabled: true, pageSize: 10, itemLabel: "điểm quan tâm" }} />
+      ) : (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-brand-100 bg-brand-50 px-5 py-4 text-sm text-brand-800">
+            Báo cáo tổng hợp top 10 sản phẩm theo từng hành vi. Bộ lọc ngày ở trên cũng áp dụng cho báo cáo và file Excel.
+          </div>
+          <div className="grid gap-4 xl:grid-cols-2">
+            {REPORT_GROUPS.map((group) => (
+              <ProductReportCard
+                key={group.key}
+                title={group.label}
+                metricLabel={group.metricLabel}
+                rows={productReport[group.key] || []}
+              />
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

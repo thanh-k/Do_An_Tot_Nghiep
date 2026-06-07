@@ -1,6 +1,6 @@
 const GUEST_SESSION_KEY = "insightshop_behavior_session";
 const LEGACY_GUEST_SESSION_KEY = "novashop_guest_session_id";
-const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 180; // 180 ngày
+const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 ngày
 
 function canUseDocumentCookie() {
   return typeof document !== "undefined" && typeof document.cookie === "string";

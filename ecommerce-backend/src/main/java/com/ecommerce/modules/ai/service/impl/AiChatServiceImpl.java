@@ -52,10 +52,33 @@ public class AiChatServiceImpl implements AiChatService {
     private final ProductService productService;
     private final GeminiService geminiService;
 
+    private record CategoryRequest(boolean mentioned, boolean known, String label, String key) {
+        static CategoryRequest none() {
+            return new CategoryRequest(false, false, null, null);
+        }
+    }
+
     @Override
     public AiChatResponse chat(String message) {
         String rawMessage = message == null ? "" : message.trim();
         String normalizedMessage = normalizeAliases(normalizeText(rawMessage));
+
+        if (isGreeting(normalizedMessage)) {
+            return buildSimpleReply("GREETING", buildGreetingReply());
+        }
+
+        if (isThanks(normalizedMessage)) {
+            return buildSimpleReply("THANKS", "Rất vui được hỗ trợ bạn. Khi cần tìm sản phẩm, so sánh mẫu hoặc thêm vào giỏ hàng, bạn cứ nhắn cho tôi nhé.");
+        }
+
+        if (isGoodbye(normalizedMessage)) {
+            return buildSimpleReply("GOODBYE", "Cảm ơn bạn đã ghé InsightShop. Chúc bạn mua sắm vui vẻ nhé.");
+        }
+
+        if (isHelpRequest(normalizedMessage)) {
+            return buildSimpleReply("HELP", buildHelpReply());
+        }
+
         long budget = extractBudget(normalizedMessage);
         String intent = detectIntent(normalizedMessage, budget);
         String color = extractColor(normalizedMessage);
@@ -63,8 +86,19 @@ public class AiChatServiceImpl implements AiChatService {
         int compareLimit = extractCompareLimit(normalizedMessage);
 
         List<ProductResponse> allProducts = productService.getAllProducts();
+        CategoryRequest requestedCategory = detectRequestedCategory(normalizedMessage, allProducts);
         List<ProductResponse> candidateProducts = findCandidateProducts(normalizedMessage, intent, color, budget, compareLimit, allProducts);
         List<AiProductSuggestionResponse> suggestions = mapSuggestions(candidateProducts);
+
+        if (candidateProducts.isEmpty() && ("BUDGET_SUGGESTION".equals(intent) || "PRODUCT_SUGGESTION".equals(intent)) && requestedCategory.mentioned()) {
+            return AiChatResponse.builder()
+                    .reply(buildNoProductByCategoryReply(requestedCategory, normalizedMessage, budget, allProducts))
+                    .intent(intent)
+                    .suggestedProducts(List.of())
+                    .action(null)
+                    .actions(List.of())
+                    .build();
+        }
 
         if ("COMPARE_PRODUCTS".equals(intent)) {
             String compareReply = buildCompareReply(candidateProducts, compareLimit);
@@ -73,6 +107,24 @@ public class AiChatServiceImpl implements AiChatService {
                     .intent(intent)
                     .suggestedProducts(suggestions)
                     .action(null)
+                    .actions(List.of())
+                    .build();
+        }
+
+        if ("PRODUCT_DETAIL".equals(intent)) {
+            String detailReply = buildProductDetailReply(candidateProducts, normalizedMessage);
+            return AiChatResponse.builder()
+                    .reply(detailReply)
+                    .intent(intent)
+                    .suggestedProducts(suggestions)
+                    .action(candidateProducts.isEmpty() ? null : AiActionResponse.builder()
+                            .type("VIEW_PRODUCT")
+                            .productId(candidateProducts.get(0).getId())
+                            .productSlug(candidateProducts.get(0).getSlug())
+                            .quantity(1)
+                            .color(color)
+                            .note("Bạn có thể nhấn vào để xem thông tin chi tiết sản phẩm.")
+                            .build())
                     .actions(List.of())
                     .build();
         }
@@ -96,6 +148,117 @@ public class AiChatServiceImpl implements AiChatService {
                 .build();
     }
 
+    private AiChatResponse buildSimpleReply(String intent, String reply) {
+        return AiChatResponse.builder()
+                .reply(reply)
+                .intent(intent)
+                .suggestedProducts(List.of())
+                .action(null)
+                .actions(List.of())
+                .build();
+    }
+
+    private boolean isGreeting(String message) {
+        if (message == null || message.isBlank()) return false;
+        String text = message.trim();
+        return text.equals("chao")
+                || text.equals("xin chao")
+                || text.equals("hello")
+                || text.equals("hi")
+                || text.equals("hey")
+                || text.equals("alo")
+                || text.equals("shop oi")
+                || text.equals("ad oi")
+                || text.equals("tu van vien oi")
+                || text.equals("em oi")
+                || text.equals("anh oi")
+                || text.equals("chi oi");
+    }
+
+    private boolean isThanks(String message) {
+        if (message == null || message.isBlank()) return false;
+        String text = message.trim();
+        return text.equals("cam on")
+                || text.equals("thanks")
+                || text.equals("thank you")
+                || text.equals("ok cam on")
+                || text.equals("cam on ban")
+                || text.equals("cam on shop");
+    }
+
+    private boolean isGoodbye(String message) {
+        if (message == null || message.isBlank()) return false;
+        String text = message.trim();
+        return text.equals("bye")
+                || text.equals("tam biet")
+                || text.equals("hen gap lai")
+                || text.equals("thoat");
+    }
+
+    private boolean isHelpRequest(String message) {
+        if (message == null || message.isBlank()) return false;
+        String text = message.trim();
+        return text.equals("help")
+                || text.equals("tro giup")
+                || text.equals("ban lam duoc gi")
+                || text.equals("ai lam duoc gi")
+                || text.equals("huong dan")
+                || text.equals("cach dung");
+    }
+
+    private String buildGreetingReply() {
+        return """
+                Xin chào 👋
+                Tôi là trợ lý mua sắm của InsightShop.
+
+                Tôi có thể hỗ trợ bạn:
+                • Tìm sản phẩm theo nhu cầu
+                • Tìm sản phẩm theo thương hiệu hoặc danh mục
+                • Gợi ý sản phẩm theo ngân sách
+                • So sánh 2 hoặc 3 sản phẩm cùng loại
+                • Hỗ trợ thêm sản phẩm vào giỏ hàng
+
+                Bạn có thể thử:
+                - Điện thoại dưới 20 triệu
+                - Laptop gaming khoảng 25 triệu
+                - Sản phẩm Samsung đáng mua
+                - So sánh iPhone 16 và Samsung Galaxy S25
+                - Thêm iPhone 15 Pro vào giỏ hàng
+                """;
+    }
+
+    private String buildHelpReply() {
+        return """
+                Tôi có thể giúp bạn mua sắm nhanh hơn bằng các câu hỏi như:
+
+                • Tìm theo ngân sách:
+                - Điện thoại dưới 20 triệu
+                - Laptop khoảng 15 triệu
+                - Tai nghe dưới 3 triệu
+
+                • Tìm theo thương hiệu hoặc danh mục:
+                - Có sản phẩm Apple nào?
+                - Gợi ý laptop ASUS
+                - Tìm điện thoại Samsung
+
+                • So sánh:
+                - So sánh iPhone 16 và Samsung Galaxy S25
+                - So sánh 3 điện thoại tốt nhất
+
+                • Giỏ hàng:
+                - Thêm iPhone 15 Pro vào giỏ hàng
+                - Thêm Samsung Galaxy S24 Ultra và iPhone 15 Pro vào giỏ hàng
+                """;
+    }
+
+    private boolean isUnderBudgetQuery(String message) {
+        return containsAny(message, "duoi", "duoi tam", "toi da", "khong qua", "nho hon", "re hon");
+    }
+
+    private boolean isAboveBudgetQuery(String message) {
+        return containsAny(message, "tren", "hon", "cao hon", "tu");
+    }
+
     private boolean isAiUnavailableReply(String reply) {
         if (reply == null || reply.isBlank()) return true;
         String normalized = normalizeText(reply);
@@ -111,7 +274,7 @@ public class AiChatServiceImpl implements AiChatService {
             return "COMPARE_PRODUCTS";
         }
 
-        if (budget > 0 || containsAny(message, "ngan sach", "tam tien", "so tien", "toi co", "dang co", "khoang", "duoi", "tren", "tu van theo tien")) {
+        if (budget > 0 || containsAny(message, "ngan sach", "tam tien", "so tien", "toi co", "dang co", "khoang", "duoi", "duoi tam", "toi da", "khong qua", "tren", "tu van theo tien")) {
             return "BUDGET_SUGGESTION";
         }
 
@@ -119,11 +282,21 @@ public class AiChatServiceImpl implements AiChatService {
             return "ADD_TO_CART";
         }
 
-        if (containsAny(message, "chi tiet", "mo ta", "thong tin", "gia bao nhieu", "co gi", "cau hinh", "thong so")) {
+        if (containsAny(message,
+                "chi tiet", "chi tiet san pham", "xem chi tiet",
+                "mo ta", "mo ta san pham", "gioi thieu", "noi dung",
+                "thong tin", "thong tin san pham", "info",
+                "gia bao nhieu", "gia may", "bao nhieu tien", "gia ban", "gia cua",
+                "co gi", "co nhung gi", "gom nhung gi",
+                "cau hinh", "cau hinh may", "config", "configuration",
+                "thong so", "thong so ky thuat", "spec", "specs", "specification",
+                "chip", "cpu", "ram", "bo nho", "storage", "ssd", "man hinh", "display",
+                "camera", "pin", "battery", "he dieu hanh", "os", "cong", "khung")) {
             return "PRODUCT_DETAIL";
         }
 
-        if (containsAny(message, "goi y", "tu van", "nen mua", "chon giup", "tim giup", "co nhung gi", "co cac", "san pham cua", "hang", "thuong hieu")) {
+        if (containsAny(message, "goi y", "tu van", "nen mua", "chon giup", "tim giup", "tim", "co nhung gi", "co cac", "san pham cua", "hang", "thuong hieu",
+                "dien thoai", "smartphone", "phone", "laptop", "lap top", "notebook", "macbook", "tai nghe", "headphone", "earbuds", "tablet", "may tinh bang", "dong ho", "watch", "monitor", "man hinh", "phu kien", "apple", "samsung", "oppo", "asus", "dell", "xiaomi")) {
             return "PRODUCT_SUGGESTION";
         }
 
@@ -206,11 +379,23 @@ public class AiChatServiceImpl implements AiChatService {
     }
 
     private List<ProductResponse> findProductsByBudget(String message, String color, long budget, List<ProductResponse> products) {
-        double min = budget * 0.8;
-        double max = budget * 1.2;
-        double upsellMax = budget * 1.35;
+        boolean underBudget = isUnderBudgetQuery(message);
+        boolean aboveBudget = isAboveBudgetQuery(message);
+        CategoryRequest requestedCategory = detectRequestedCategory(message, products);
 
-        List<ProductResponse> inRange = products.stream()
+        if (requestedCategory.mentioned() && !requestedCategory.known()) {
+            return List.of();
+        }
+
+        double min = underBudget ? 0 : budget * 0.8;
+        double max = underBudget ? budget : (aboveBudget ? budget * 1.6 : budget * 1.2);
+        double upsellMax = underBudget ? budget * 1.15 : budget * 1.35;
+
+        List<ProductResponse> categoryFilteredProducts = products.stream()
+                .filter(p -> !requestedCategory.mentioned() || sameCategory(p, requestedCategory))
+                .toList();
+
+        List<ProductResponse> inRange = categoryFilteredProducts.stream()
                 .filter(p -> getMinPrice(p) > 0)
                 .filter(p -> scoreProductForNeed(p, message, color) >= 0)
                 .filter(p -> {
@@ -223,9 +408,10 @@ public class AiChatServiceImpl implements AiChatService {
                 .limit(6)
                 .toList();
 
+        if (underBudget) return inRange;
         if (inRange.size() >= 4) return inRange;
 
-        List<ProductResponse> upsell = products.stream()
+        List<ProductResponse> upsell = categoryFilteredProducts.stream()
                 .filter(p -> getMinPrice(p) > max && getMinPrice(p) <= upsellMax)
                 .filter(p -> scoreProductForNeed(p, message, color) >= 0)
                 .sorted(Comparator
@@ -239,7 +425,7 @@ public class AiChatServiceImpl implements AiChatService {
 
         if (!result.isEmpty()) return result;
 
-        return products.stream()
+        return categoryFilteredProducts.stream()
                 .filter(p -> getMinPrice(p) > 0)
                 .sorted(Comparator.comparingDouble(p -> Math.abs(getMinPrice(p) - budget)))
                 .limit(6)
@@ -415,17 +601,17 @@ public class AiChatServiceImpl implements AiChatService {
         if (brandMentioned(product, message)) score += 140;
         if (categoryMentioned(product, message)) score += 100;
 
-        if (containsAny(message, "dien thoai", "iphone", "samsung", "android", "oppo", "xiaomi", "vivo", "realme")) {
+        if (containsAny(message, "dien thoai", "smartphone", "phone", "iphone", "samsung", "android", "oppo", "xiaomi", "vivo", "realme")) {
             if (isPhoneProduct(product)) score += 40;
             else score -= 40;
         }
 
-        if (containsAny(message, "laptop", "macbook", "dell", "hp", "lenovo", "asus")) {
+        if (containsAny(message, "laptop", "lap top", "notebook", "macbook", "dell", "hp", "lenovo", "asus")) {
             if (isLaptopProduct(product)) score += 40;
             else score -= 40;
         }
 
-        if (containsAny(message, "tai nghe", "headphone", "earbuds", "airpods")) {
+        if (containsAny(message, "tai nghe", "tai nge", "headphone", "earbuds", "airpods")) {
             if (isHeadphoneProduct(product)) score += 40;
             else score -= 40;
         }
@@ -521,19 +707,167 @@ public class AiChatServiceImpl implements AiChatService {
         return score;
     }
 
+    private boolean hasSpecificCategoryInMessage(String message) {
+        return detectRequestedCategory(message, productService.getAllProducts()).mentioned();
+    }
+
+    private boolean matchesRequestedCategory(ProductResponse product, String message) {
+        CategoryRequest requestedCategory = detectRequestedCategory(message, productService.getAllProducts());
+        return !requestedCategory.mentioned() || (requestedCategory.known() && sameCategory(product, requestedCategory));
+    }
+
+    private CategoryRequest detectRequestedCategory(String message, List<ProductResponse> products) {
+        if (message == null || message.isBlank()) return CategoryRequest.none();
+        String text = normalizeAliases(normalizeText(message));
+
+        // Nhận diện các cách user hay gõ sai/gõ tắt. Nếu DB có danh mục tương ứng thì khóa vào danh mục đó.
+        Map<String, List<String>> aliases = new LinkedHashMap<>();
+        aliases.put("dien thoai", List.of("dien thoai", "phone", "smartphone", "mobile", "iphone", "android", "oppo phone", "xiaomi phone"));
+        aliases.put("laptop", List.of("laptop", "lap top", "laptop", "notebook", "macbook", "ultrabook", "may tinh xach tay", "may tinh laptop"));
+        aliases.put("tai nghe", List.of("tai nghe", "tai nge", "headphone", "head phone", "earphone", "earbuds", "airpods", "am thanh"));
+        aliases.put("may tinh bang", List.of("may tinh bang", "tablet", "ipad", "tab"));
+        aliases.put("dong ho", List.of("dong ho", "watch", "smartwatch", "dong ho thong minh"));
+        aliases.put("man hinh", List.of("man hinh", "monitor", "display", "screen"));
+        aliases.put("phu kien", List.of("phu kien", "accessory", "accessories", "sac", "cap sac", "adapter"));
+        aliases.put("gia dung thong minh", List.of("gia dung", "gia dung thong minh", "nha thong minh", "may hut bui", "robot hut bui", "may pha ca phe"));
+
+        for (Map.Entry<String, List<String>> entry : aliases.entrySet()) {
+            boolean mentioned = entry.getValue().stream().anyMatch(alias -> containsPhrase(text, alias));
+            if (!mentioned) continue;
+
+            String canonicalKey = entry.getKey();
+            ProductResponse sample = products.stream()
+                    .filter(p -> categoryText(p).contains(canonicalKey)
+                            || entry.getValue().stream().anyMatch(alias -> categoryText(p).contains(normalizeText(alias))))
+                    .findFirst()
+                    .orElse(null);
+
+            if (sample != null && sample.getCategory() != null) {
+                return new CategoryRequest(true, true, safe(sample.getCategory().getName()), categoryKey(sample));
+            }
+
+            return new CategoryRequest(true, false, toDisplayCategoryName(canonicalKey), canonicalKey);
+        }
+
+        for (ProductResponse product : products) {
+            if (product.getCategory() == null) continue;
+            String categoryName = normalizeText(product.getCategory().getName());
+            String categorySlug = normalizeText(product.getCategory().getSlug());
+            if ((!categoryName.isBlank() && containsPhrase(text, categoryName))
+                    || (!categorySlug.isBlank() && containsPhrase(text, categorySlug))) {
+                return new CategoryRequest(true, true, safe(product.getCategory().getName()), categoryKey(product));
+            }
+        }
+
+        // Một số danh mục phổ biến nếu user hỏi nhưng hệ thống chưa bán.
+        Map<String, String> unsupported = Map.of(
+                "may giat", "Máy giặt",
+                "tu lanh", "Tủ lạnh",
+                "tivi", "Tivi",
+                "tv", "Tivi",
+                "may lanh", "Máy lạnh",
+                "dieu hoa", "Điều hòa",
+                "may anh", "Máy ảnh",
+                "camera", "Camera"
+        );
+        for (Map.Entry<String, String> entry : unsupported.entrySet()) {
+            if (containsPhrase(text, entry.getKey())) {
+                return new CategoryRequest(true, false, entry.getValue(), entry.getKey());
+            }
+        }
+
+        return CategoryRequest.none();
+    }
+
+    private boolean sameCategory(ProductResponse product, CategoryRequest requestedCategory) {
+        return product != null
+                && product.getCategory() != null
+                && requestedCategory != null
+                && requestedCategory.key() != null
+                && categoryKey(product).equals(requestedCategory.key());
+    }
+
+    private String categoryText(ProductResponse product) {
+        if (product == null || product.getCategory() == null) return "";
+        return normalizeText(safe(product.getCategory().getName()) + " " + safe(product.getCategory().getSlug()));
+    }
+
+    private boolean containsPhrase(String text, String phrase) {
+        if (text == null || phrase == null) return false;
+        String normalizedText = " " + normalizeAliases(normalizeText(text)) + " ";
+        String normalizedPhrase = " " + normalizeAliases(normalizeText(phrase)) + " ";
+        return normalizedText.contains(normalizedPhrase.trim().length() <= 3 ? normalizedPhrase : normalizedPhrase);
+    }
+
+    private String toDisplayCategoryName(String key) {
+        return switch (key) {
+            case "dien thoai" -> "Điện thoại";
+            case "laptop" -> "Laptop";
+            case "tai nghe" -> "Tai nghe";
+            case "may tinh bang" -> "Máy tính bảng";
+            case "dong ho" -> "Đồng hồ thông minh";
+            case "man hinh" -> "Màn hình";
+            case "phu kien" -> "Phụ kiện";
+            case "gia dung thong minh" -> "Gia dụng thông minh";
+            default -> key;
+        };
+    }
+
     private boolean isPhoneProduct(ProductResponse product) {
+        String category = product.getCategory() != null
+                ? normalizeText(safe(product.getCategory().getName()) + " " + safe(product.getCategory().getSlug()))
+                : "";
+        String name = normalizeText(safe(product.getName()) + " " + safe(product.getSlug()));
         String all = getFullProductText(product);
-        return containsAny(all, "dien thoai", "iphone", "samsung", "android", "xiaomi", "oppo", "vivo", "realme");
+
+        return containsAny(category, "dien thoai", "smartphone", "phone")
+                || containsAny(name, "iphone", "galaxy s", "galaxy z", "zenfone", "rog phone", "oppo", "xiaomi", "vivo", "realme", "pixel")
+                || containsAny(all, "dien thoai flagship", "dien thoai gaming", "smartphone");
     }
 
     private boolean isLaptopProduct(ProductResponse product) {
-        String all = getFullProductText(product);
-        return containsAny(all, "laptop", "macbook", "notebook", "ultrabook", "dell", "hp", "lenovo", "asus");
+        String category = product.getCategory() != null
+                ? normalizeText(safe(product.getCategory().getName()) + " " + safe(product.getCategory().getSlug()))
+                : "";
+        String name = normalizeText(safe(product.getName()) + " " + safe(product.getSlug()));
+        return containsAny(category, "laptop", "notebook", "ultrabook")
+                || containsAny(name, "macbook", "thinkpad", "inspiron", "latitude", "vivobook", "zenbook", "laptop");
     }
 
     private boolean isHeadphoneProduct(ProductResponse product) {
-        String all = getFullProductText(product);
-        return containsAny(all, "tai nghe", "headphone", "earbuds", "airpods");
+        String category = product.getCategory() != null
+                ? normalizeText(safe(product.getCategory().getName()) + " " + safe(product.getCategory().getSlug()))
+                : "";
+        String name = normalizeText(safe(product.getName()) + " " + safe(product.getSlug()));
+        return containsAny(category, "tai nghe", "headphone", "earbuds", "audio")
+                || containsAny(name, "airpods", "earbuds", "headphone", "buds", "tai nghe");
+    }
+
+    private boolean isTabletProduct(ProductResponse product) {
+        String category = product.getCategory() != null
+                ? normalizeText(safe(product.getCategory().getName()) + " " + safe(product.getCategory().getSlug()))
+                : "";
+        String name = normalizeText(safe(product.getName()) + " " + safe(product.getSlug()));
+        return containsAny(category, "may tinh bang", "tablet")
+                || containsAny(name, "ipad", "galaxy tab", "tablet");
+    }
+
+    private boolean isWatchProduct(ProductResponse product) {
+        String category = product.getCategory() != null
+                ? normalizeText(safe(product.getCategory().getName()) + " " + safe(product.getCategory().getSlug()))
+                : "";
+        String name = normalizeText(safe(product.getName()) + " " + safe(product.getSlug()));
+        return containsAny(category, "dong ho", "watch")
+                || containsAny(name, "watch", "garmin", "dong ho");
+    }
+
+    private boolean isMonitorProduct(ProductResponse product) {
+        String category = product.getCategory() != null
+                ? normalizeText(safe(product.getCategory().getName()) + " " + safe(product.getCategory().getSlug()))
+                : "";
+        String name = normalizeText(safe(product.getName()) + " " + safe(product.getSlug()));
+        return containsAny(category, "man hinh", "monitor")
+                || containsAny(name, "monitor", "man hinh");
     }
 
     private boolean variantMatchesColor(ProductResponse product, String color) {
@@ -619,6 +953,135 @@ public class AiChatServiceImpl implements AiChatService {
         return desc;
     }
 
+
+
+    private String buildProductDetailReply(List<ProductResponse> products, String normalizedMessage) {
+        if (products == null || products.isEmpty()) {
+            return "Tôi chưa tìm thấy sản phẩm bạn hỏi. Bạn có thể nhập rõ hơn tên sản phẩm, ví dụ: thông số MacBook Air M3, cấu hình iPhone 16 hoặc mô tả Samsung Galaxy S25.";
+        }
+
+        ProductResponse product = products.get(0);
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("Tôi tìm thấy sản phẩm: ").append(safe(product.getName())).append(".\n");
+
+        if (product.getBrand() != null && !safe(product.getBrand().getName()).isBlank()) {
+            sb.append("Thương hiệu: ").append(safe(product.getBrand().getName())).append(".\n");
+        }
+
+        if (product.getCategory() != null && !safe(product.getCategory().getName()).isBlank()) {
+            sb.append("Danh mục: ").append(safe(product.getCategory().getName())).append(".\n");
+        }
+
+        sb.append("Giá bán hiện tại: ").append(formatVnd(getMinPrice(product))).append(".\n");
+
+        Double compareAtPrice = getCompareAtPriceOfMinPriceVariant(product);
+        if (compareAtPrice != null && compareAtPrice > getMinPrice(product)) {
+            sb.append("Giá gốc: ").append(formatVnd(compareAtPrice)).append(".\n");
+        }
+
+        boolean wantsSpecs = containsAny(normalizedMessage,
+                "thong so", "thong so ky thuat", "cau hinh", "config", "spec", "specs",
+                "chip", "cpu", "ram", "bo nho", "storage", "ssd", "man hinh", "display",
+                "camera", "pin", "battery", "he dieu hanh", "os", "cong", "khung");
+
+        boolean wantsDescription = containsAny(normalizedMessage,
+                "mo ta", "gioi thieu", "thong tin", "chi tiet", "co gi", "noi dung");
+
+        if (wantsSpecs || !safe(product.getSpecifications()).isBlank()) {
+            String specText = buildReadableSpecifications(product);
+            if (!specText.isBlank()) {
+                sb.append("\nThông số kỹ thuật:\n").append(specText);
+            }
+        }
+
+        if (wantsDescription || sb.length() < 120) {
+            String shortDescription = safe(product.getShortDescription());
+            String description = safe(product.getDescription());
+
+            if (!shortDescription.isBlank()) {
+                sb.append("\nMô tả ngắn: ").append(shortDescription).append("\n");
+            }
+
+            if (!description.isBlank() && !description.equalsIgnoreCase(shortDescription)) {
+                sb.append("Mô tả chi tiết: ").append(limitForChat(description, 420)).append("\n");
+            }
+        }
+
+        if (product.getVariants() != null && !product.getVariants().isEmpty()) {
+            sb.append("\nBiến thể hiện có:\n");
+            product.getVariants().stream()
+                    .limit(5)
+                    .forEach(variant -> {
+                        String attrs = safe(variant.getAttributes());
+                        sb.append("- ");
+                        if (!attrs.isBlank() && !"{}".equals(attrs)) {
+                            sb.append(cleanVariantAttributes(attrs)).append(" - ");
+                        }
+                        sb.append("giá ").append(variant.getPrice() == null ? "chưa có giá" : formatVnd(variant.getPrice()));
+                        if (variant.getStock() != null) {
+                            sb.append(", còn ").append(variant.getStock());
+                        }
+                        sb.append("\n");
+                    });
+        }
+
+        sb.append("\nBạn có thể bấm vào sản phẩm bên dưới để xem hình ảnh, biến thể và đặt mua.");
+        return sb.toString().trim();
+    }
+
+    private String buildReadableSpecifications(ProductResponse product) {
+        Map<String, String> specs = parseSpecMap(safe(product.getSpecifications()));
+        if (specs.isEmpty()) {
+            return "";
+        }
+
+        List<String> priorityKeys = List.of(
+                "chip", "cpu", "ram", "bo nho", "storage", "ssd",
+                "man hinh", "display", "camera", "pin", "battery",
+                "he dieu hanh", "os", "khung", "cong"
+        );
+
+        StringBuilder sb = new StringBuilder();
+        List<String> usedKeys = new ArrayList<>();
+
+        for (String priorityKey : priorityKeys) {
+            for (Map.Entry<String, String> entry : specs.entrySet()) {
+                String normalizedKey = normalizeText(entry.getKey());
+                if (!usedKeys.contains(entry.getKey())
+                        && (normalizedKey.equals(priorityKey)
+                        || normalizedKey.contains(priorityKey)
+                        || priorityKey.contains(normalizedKey))) {
+                    sb.append("- ").append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
+                    usedKeys.add(entry.getKey());
+                }
+            }
+        }
+
+        specs.entrySet().stream()
+                .filter(entry -> !usedKeys.contains(entry.getKey()))
+                .limit(8)
+                .forEach(entry -> sb.append("- ").append(entry.getKey()).append(": ").append(entry.getValue()).append("\n"));
+
+        return sb.toString();
+    }
+
+    private String cleanVariantAttributes(String value) {
+        Map<String, String> attrs = parseSpecMap(value);
+        if (attrs.isEmpty()) {
+            return value.replace("{", "").replace("}", "").replace("\"", "").trim();
+        }
+        return attrs.entrySet().stream()
+                .map(entry -> entry.getKey() + ": " + entry.getValue())
+                .collect(Collectors.joining(", "));
+    }
+
+    private String limitForChat(String value, int maxLength) {
+        if (value == null) return "";
+        String cleaned = value.replaceAll("\\s+", " ").trim();
+        if (cleaned.length() <= maxLength) return cleaned;
+        return cleaned.substring(0, maxLength).trim() + "...";
+    }
 
     private String buildCompareReply(List<ProductResponse> products, int compareLimit) {
         int limit = normalizeCompareLimit(compareLimit);
@@ -871,8 +1334,44 @@ public class AiChatServiceImpl implements AiChatService {
                 .toList();
     }
 
+    private String buildNoProductByCategoryReply(CategoryRequest requestedCategory, String normalizedMessage, long budget, List<ProductResponse> allProducts) {
+        String label = requestedCategory.label() == null ? "danh mục này" : requestedCategory.label();
+
+        if (!requestedCategory.known()) {
+            String availableCategories = allProducts.stream()
+                    .filter(p -> p.getCategory() != null)
+                    .map(p -> safe(p.getCategory().getName()))
+                    .filter(name -> !name.isBlank())
+                    .distinct()
+                    .limit(10)
+                    .collect(Collectors.joining(", "));
+
+            return "Hiện tại hệ thống chưa có danh mục \"" + label + "\".\n"
+                    + "Bạn có thể chọn các danh mục đang có như: "
+                    + (availableCategories.isBlank() ? "điện thoại, laptop, tai nghe, màn hình." : availableCategories + ".");
+        }
+
+        if (budget > 0) {
+            if (isUnderBudgetQuery(normalizedMessage)) {
+                return "Hiện tại tôi chưa tìm thấy sản phẩm thuộc danh mục " + label
+                        + " có giá dưới " + String.format("%,d đ", budget) + ".\n"
+                        + "Bạn có thể tăng khoảng giá hoặc thử danh mục/thương hiệu khác nhé.";
+            }
+
+            return "Hiện tại tôi chưa tìm thấy sản phẩm thuộc danh mục " + label
+                    + " phù hợp với ngân sách khoảng " + String.format("%,d đ", budget) + ".\n"
+                    + "Bạn có thể mô tả thêm nhu cầu hoặc thay đổi khoảng giá để tôi gợi ý chính xác hơn.";
+        }
+
+        return "Hiện tại tôi chưa tìm thấy sản phẩm thuộc danh mục " + label
+                + " phù hợp với yêu cầu này. Bạn có thể nói rõ thêm thương hiệu, mức giá hoặc nhu cầu sử dụng nhé.";
+    }
+
     private String buildFallbackReply(String intent, List<ProductResponse> products, String color, int quantity, String normalizedMessage, long budget) {
         if (products == null || products.isEmpty()) {
+            if ("GENERAL".equals(intent)) {
+                return "Tôi có thể hỗ trợ tìm sản phẩm, tư vấn theo ngân sách, so sánh sản phẩm hoặc thêm sản phẩm vào giỏ hàng. Bạn hãy thử nhập: điện thoại dưới 20 triệu, laptop ASUS, hoặc so sánh iPhone 16 và Samsung Galaxy S25.";
+            }
             return "Tôi chưa tìm thấy sản phẩm phù hợp trong hệ thống. Bạn có thể mô tả rõ hơn nhu cầu, thương hiệu, danh mục hoặc khoảng giá mong muốn.";
         }
 
@@ -892,9 +1391,21 @@ public class AiChatServiceImpl implements AiChatService {
         }
 
         if ("BUDGET_SUGGESTION".equals(intent) && budget > 0) {
+            boolean underBudget = isUnderBudgetQuery(normalizedMessage);
             boolean hasUpsell = products.stream().anyMatch(p -> getMinPrice(p) > budget);
             StringBuilder sb = new StringBuilder();
-            sb.append("Với ngân sách khoảng ").append(String.format("%,d đ", budget)).append(", tôi gợi ý một số sản phẩm phù hợp bên dưới.");
+
+            CategoryRequest requestedCategory = detectRequestedCategory(normalizedMessage, products);
+            String categoryPart = requestedCategory.mentioned() && requestedCategory.known()
+                    ? " thuộc danh mục " + requestedCategory.label()
+                    : "";
+
+            if (underBudget) {
+                sb.append("Với yêu cầu dưới ").append(String.format("%,d đ", budget)).append(categoryPart).append(", tôi đã ưu tiên các sản phẩm nằm trong tầm giá này.");
+            } else {
+                sb.append("Với ngân sách khoảng ").append(String.format("%,d đ", budget)).append(categoryPart).append(", tôi gợi ý một số sản phẩm phù hợp bên dưới.");
+            }
+
             if (hasUpsell) {
                 sb.append(" Có vài mẫu cao hơn ngân sách một chút, nếu bạn có thể cố gắng thêm thì rất đáng cân nhắc vì cấu hình và trải nghiệm sẽ tốt hơn.");
             }
@@ -1036,9 +1547,14 @@ public class AiChatServiceImpl implements AiChatService {
     private long extractBudget(String message) {
         if (message == null || message.isBlank()) return 0L;
 
-        Matcher millionMatcher = Pattern.compile("\\b(\\d{1,3})(?:\\s*)(trieu|tr|m)\\b").matcher(message);
+        Matcher millionMatcher = Pattern.compile("\\b(\\d{1,3})(?:[\\.,](\\d{1,2}))?(?:\\s*)(trieu|tr|m|cu)\\b").matcher(message);
         if (millionMatcher.find()) {
-            return Long.parseLong(millionMatcher.group(1)) * 1_000_000L;
+            long whole = Long.parseLong(millionMatcher.group(1)) * 1_000_000L;
+            String decimal = millionMatcher.group(2);
+            if (decimal != null && !decimal.isBlank()) {
+                whole += Long.parseLong(decimal) * (decimal.length() == 1 ? 100_000L : 10_000L);
+            }
+            return whole;
         }
 
         Matcher thousandMatcher = Pattern.compile("\\b(\\d{3,6})(?:\\s*)(ngan|k)\\b").matcher(message);
