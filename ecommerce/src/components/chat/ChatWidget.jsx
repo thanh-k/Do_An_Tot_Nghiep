@@ -201,14 +201,19 @@ function renderFormattedAssistantText(text = "") {
 }
 
 function buildContextFromData(data, previousContext) {
+  const primaryAction =
+    Array.isArray(data?.actions) && data.actions.length > 0
+      ? data.actions[0]
+      : data?.action || null;
+
   const primaryProduct =
-    data?.suggestedProducts?.find((item) => item?.id === data?.action?.productId) ||
+    data?.suggestedProducts?.find((item) => item?.id === primaryAction?.productId) ||
     data?.suggestedProducts?.[0] ||
     null;
 
   return {
     lastProductId:
-      data?.action?.productId ||
+      primaryAction?.productId ||
       primaryProduct?.id ||
       previousContext?.lastProductId ||
       null,
@@ -216,8 +221,8 @@ function buildContextFromData(data, previousContext) {
       primaryProduct?.name ||
       previousContext?.lastProductName ||
       null,
-    lastColor: data?.action?.color || previousContext?.lastColor || null,
-    lastQuantity: Number(data?.action?.quantity || previousContext?.lastQuantity || 1),
+    lastColor: primaryAction?.color || previousContext?.lastColor || null,
+    lastQuantity: Number(primaryAction?.quantity || previousContext?.lastQuantity || 1),
     lastIntent: data?.intent || previousContext?.lastIntent || null,
   };
 }
@@ -313,14 +318,24 @@ function getInlineProducts(message) {
     ? 4
     : 2;
 
-  if (message?.action?.productId) {
-    const primary = products.find(
-      (item) => Number(item.id) === Number(message.action.productId),
-    );
+  const actionProductIds = Array.isArray(message?.actions)
+    ? message.actions
+        .map((action) => Number(action?.productId))
+        .filter(Boolean)
+    : message?.action?.productId
+      ? [Number(message.action.productId)]
+      : [];
+
+  if (actionProductIds.length) {
+    const primaryProducts = actionProductIds
+      .map((id) => products.find((item) => Number(item.id) === id))
+      .filter(Boolean);
+
     const rest = products.filter(
-      (item) => Number(item.id) !== Number(message.action.productId),
+      (item) => !actionProductIds.includes(Number(item.id)),
     );
-    return primary ? [primary, ...rest.slice(0, limit - 1)] : products.slice(0, limit);
+
+    return [...primaryProducts, ...rest].slice(0, limit);
   }
 
   return products.slice(0, limit);
@@ -398,58 +413,98 @@ function ChatWidget() {
     setMessages((prev) => [...prev, ...nextMessages]);
   };
 
+  const normalizeActions = (actionOrActions) => {
+    if (!actionOrActions) return [];
+    return Array.isArray(actionOrActions)
+      ? actionOrActions.filter(Boolean)
+      : [actionOrActions];
+  };
+
   const executeAddToCart = async (
-    action,
+    actionOrActions,
     userText = "Xác nhận thêm vào giỏ",
   ) => {
+    const actions = normalizeActions(actionOrActions);
+
+    if (!actions.length) return;
+
     const userMessage = {
       id: Date.now(),
       role: "user",
       text: userText,
     };
 
-    try {
-      const product = await productService.getProductById(action.productId);
-      const variant = resolveVariant(product, action);
+    const addedProducts = [];
+    const failedProducts = [];
 
-      if (!product || !variant) {
-        throw new Error("Không tìm thấy biến thể phù hợp để thêm vào giỏ hàng.");
+    try {
+      for (const action of actions) {
+        try {
+          const product = await productService.getProductById(action.productId);
+          const variant = resolveVariant(product, action);
+
+          if (!product || !variant) {
+            throw new Error("Không tìm thấy biến thể phù hợp để thêm vào giỏ hàng.");
+          }
+
+          const quantity = Math.max(1, Number(action.quantity || 1));
+          addToCart(product, variant, quantity);
+
+          const attrs = parseVariantAttributes(variant);
+          const colorLabel = attrs.color || variant.color || action.color || "";
+
+          addedProducts.push({
+            product,
+            variant,
+            quantity,
+            colorLabel,
+          });
+        } catch (itemError) {
+          console.error("Lỗi thêm từng sản phẩm từ AI vào giỏ hàng:", itemError);
+          failedProducts.push(action);
+        }
       }
 
-      const quantity = Math.max(1, Number(action.quantity || 1));
-      addToCart(product, variant, quantity);
+      const addedText = addedProducts
+        .map(({ product, quantity, colorLabel }) =>
+          `${quantity} ${product.name}${colorLabel ? ` màu ${colorLabel}` : ""}`,
+        )
+        .join(", ");
 
-      const attrs = parseVariantAttributes(variant);
-      const colorLabel = attrs.color || variant.color || action.color || "";
+      const failedText = failedProducts.length
+        ? `\nCó ${failedProducts.length} sản phẩm chưa thêm được, bạn vui lòng thử lại hoặc thêm thủ công.`
+        : "";
 
       const aiMessage = {
         id: Date.now() + 1,
         role: "assistant",
-        text: `Đã thêm ${quantity} ${product.name}${
-          colorLabel ? ` màu ${colorLabel}` : ""
-        } vào giỏ hàng thành công.`,
-        suggestedProducts: [
-          {
-            id: product.id,
-            name: product.name,
-            slug: product.slug,
-            thumbnail: product.thumbnail,
-            price: variant.price || 0,
-            compareAtPrice: variant.compareAtPrice || null,
-          },
-        ],
+        text: addedProducts.length
+          ? `Đã thêm ${addedText} vào giỏ hàng thành công.${failedText}`
+          : "Tôi chưa thể thêm sản phẩm vào giỏ hàng lúc này. Bạn vui lòng thử lại sau.",
+        suggestedProducts: addedProducts.map(({ product, variant }) => ({
+          id: product.id,
+          name: product.name,
+          slug: product.slug,
+          thumbnail: product.thumbnail,
+          price: variant.price || 0,
+          compareAtPrice: variant.compareAtPrice || null,
+        })),
       };
 
       appendMessages([userMessage, aiMessage]);
       setPendingAction(null);
-      setConversationContext((prev) => ({
-        ...prev,
-        lastProductId: product.id,
-        lastProductName: product.name,
-        lastColor: colorLabel || prev.lastColor,
-        lastQuantity: quantity,
-        lastIntent: "ADD_TO_CART",
-      }));
+
+      if (addedProducts.length) {
+        const lastAdded = addedProducts[addedProducts.length - 1];
+        setConversationContext((prev) => ({
+          ...prev,
+          lastProductId: lastAdded.product.id,
+          lastProductName: lastAdded.product.name,
+          lastColor: lastAdded.colorLabel || prev.lastColor,
+          lastQuantity: lastAdded.quantity,
+          lastIntent: "ADD_TO_CART",
+        }));
+      }
     } catch (error) {
       console.error("Lỗi thêm sản phẩm từ AI vào giỏ hàng:", error);
 
@@ -495,15 +550,26 @@ function ChatWidget() {
     try {
       const data = await aiService.chat(enrichedMessage, conversationContext);
 
-      if (
-        ["CONFIRM_ADD_TO_CART", "ADD_TO_CART", "ADD_TO_CART_READY"].includes(
-          data.action?.type,
-        )
-      ) {
-        setPendingAction({
-          ...data.action,
-          quantity: Number(data.action?.quantity || 1),
-        });
+      const addToCartActions = Array.isArray(data.actions)
+        ? data.actions.filter((action) =>
+            ["CONFIRM_ADD_TO_CART", "ADD_TO_CART", "ADD_TO_CART_READY"].includes(
+              action?.type,
+            ),
+          )
+        : data.action &&
+            ["CONFIRM_ADD_TO_CART", "ADD_TO_CART", "ADD_TO_CART_READY"].includes(
+              data.action?.type,
+            )
+          ? [data.action]
+          : [];
+
+      if (addToCartActions.length) {
+        setPendingAction(
+          addToCartActions.map((action) => ({
+            ...action,
+            quantity: Number(action?.quantity || 1),
+          })),
+        );
       } else {
         setPendingAction(null);
       }
@@ -516,6 +582,7 @@ function ChatWidget() {
         text: data.reply,
         suggestedProducts: data.suggestedProducts || [],
         action: data.action || null,
+        actions: data.actions || [],
         intent: data.intent || null,
       };
 
@@ -546,14 +613,19 @@ function ChatWidget() {
     }
   };
 
-  const renderAction = (action) => {
+  const renderAction = (actionOrActions) => {
+    const actions = normalizeActions(actionOrActions);
+    const addToCartActions = actions.filter((action) =>
+      ["CONFIRM_ADD_TO_CART", "ADD_TO_CART", "ADD_TO_CART_READY"].includes(
+        action?.type,
+      ),
+    );
+    const viewProductAction = actions.find((action) => action?.type === "VIEW_PRODUCT");
+    const action = addToCartActions[0] || viewProductAction || null;
+
     if (!action?.type) return null;
 
-    if (
-      ["CONFIRM_ADD_TO_CART", "ADD_TO_CART", "ADD_TO_CART_READY"].includes(
-        action.type,
-      )
-    ) {
+    if (addToCartActions.length) {
       return (
         <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
           <div className="flex items-center gap-2 font-semibold">
@@ -561,16 +633,18 @@ function ChatWidget() {
             Xác nhận thêm vào giỏ hàng
           </div>
           <p className="mt-1 text-xs leading-5">
-            {action.note ||
-              "Bạn có thể bấm nút dưới đây để thêm sản phẩm vào giỏ hàng."}
+            {addToCartActions.length > 1
+              ? `AI đã tìm được ${addToCartActions.length} sản phẩm. Bạn có thể bấm nút dưới đây để thêm tất cả vào giỏ hàng.`
+              : action.note ||
+                "Bạn có thể bấm nút dưới đây để thêm sản phẩm vào giỏ hàng."}
           </p>
           <button
             type="button"
-            onClick={() => handleQuickConfirm(action)}
+            onClick={() => handleQuickConfirm(addToCartActions)}
             className="mt-3 inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
           >
             <Check size={14} />
-            Thêm vào giỏ
+            {addToCartActions.length > 1 ? "Thêm tất cả vào giỏ" : "Thêm vào giỏ"}
           </button>
         </div>
       );
@@ -649,7 +723,8 @@ function ChatWidget() {
                     ) : null}
                   </div>
 
-                  {message.role === "assistant" && renderAction(message.action)}
+                  {message.role === "assistant" &&
+                    renderAction(message.actions?.length ? message.actions : message.action)}
                 </div>
               </div>
             ))}

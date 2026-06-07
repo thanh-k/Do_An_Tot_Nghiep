@@ -26,13 +26,20 @@ export const aiService = {
       }),
     });
 
+    const actions = Array.isArray(payload.actions)
+      ? payload.actions.map(normalizeAction).filter(Boolean)
+      : payload.action
+        ? [normalizeAction(payload.action)].filter(Boolean)
+        : [];
+
     return {
       reply: payload.reply || "Xin lỗi, tôi chưa thể trả lời lúc này.",
       intent: payload.intent || null,
       suggestedProducts: Array.isArray(payload.suggestedProducts)
         ? payload.suggestedProducts
         : [],
-      action: normalizeAction(payload.action),
+      action: actions[0] || normalizeAction(payload.action),
+      actions,
     };
   },
 };

@@ -1,25 +1,121 @@
-import axios from "axios";
-const API_URL = `${import.meta.env.VITE_API_BASE_URL}/products`;
+import apiClient from "@/services/apiClient";
+
+const API_URL = "/products";
+
+function unwrapList(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.result)) return data.result;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.content)) return data.content;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.result?.content)) return data.result.content;
+  if (Array.isArray(data?.data?.content)) return data.data.content;
+  return [];
+}
+
+function unwrapOne(data) {
+  if (!data) return null;
+  if (Array.isArray(data)) return data[0] || null;
+  if (data?.result) return unwrapOne(data.result);
+  if (data?.data) return unwrapOne(data.data);
+  if (data?.id || data?.slug || data?.name) return data;
+  return null;
+}
+
+function removeAccents(value = "") {
+  return String(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .trim();
+}
+
+function safeParseJson(value, fallback = {}) {
+  if (!value) return fallback;
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
+function normalizeVariant(variant = {}) {
+  return {
+    ...variant,
+    attributes: safeParseJson(variant.attributes, {}),
+  };
+}
+
+function normalizeProduct(product) {
+  if (!product || typeof product !== "object") return null;
+
+  const variants = Array.isArray(product.variants)
+    ? product.variants.map(normalizeVariant)
+    : [];
+
+  const specifications =
+    product.specifications && typeof product.specifications === "string"
+      ? safeParseJson(product.specifications, {})
+      : product.specifications || {};
+
+  return {
+    ...product,
+    specifications,
+    variants,
+  };
+}
+
+function normalizeProducts(products = []) {
+  return unwrapList(products)
+    .map(normalizeProduct)
+    .filter(Boolean);
+}
+
+function getProductPrice(product) {
+  return Number(product?.variants?.[0]?.price || product?.price || 0);
+}
+
+function getCompareAtPrice(product) {
+  return Number(
+    product?.variants?.[0]?.compareAtPrice ||
+      product?.compareAtPrice ||
+      product?.compare_at_price ||
+      0,
+  );
+}
+
+function matchesSlug(product, slug) {
+  const target = removeAccents(slug);
+  const productSlug = removeAccents(product?.slug || "");
+  const productNameSlug = removeAccents(product?.name || "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return productSlug === target || productNameSlug === target;
+}
+
+async function fetchAllProducts() {
+  const response = await apiClient.request(API_URL);
+  return normalizeProducts(response);
+}
 
 export const userProductService = {
-  // Hàm lấy danh sách sản phẩm có xử lý Lọc, Sắp xếp và Phân trang
   async getProducts(filters = {}) {
     try {
-      // BƯỚC 1: Gọi API lấy toàn bộ sản phẩm từ Backend
-      // (Vì Backend chưa có API Query Params chuẩn, ta sẽ lấy hết và xử lý tại Frontend cho mượt)
-      const response = await axios.get(API_URL);
-      let products = response.data.result || [];
+      let products = await fetchAllProducts();
 
-      // BƯỚC 2: Xử lý LỌC (Filter) Danh mục, Thương hiệu & Khoảng giá
       if (filters.category) {
         products = products.filter(
-          (p) => String(p.category?.id) === String(filters.category),
+          (p) => String(p.category?.id || p.categoryId) === String(filters.category),
         );
       }
 
       if (filters.brands && filters.brands.length > 0) {
         products = products.filter((p) =>
-          filters.brands.includes(p.brand?.name),
+          filters.brands.includes(p.brand?.name || p.brandName),
         );
       }
 
@@ -30,94 +126,80 @@ export const userProductService = {
         filters.maxPrice !== ""
       ) {
         products = products.filter((p) => {
-          const price = p.variants?.[0]?.price || 0;
+          const price = getProductPrice(p);
+          return price >= Number(filters.minPrice) && price <= Number(filters.maxPrice);
+        });
+      }
+
+      const checkVariantAttr = (product, filterValues, attrKey) => {
+        if (!filterValues || filterValues.length === 0) return true;
+        return product.variants?.some((variant) => {
+          const attrs = variant.attributes || {};
+          return filterValues.includes(attrs[attrKey] || variant[attrKey]);
+        });
+      };
+
+      if (filters.colors?.length > 0) {
+        products = products.filter((p) => checkVariantAttr(p, filters.colors, "color"));
+      }
+
+      if (filters.storages?.length > 0) {
+        products = products.filter((p) => checkVariantAttr(p, filters.storages, "storage"));
+      }
+
+      if (filters.rams?.length > 0) {
+        products = products.filter((p) => checkVariantAttr(p, filters.rams, "ram"));
+      }
+
+      if (filters.ssds?.length > 0) {
+        products = products.filter((p) => checkVariantAttr(p, filters.ssds, "ssd"));
+      }
+
+      if (filters.inStock) {
+        products = products.filter((p) =>
+          p.variants?.some((variant) => Number(variant.stock || 0) > 0),
+        );
+      }
+
+      const searchQuery = filters.search || filters.q || filters.keyword;
+      if (searchQuery) {
+        const keyword = removeAccents(searchQuery);
+        products = products.filter((p) => {
+          const name = removeAccents(p.name || "");
+          const slug = removeAccents(p.slug || "");
+          const brand = removeAccents(p.brand?.name || p.brandName || "");
+          const category = removeAccents(p.category?.name || p.categoryName || "");
+
           return (
-            price >= Number(filters.minPrice) &&
-            price <= Number(filters.maxPrice)
+            name.includes(keyword) ||
+            slug.includes(keyword) ||
+            brand.includes(keyword) ||
+            category.includes(keyword)
           );
         });
       }
 
-      // --- LỌC NÂNG CAO (Màu sắc, Dung lượng, RAM, SSD, InStock) ---
-      const checkVariantAttr = (product, filterValues, attrKey) => {
-        if (!filterValues || filterValues.length === 0) return true;
-        return product.variants?.some((v) => {
-          const attrs =
-            typeof v.attributes === "string"
-              ? JSON.parse(v.attributes || "{}")
-              : v.attributes || {};
-          return filterValues.includes(attrs[attrKey] || v[attrKey]);
-        });
-      };
-
-      if (filters.colors?.length > 0)
-        products = products.filter((p) =>
-          checkVariantAttr(p, filters.colors, "color"),
-        );
-      if (filters.storages?.length > 0)
-        products = products.filter((p) =>
-          checkVariantAttr(p, filters.storages, "storage"),
-        );
-      if (filters.rams?.length > 0)
-        products = products.filter((p) =>
-          checkVariantAttr(p, filters.rams, "ram"),
-        );
-      if (filters.ssds?.length > 0)
-        products = products.filter((p) =>
-          checkVariantAttr(p, filters.ssds, "ssd"),
-        );
-
-      // Lọc theo trạng thái còn hàng (ít nhất 1 biến thể có stock > 0)
-      if (filters.inStock) {
-        products = products.filter((p) =>
-          p.variants?.some((v) => Number(v.stock) > 0),
-        );
-      }
-
-      // BƯỚC 3: Xử lý TÌM KIẾM (Search)
-      const searchQuery = filters.search || filters.q || filters.keyword;
-      if (searchQuery) {
-        const keyword = searchQuery.toLowerCase().trim();
-        const removeAccents = (str) => str ? str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D') : '';
-        const cleanKeyword = removeAccents(keyword);
-
-        products = products.filter(
-          (p) => {
-            const name = p.name ? p.name.toLowerCase() : "";
-            return name.includes(keyword) || removeAccents(name).includes(cleanKeyword) || (p.slug && p.slug.includes(cleanKeyword));
-          }
-        );
-      }
-
-      // BƯỚC 4: Xử lý SẮP XẾP (Sort)
       if (filters.sortBy) {
         switch (filters.sortBy) {
           case "price-asc":
-            products.sort((a, b) => {
-              const priceA = a.variants?.[0]?.price || 0;
-              const priceB = b.variants?.[0]?.price || 0;
-              return priceA - priceB;
-            });
+            products.sort((a, b) => getProductPrice(a) - getProductPrice(b));
             break;
           case "price-desc":
-            products.sort((a, b) => {
-              const priceA = a.variants?.[0]?.price || 0;
-              const priceB = b.variants?.[0]?.price || 0;
-              return priceB - priceA;
-            });
+            products.sort((a, b) => getProductPrice(b) - getProductPrice(a));
             break;
           case "newest":
-            // Sản phẩm có ID lớn hơn là sản phẩm mới tạo
-            products.sort((a, b) => b.id - a.id);
+            products.sort((a, b) => {
+              const dateA = new Date(a.createdAt || a.updatedAt || 0).getTime();
+              const dateB = new Date(b.createdAt || b.updatedAt || 0).getTime();
+              if (dateA !== dateB) return dateB - dateA;
+              return Number(b.id || 0) - Number(a.id || 0);
+            });
             break;
           case "sale":
-            // Sắp xếp theo mức giảm giá nhiều nhất
             products.sort((a, b) => {
-              const getDiscount = (p) =>
-                p.variants?.[0]?.compareAtPrice > p.variants?.[0]?.price
-                  ? p.variants[0].compareAtPrice - p.variants[0].price
-                  : 0;
-              return getDiscount(b) - getDiscount(a);
+              const discountA = Math.max(getCompareAtPrice(a) - getProductPrice(a), 0);
+              const discountB = Math.max(getCompareAtPrice(b) - getProductPrice(b), 0);
+              return discountB - discountA;
             });
             break;
           default:
@@ -125,48 +207,39 @@ export const userProductService = {
         }
       }
 
-      // BƯỚC 5: Xử lý PHÂN TRANG (Pagination)
       const page = Number(filters.page) || 1;
-      const pageSize = Number(filters.pageSize) || 9; // 9 sản phẩm 1 trang
+      const pageSize = Number(filters.pageSize) || 12;
       const total = products.length;
-      const totalPages = Math.ceil(total / pageSize);
-
-      // Cắt mảng lấy đúng số lượng sản phẩm của trang hiện tại
+      const totalPages = Math.ceil(total / pageSize) || 1;
       const startIndex = (page - 1) * pageSize;
       const paginatedItems = products.slice(startIndex, startIndex + pageSize);
 
-      // Trả về dữ liệu chuẩn cấu trúc mà Component đang chờ
       return {
         items: paginatedItems,
-        total: total,
-        page: page,
-        totalPages: totalPages === 0 ? 1 : totalPages,
+        total,
+        page,
+        totalPages,
       };
     } catch (error) {
       console.error("Lỗi khi lấy danh sách sản phẩm User:", error);
-      throw error;
+      return { items: [], total: 0, page: 1, totalPages: 1 };
     }
   },
 
-  // 1. Hàm dành riêng cho Dropdown gợi ý tìm kiếm trên thanh SearchBar
   async getSearchSuggestions(keyword, limit = 5) {
     try {
       if (!keyword || !keyword.trim()) return [];
 
-      const response = await axios.get(API_URL);
-      const allProducts = response.data.result || [];
+      const allProducts = await fetchAllProducts();
+      const searchKw = removeAccents(keyword);
 
-      const searchKw = keyword.toLowerCase().trim();
-      const removeAccents = (str) => str ? str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D') : '';
-      const cleanSearchKw = removeAccents(searchKw);
-
-      const matchedProducts = allProducts.filter(p => {
-        const name = p.name ? p.name.toLowerCase() : "";
-        const cleanName = removeAccents(name);
-        return name.includes(searchKw) || cleanName.includes(cleanSearchKw) || (p.slug && p.slug.includes(cleanSearchKw));
+      const matchedProducts = allProducts.filter((p) => {
+        const name = removeAccents(p.name || "");
+        const slug = removeAccents(p.slug || "");
+        return name.includes(searchKw) || slug.includes(searchKw);
       });
 
-      matchedProducts.sort((a, b) => b.id - a.id);
+      matchedProducts.sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
       return matchedProducts.slice(0, limit);
     } catch (error) {
       console.error("Lỗi khi lấy gợi ý tìm kiếm:", error);
@@ -174,104 +247,86 @@ export const userProductService = {
     }
   },
 
-  // 2. Hàm MỚI ĐỘC LẬP dành riêng cho trang Kết quả tìm kiếm (SearchResultPage)
   async searchProducts(keyword, page = 1, pageSize = 12) {
     try {
-      const response = await axios.get(API_URL);
-      let allProducts = response.data.result || [];
+      let allProducts = await fetchAllProducts();
 
       if (keyword && keyword.trim()) {
-        const searchKw = keyword.toLowerCase().trim();
-        const removeAccents = (str) => str ? str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D') : '';
-        const cleanSearchKw = removeAccents(searchKw);
+        const searchKw = removeAccents(keyword);
 
-        allProducts = allProducts.filter(p => {
-          const name = p.name ? p.name.toLowerCase() : "";
-          const cleanName = removeAccents(name);
-          return name.includes(searchKw) || cleanName.includes(cleanSearchKw) || (p.slug && p.slug.includes(cleanSearchKw));
+        allProducts = allProducts.filter((p) => {
+          const name = removeAccents(p.name || "");
+          const slug = removeAccents(p.slug || "");
+          const brand = removeAccents(p.brand?.name || p.brandName || "");
+          const category = removeAccents(p.category?.name || p.categoryName || "");
+
+          return (
+            name.includes(searchKw) ||
+            slug.includes(searchKw) ||
+            brand.includes(searchKw) ||
+            category.includes(searchKw)
+          );
         });
       }
 
-      allProducts.sort((a, b) => b.id - a.id);
+      allProducts.sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
 
-      let items = allProducts;
-
-      // Ép kiểu JSON cho các chuỗi cấu hình để UI render không bị lỗi
-      items = items.map((product) => {
-        if (product.specifications && typeof product.specifications === "string") {
-          try { product.specifications = JSON.parse(product.specifications); }
-          catch (e) { product.specifications = {}; }
-        }
-        if (product.variants && Array.isArray(product.variants)) {
-          product.variants = product.variants.map((v) => {
-            if (v.attributes && typeof v.attributes === "string") {
-              try { v.attributes = JSON.parse(v.attributes); } catch (e) { }
-            }
-            return v;
-          });
-        }
-        return product;
-      });
-
-      const total = items.length;
-      const totalPages = Math.ceil(total / pageSize);
+      const total = allProducts.length;
+      const totalPages = Math.ceil(total / pageSize) || 1;
       const startIndex = (page - 1) * pageSize;
-      const paginatedItems = items.slice(startIndex, startIndex + pageSize);
+      const paginatedItems = allProducts.slice(startIndex, startIndex + pageSize);
 
-      return { items: paginatedItems, total, page, totalPages: totalPages === 0 ? 1 : totalPages };
+      return {
+        items: paginatedItems,
+        total,
+        page,
+        totalPages,
+      };
     } catch (error) {
       console.error("Lỗi khi tìm kiếm sản phẩm ở trang Search:", error);
       return { items: [], total: 0, page: 1, totalPages: 1 };
     }
   },
 
-  // Hàm lấy chi tiết một sản phẩm theo Slug
   async getProductBySlug(slug) {
     try {
-      const response = await axios.get(`${API_URL}/slug/${slug}`);
-      let product = response.data.result;
+      let product = null;
 
-      // Ép kiểu chuỗi JSON specifications thành Object để UI render được
-      if (
-        product.specifications &&
-        typeof product.specifications === "string"
-      ) {
-        try {
-          product.specifications = JSON.parse(product.specifications);
-        } catch (e) {
-          product.specifications = {};
-        }
+      try {
+        const response = await apiClient.request(`${API_URL}/slug/${slug}`);
+        product = normalizeProduct(unwrapOne(response));
+      } catch {
+        product = null;
       }
 
-      // Ép kiểu chuỗi JSON attributes của từng biến thể thành Object
-      if (product.variants && Array.isArray(product.variants)) {
-        product.variants = product.variants.map((v) => {
-          if (v.attributes && typeof v.attributes === "string") {
-            try {
-              v.attributes = JSON.parse(v.attributes);
-            } catch (e) { }
-          }
-          return v;
-        });
+      if (!product) {
+        const allProducts = await fetchAllProducts();
+        product =
+          allProducts.find((item) => matchesSlug(item, slug)) ||
+          allProducts.find((item) => String(item.id) === String(slug)) ||
+          null;
       }
 
-      // Tự động lấy sản phẩm liên quan dựa trên cùng Danh mục
+      if (!product) {
+        throw new Error(`Không tìm thấy sản phẩm với slug: ${slug}`);
+      }
+
       try {
         const categoryId = product.category?.id || product.categoryId;
+
         if (categoryId) {
-          // Gọi lại hàm getProducts với bộ lọc category
           const relatedRes = await userProductService.getProducts({
             category: categoryId,
-            pageSize: 5, // Lấy dư 1 cái phòng trường hợp trùng với sản phẩm đang xem
+            pageSize: 5,
           });
 
-          // Lọc bỏ sản phẩm hiện tại và lấy tối đa 4 sản phẩm hiển thị
-          product.relatedProducts = relatedRes.items
-            .filter((p) => p.id !== product.id)
+          product.relatedProducts = (relatedRes.items || [])
+            .filter((item) => Number(item.id) !== Number(product.id))
             .slice(0, 4);
+        } else {
+          product.relatedProducts = [];
         }
-      } catch (err) {
-        console.error("Lỗi khi tải sản phẩm liên quan:", err);
+      } catch {
         product.relatedProducts = [];
       }
 
@@ -282,60 +337,66 @@ export const userProductService = {
     }
   },
 
-  // Hàm lấy dữ liệu cho Trang Chủ (HomePage)
   async getHomeCollections() {
     try {
-      const response = await axios.get(API_URL);
-      const allProducts = response.data.result || [];
+      const allProducts = await fetchAllProducts();
 
-      // Lọc ra các danh sách tương ứng (lấy tối đa 8 sản phẩm mỗi bộ sưu tập cho đẹp)
-      const featured = allProducts.filter((p) => p.isFeatured).slice(0, 8);
-      const newest = allProducts
-        .filter((p) => p.isNew)
-        .sort((a, b) => b.id - a.id)
+      const featured = allProducts
+        .filter((p) => p.isFeatured === true || Number(p.featured) === 1)
         .slice(0, 8);
-      const sale = allProducts.filter((p) => p.isSale).slice(0, 8);
+
+      const newest = [...allProducts]
+        .sort((a, b) => {
+          const dateA = new Date(a.createdAt || a.updatedAt || 0).getTime();
+          const dateB = new Date(b.createdAt || b.updatedAt || 0).getTime();
+          if (dateA !== dateB) return dateB - dateA;
+          return Number(b.id || 0) - Number(a.id || 0);
+        })
+        .slice(0, 8);
+
+      const sale = allProducts
+        .filter((p) => getCompareAtPrice(p) > getProductPrice(p))
+        .slice(0, 8);
 
       return {
-        featured,
+        featured: featured.length > 0 ? featured : newest,
         newest,
         sale,
       };
     } catch (error) {
       console.error("Lỗi khi lấy dữ liệu trang chủ:", error);
-      // Trả về mảng rỗng an toàn để giao diện không bị crash khi dùng vòng lặp .map()
       return { featured: [], newest: [], sale: [] };
     }
   },
 
-  // Hàm lấy danh sách các tuỳ chọn cho Bộ lọc (Filter Sidebar)
   async getAvailableFilters() {
     try {
-      // Lấy danh sách thương hiệu THẬT từ Backend
-      const brandRes = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL}/brands`
-      );
-      const brandNames = brandRes.result
-        ? brandRes.result.map((b) => b.name)
-        : [];
+      const products = await fetchAllProducts();
 
-      // Trả về dạng mảng String trơn để FilterSidebar của bạn map() không bị lỗi Object
+      const brands = [
+        ...new Set(
+          products
+            .map((p) => p.brand?.name || p.brandName)
+            .filter(Boolean),
+        ),
+      ];
+
+      const valuesFromVariants = (key) => [
+        ...new Set(
+          products.flatMap((product) =>
+            (product.variants || [])
+              .map((variant) => variant.attributes?.[key] || variant[key])
+              .filter(Boolean),
+          ),
+        ),
+      ];
+
       return {
-        brands: brandNames,
-        colors: [
-          "Đen",
-          "Trắng",
-          "Titan",
-          "Đỏ",
-          "Xanh",
-          "Vàng",
-          "Bạc",
-          "Xám",
-          "Hồng",
-        ],
-        storages: ["64GB", "128GB", "256GB", "512GB", "1TB"],
-        rams: ["4GB", "8GB", "12GB", "16GB", "32GB", "64GB"],
-        ssds: ["256GB", "512GB", "1TB", "2TB"],
+        brands,
+        colors: valuesFromVariants("color"),
+        storages: valuesFromVariants("storage"),
+        rams: valuesFromVariants("ram"),
+        ssds: valuesFromVariants("ssd"),
       };
     } catch (error) {
       console.error("Lỗi lấy danh sách bộ lọc:", error);
@@ -343,16 +404,15 @@ export const userProductService = {
     }
   },
 
-  // Hàm tìm kiếm bằng hình ảnh (Tích hợp AI)
   async imageSearch(file, k = 10) {
     try {
-      // Bước 1: Gửi ảnh sang Vision Service qua Nginx proxy
       const formData = new FormData();
       formData.append("file", file);
       formData.append("k", String(k));
 
-      const baseUrl = import.meta.env.VITE_API_BASE_URL
+      const baseUrl = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1")
         .replace("/api/v1", "");
+
       const visionUrl = import.meta.env.DEV
         ? "http://localhost:8001"
         : `${baseUrl}/vision`;
@@ -363,6 +423,7 @@ export const userProductService = {
       });
 
       if (!visionRes.ok) throw new Error("Vision service lỗi");
+
       const visionData = await visionRes.json();
       const productIds = visionData.product_ids || [];
 
@@ -370,27 +431,12 @@ export const userProductService = {
         return { label: "Không tìm thấy sản phẩm tương đồng", items: [] };
       }
 
-      // Bước 2: Lấy chi tiết sản phẩm từ Java Backend
       const products = await apiClient.request(`${API_URL}/batch`, {
         method: "POST",
         body: JSON.stringify(productIds),
       });
 
-      const normalizedProducts = (Array.isArray(products) ? products : []).map((product) => {
-        if (product.specifications && typeof product.specifications === "string") {
-          try { product.specifications = JSON.parse(product.specifications); }
-          catch { product.specifications = {}; }
-        }
-        if (product.variants && Array.isArray(product.variants)) {
-          product.variants = product.variants.map((v) => {
-            if (v.attributes && typeof v.attributes === "string") {
-              try { v.attributes = JSON.parse(v.attributes); } catch { }
-            }
-            return v;
-          });
-        }
-        return product;
-      });
+      const normalizedProducts = normalizeProducts(products);
 
       return {
         label: `Tìm thấy ${normalizedProducts.length} sản phẩm tương tự`,
