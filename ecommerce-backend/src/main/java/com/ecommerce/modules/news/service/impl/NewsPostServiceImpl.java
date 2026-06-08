@@ -72,21 +72,23 @@ public class NewsPostServiceImpl implements NewsPostService {
     private final NewsMapper newsMapper;
     private final LocalStorageService localStorageService;
 
-    private record RssSource(String name, String url) {}
+    private record RssSource(String name, String url) {
+    }
 
     private final List<RssSource> vietnamTechnologySources = List.of(
             new RssSource("VnExpress Số hóa", "https://vnexpress.net/rss/so-hoa.rss"),
             new RssSource("Dân trí Công nghệ", "https://dantri.com.vn/cong-nghe.rss"),
             new RssSource("VietnamNet Công nghệ", "https://vietnamnet.vn/rss/cong-nghe.rss"),
             new RssSource("Thanh Niên Công nghệ", "https://thanhnien.vn/rss/cong-nghe-game.rss"),
-            new RssSource("Tuổi Trẻ Nhịp sống số", "https://tuoitre.vn/rss/nhip-song-so.rss")
-    );
+            new RssSource("Tuổi Trẻ Nhịp sống số", "https://tuoitre.vn/rss/nhip-song-so.rss"));
 
     @Override
     public List<NewsPostResponse> getPublicPosts(String topicSlug, String keyword, String sourceType) {
         syncExternalNewsIfNeeded();
         NewsPostSourceType parsedSourceType = parseSourceType(sourceType);
-        return newsPostRepository.searchPosts(NewsPostStatus.PUBLISHED, blankToNull(topicSlug), blankToNull(keyword), parsedSourceType).stream()
+        return newsPostRepository
+                .searchPosts(NewsPostStatus.PUBLISHED, blankToNull(topicSlug), blankToNull(keyword), parsedSourceType)
+                .stream()
                 .map(newsMapper::toPostResponse)
                 .toList();
     }
@@ -94,7 +96,8 @@ public class NewsPostServiceImpl implements NewsPostService {
     @Override
     public NewsPostResponse getFeaturedPost() {
         syncExternalNewsIfNeeded();
-        List<NewsPost> featured = newsPostRepository.findTop1ByFeaturedTrueAndStatusOrderByPublishedAtDescCreatedAtDesc(NewsPostStatus.PUBLISHED);
+        List<NewsPost> featured = newsPostRepository
+                .findTop1ByFeaturedTrueAndStatusOrderByPublishedAtDescCreatedAtDesc(NewsPostStatus.PUBLISHED);
         if (!featured.isEmpty()) {
             return newsMapper.toPostResponse(featured.get(0));
         }
@@ -125,8 +128,12 @@ public class NewsPostServiceImpl implements NewsPostService {
     @Override
     public List<NewsPostResponse> getRelatedPosts(Long id) {
         NewsPost post = findPostById(id);
-        if (post.getTopic() == null) return List.of();
-        return newsPostRepository.findTop4ByTopicIdAndStatusAndIdNotOrderByPublishedAtDesc(post.getTopic().getId(), NewsPostStatus.PUBLISHED, id).stream()
+        if (post.getTopic() == null)
+            return List.of();
+        return newsPostRepository
+                .findTop4ByTopicIdAndStatusAndIdNotOrderByPublishedAtDesc(post.getTopic().getId(),
+                        NewsPostStatus.PUBLISHED, id)
+                .stream()
                 .map(newsMapper::toPostResponse)
                 .toList();
     }
@@ -135,7 +142,8 @@ public class NewsPostServiceImpl implements NewsPostService {
     public List<NewsPostResponse> getAdminPosts(String keyword, String topicSlug, String status, String sourceType) {
         NewsPostStatus parsedStatus = blankToNull(status) == null ? null : NewsPostStatus.valueOf(status.toUpperCase());
         NewsPostSourceType parsedSourceType = parseSourceType(sourceType);
-        return newsPostRepository.searchPosts(parsedStatus, blankToNull(topicSlug), blankToNull(keyword), parsedSourceType).stream()
+        return newsPostRepository
+                .searchPosts(parsedStatus, blankToNull(topicSlug), blankToNull(keyword), parsedSourceType).stream()
                 .map(newsMapper::toPostResponse)
                 .toList();
     }
@@ -262,7 +270,8 @@ public class NewsPostServiceImpl implements NewsPostService {
 
     private void syncExternalNewsIfNeeded() {
         long now = System.currentTimeMillis();
-        if (now - lastExternalSyncAt < EXTERNAL_SYNC_INTERVAL_MS) return;
+        if (now - lastExternalSyncAt < EXTERNAL_SYNC_INTERVAL_MS)
+            return;
         try {
             syncExternalTechnologyNews();
         } catch (Exception ignored) {
@@ -277,15 +286,15 @@ public class NewsPostServiceImpl implements NewsPostService {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(source.url()))
                     .timeout(java.time.Duration.ofSeconds(15))
-                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36 InsightShop-NewsBot/1.0")
+                    .header("User-Agent",
+                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36 InsightShop-NewsBot/1.0")
                     .header("Accept", "application/rss+xml, application/xml, text/xml, text/html, */*")
                     .GET()
                     .build();
 
             HttpResponse<String> response = HTTP_CLIENT.send(
                     request,
-                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
-            );
+                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
             String body = response.body();
 
@@ -315,7 +324,8 @@ public class NewsPostServiceImpl implements NewsPostService {
             log.info("RSS {} có {} item", source.name(), items.getLength());
 
             if (items.getLength() == 0) {
-                log.warn("Nguồn RSS {} không có thẻ <item>. Có thể nguồn trả HTML hoặc đổi cấu trúc RSS.", source.name());
+                log.warn("Nguồn RSS {} không có thẻ <item>. Có thể nguồn trả HTML hoặc đổi cấu trúc RSS.",
+                        source.name());
                 return savedPosts;
             }
 
@@ -325,24 +335,20 @@ public class NewsPostServiceImpl implements NewsPostService {
 
                     String rawTitle = firstNonBlank(
                             getText(item, "title"),
-                            getText(item, "media:title")
-                    );
+                            getText(item, "media:title"));
 
                     String rawLink = firstNonBlank(
                             getText(item, "link"),
-                            getText(item, "guid")
-                    );
+                            getText(item, "guid"));
 
                     String description = firstNonBlank(
                             getText(item, "description"),
-                            getText(item, "content:encoded")
-                    );
+                            getText(item, "content:encoded"));
 
                     String pubDate = firstNonBlank(
                             getText(item, "pubDate"),
                             getText(item, "published"),
-                            getText(item, "updated")
-                    );
+                            getText(item, "updated"));
 
                     String title = limitText(cleanText(rawTitle), MAX_TITLE_LENGTH);
                     String link = normalizeUrl(limitText(cleanText(rawLink), MAX_URL_LENGTH));
@@ -353,7 +359,8 @@ public class NewsPostServiceImpl implements NewsPostService {
                     }
 
                     if (link.isBlank() || !link.startsWith("http")) {
-                        log.warn("Bỏ qua tin RSS '{}' từ nguồn {} vì link không hợp lệ: {}", title, source.name(), link);
+                        log.warn("Bỏ qua tin RSS '{}' từ nguồn {} vì link không hợp lệ: {}", title, source.name(),
+                                link);
                         continue;
                     }
 
@@ -366,8 +373,7 @@ public class NewsPostServiceImpl implements NewsPostService {
                     String thumbnail = limitText(firstNonBlank(
                             extractImage(description),
                             extractMediaThumbnail(item),
-                            extractEnclosureImage(item)
-                    ), MAX_URL_LENGTH);
+                            extractEnclosureImage(item)), MAX_URL_LENGTH);
                     String sourceName = limitText(source.name(), MAX_SOURCE_NAME_LENGTH);
 
                     NewsPost post = NewsPost.builder()
@@ -394,7 +400,8 @@ public class NewsPostServiceImpl implements NewsPostService {
 
                     log.info("Đã lưu tin RSS: [{}] {}", source.name(), title);
                 } catch (Exception itemError) {
-                    log.warn("Bỏ qua một tin RSS lỗi từ nguồn {}: {}", source.name(), itemError.getMessage(), itemError);
+                    log.warn("Bỏ qua một tin RSS lỗi từ nguồn {}: {}", source.name(), itemError.getMessage(),
+                            itemError);
                 }
             }
 
@@ -486,12 +493,15 @@ public class NewsPostServiceImpl implements NewsPostService {
         return "<p>" + escapeHtml(summary) + "</p>"
                 + "<p><strong>Nguồn:</strong> " + escapeHtml(sourceName) + "</p>"
                 + "<p>Bài viết này được hệ thống đồng bộ từ nguồn RSS. Để xem đầy đủ nội dung, vui lòng đọc tại bài gốc.</p>"
-                + "<p><a href=\"" + escapeHtml(link) + "\" target=\"_blank\" rel=\"noopener noreferrer\">Đọc bài gốc</a></p>";
+                + "<p><a href=\"" + escapeHtml(link)
+                + "\" target=\"_blank\" rel=\"noopener noreferrer\">Đọc bài gốc</a></p>";
     }
 
     private String extractImage(String html) {
-        if (html == null) return null;
-        Matcher matcher = Pattern.compile("<img[^>]+src=[\\\"']([^\\\"']+)[\\\"']", Pattern.CASE_INSENSITIVE).matcher(html);
+        if (html == null)
+            return null;
+        Matcher matcher = Pattern.compile("<img[^>]+src=[\\\"']([^\\\"']+)[\\\"']", Pattern.CASE_INSENSITIVE)
+                .matcher(html);
         return matcher.find() ? matcher.group(1) : null;
     }
 
@@ -500,7 +510,8 @@ public class NewsPostServiceImpl implements NewsPostService {
         if (nodes.getLength() == 0) {
             nodes = item.getElementsByTagName("thumbnail");
         }
-        if (nodes.getLength() == 0) return null;
+        if (nodes.getLength() == 0)
+            return null;
 
         Element element = (Element) nodes.item(0);
         return element.hasAttribute("url") ? element.getAttribute("url") : null;
@@ -520,7 +531,8 @@ public class NewsPostServiceImpl implements NewsPostService {
     }
 
     private String firstNonBlank(String... values) {
-        if (values == null) return "";
+        if (values == null)
+            return "";
         for (String value : values) {
             if (value != null && !value.isBlank()) {
                 return value;
@@ -530,7 +542,8 @@ public class NewsPostServiceImpl implements NewsPostService {
     }
 
     private String normalizeUrl(String value) {
-        if (value == null) return "";
+        if (value == null)
+            return "";
         String url = value.trim();
 
         int spaceIndex = url.indexOf(" ");
@@ -546,12 +559,14 @@ public class NewsPostServiceImpl implements NewsPostService {
     }
 
     private String stripHtml(String value) {
-        if (value == null) return "";
+        if (value == null)
+            return "";
         return cleanText(value.replaceAll("<[^>]*>", " "));
     }
 
     private String cleanText(String value) {
-        if (value == null) return "";
+        if (value == null)
+            return "";
         return value.replace("<![CDATA[", "").replace("]]>", "")
                 .replace("&nbsp;", " ")
                 .replaceAll("\\s+", " ")
@@ -559,12 +574,14 @@ public class NewsPostServiceImpl implements NewsPostService {
     }
 
     private String limitText(String value, int maxLength) {
-        if (value == null || value.length() <= maxLength) return value;
+        if (value == null || value.length() <= maxLength)
+            return value;
         return value.substring(0, maxLength).trim() + "...";
     }
 
     private String escapeHtml(String value) {
-        if (value == null) return "";
+        if (value == null)
+            return "";
         return value.replace("&", "&amp;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;")
@@ -572,9 +589,11 @@ public class NewsPostServiceImpl implements NewsPostService {
     }
 
     private LocalDateTime parsePublishedAt(String pubDate) {
-        if (pubDate == null || pubDate.isBlank()) return LocalDateTime.now();
+        if (pubDate == null || pubDate.isBlank())
+            return LocalDateTime.now();
         try {
-            return ZonedDateTime.parse(pubDate, DateTimeFormatter.RFC_1123_DATE_TIME.withLocale(Locale.ENGLISH)).toLocalDateTime();
+            return ZonedDateTime.parse(pubDate, DateTimeFormatter.RFC_1123_DATE_TIME.withLocale(Locale.ENGLISH))
+                    .toLocalDateTime();
         } catch (Exception ignored) {
             return LocalDateTime.now();
         }
@@ -582,7 +601,8 @@ public class NewsPostServiceImpl implements NewsPostService {
 
     private NewsPostSourceType parseSourceType(String sourceType) {
         String value = blankToNull(sourceType);
-        if (value == null || value.equalsIgnoreCase("ALL")) return null;
+        if (value == null || value.equalsIgnoreCase("ALL"))
+            return null;
         return NewsPostSourceType.valueOf(value.toUpperCase());
     }
 
@@ -634,7 +654,8 @@ public class NewsPostServiceImpl implements NewsPostService {
         if (current != null && candidate.equalsIgnoreCase(current.getSlug())) {
             return candidate;
         }
-        while (id == null ? newsPostRepository.existsBySlugIgnoreCase(candidate) : newsPostRepository.existsBySlugIgnoreCaseAndIdNot(candidate, id)) {
+        while (id == null ? newsPostRepository.existsBySlugIgnoreCase(candidate)
+                : newsPostRepository.existsBySlugIgnoreCaseAndIdNot(candidate, id)) {
             candidate = base + "-" + index++;
         }
         return candidate;
