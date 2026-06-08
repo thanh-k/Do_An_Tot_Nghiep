@@ -83,24 +83,44 @@ function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
+    let cancelled = false;
+
     setLoading(true);
+
     userProductService
       .getProductBySlug(slug)
       .then((product) => {
+        if (cancelled) return;
+
         setProductData(product);
-        behaviorService.track({
-          eventType: "VIEW_PRODUCT",
-          productId: product.id,
-          categoryId: product.category?.id,
-          brandId: product.brand?.id,
-        });
+
+        const productId = product?.id || product?.productId;
+        const categoryId = product?.categoryId || product?.category?.id;
+        const brandId = product?.brandId || product?.brand?.id;
+
+        if (productId) {
+          behaviorService.track({
+            eventType: "VIEW_PRODUCT",
+            productId,
+            categoryId,
+            brandId,
+            pageUrl: window.location.href,
+          });
+        } else {
+          console.warn("Không track VIEW_PRODUCT vì thiếu productId:", product);
+        }
+
         const defaultVariant = getDefaultVariant(product);
-        setSelectedAttributes(
-          buildSelectedAttributesFromVariant(defaultVariant),
-        );
+        setSelectedAttributes(buildSelectedAttributesFromVariant(defaultVariant));
         setQuantity(1);
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [slug]);
 
   const sellableVariants = useMemo(() => {
