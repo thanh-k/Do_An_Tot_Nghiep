@@ -83,25 +83,45 @@ function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
-    setLoading(true);
-    userProductService
-      .getProductBySlug(slug)
-      .then((product) => {
-        setProductData(product);
+  let cancelled = false;
+
+  setLoading(true);
+
+  userProductService
+    .getProductBySlug(slug)
+    .then((product) => {
+      if (cancelled) return;
+
+      setProductData(product);
+
+      const productId = product?.id || product?.productId;
+      const categoryId = product?.categoryId || product?.category?.id;
+      const brandId = product?.brandId || product?.brand?.id;
+
+      if (productId) {
         behaviorService.track({
           eventType: "VIEW_PRODUCT",
-          productId: product.id,
-          categoryId: product.category?.id,
-          brandId: product.brand?.id,
+          productId,
+          categoryId,
+          brandId,
+          pageUrl: window.location.href,
         });
-        const defaultVariant = getDefaultVariant(product);
-        setSelectedAttributes(
-          buildSelectedAttributesFromVariant(defaultVariant),
-        );
-        setQuantity(1);
-      })
-      .finally(() => setLoading(false));
-  }, [slug]);
+      } else {
+        console.warn("Không track VIEW_PRODUCT vì thiếu productId:", product);
+      }
+
+      const defaultVariant = getDefaultVariant(product);
+      setSelectedAttributes(buildSelectedAttributesFromVariant(defaultVariant));
+      setQuantity(1);
+    })
+    .finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+
+  return () => {
+    cancelled = true;
+  };
+}, [slug]);
 
   const sellableVariants = useMemo(() => {
     if (!productData?.variants) return [];
