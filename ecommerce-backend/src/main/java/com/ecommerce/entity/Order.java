@@ -1,6 +1,5 @@
 package com.ecommerce.entity;
 
-
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
@@ -26,6 +25,7 @@ public class Order {
     private Double discountAmount;
     private String voucherCode;
     private String status; // "PENDING", "PAID", "DELIVERED"
+    private String paymentMethod; // "COD" hoặc "VNPAY"
     private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)

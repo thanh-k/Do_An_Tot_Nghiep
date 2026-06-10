@@ -43,6 +43,7 @@ public class OrderServiceImpl implements OrderService {
                 .userId(request.getUserId()) // Lưu user_id vào database
                 .shippingAddress(request.getShippingAddress())
                 .phoneNumber(request.getPhoneNumber())
+                .paymentMethod(request.getPaymentMethod())
                 .status("PENDING")
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -109,7 +110,7 @@ public class OrderServiceImpl implements OrderService {
     public OrderResponse getOrderById(Long id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng")); // Tạm dùng RuntimeException, nên
-                                                                                                                               // tạo ErrorCode.ORDER_NOT_FOUND
+                                                                                     // tạo ErrorCode.ORDER_NOT_FOUND
         return orderMapper.toResponse(order);
     }
 
@@ -138,7 +139,8 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private boolean isCompletedStatus(String status) {
-        if (status == null) return false;
+        if (status == null)
+            return false;
         String normalized = status.trim().toUpperCase();
         return normalized.equals("COMPLETED")
                 || normalized.equals("COMPLETE")
@@ -168,5 +170,14 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
         orderRepository.delete(order);
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse updatePaymentStatus(Long id, String paymentStatus) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
+        order.setStatus(paymentStatus);
+        return orderMapper.toResponse(orderRepository.save(order));
     }
 }

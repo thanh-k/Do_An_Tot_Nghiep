@@ -3,13 +3,17 @@ package com.ecommerce.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class VisionServiceClient {
@@ -39,6 +43,40 @@ public class VisionServiceClient {
             logger.info("✅ [Vision Service] Đã đồng bộ vector cho sản phẩm ID: {}", productId);
         } catch (Exception e) {
             logger.error("❌ [Vision Service] Lỗi đồng bộ sản phẩm ID {}: {}", productId, e.getMessage());
+        }
+    }
+
+    public List<Long> searchByImage(MultipartFile file, int k) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+            body.add("file", new ByteArrayResource(file.getBytes()) {
+                @Override
+                public String getFilename() {
+                    return file.getOriginalFilename() != null
+                            ? file.getOriginalFilename()
+                            : "image.jpg";
+                }
+            });
+            body.add("k", String.valueOf(k));
+
+            HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(body, headers);
+
+            ResponseEntity<Map> response = restTemplate.postForEntity(
+                    visionServiceUrl + "/search", request, Map.class);
+
+            if (response.getBody() != null) {
+                List<Integer> ids = (List<Integer>) response.getBody().get("product_ids");
+                if (ids != null) {
+                    return ids.stream().map(Long::valueOf).collect(Collectors.toList());
+                }
+            }
+            return List.of();
+        } catch (Exception e) {
+            logger.error("❌ [Vision Search] Lỗi: {}", e.getMessage());
+            return List.of();
         }
     }
 
