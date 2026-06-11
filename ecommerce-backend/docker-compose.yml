@@ -33,6 +33,7 @@ services:
       - ./uploads:/app/uploads
     depends_on:
       - db
+      - mongo
 volumes:
   db_data:
   mongo_data:
