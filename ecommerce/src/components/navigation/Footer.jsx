@@ -1,238 +1,334 @@
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { APP_META } from "@/constants";
+import { APP_META, PAYMENT_METHOD_OPTIONS } from "@/constants";
 import {
+  BadgePercent,
   Facebook,
-  Youtube,
   Instagram,
-  Phone,
   Mail,
   MapPin,
-  Truck,
+  Phone,
   ShieldCheck,
-  Clock,
-  RotateCcw,
+  ShoppingBag,
+  Tags,
+  Truck,
+  Youtube,
 } from "lucide-react";
 
+import { categoryService } from "@/services/admin/categoryService";
+import { brandService } from "@/services/admin/brandService";
+import userNewsService from "@/services/user/newsService";
+import userVoucherService from "@/services/user/voucherService";
+
+const FOOTER_LIMIT = 5;
+
+// Tên hiển thị của footer.
+// Nếu APP_META trong dự án còn là dữ liệu mẫu NovaShop thì tự chuyển về thương hiệu đang dùng.
+const SHOP_NAME = APP_META.name && APP_META.name !== "NovaShop" ? APP_META.name : "InsightShop";
+
+
+const quickLinks = [
+  { label: "Tin tức", to: "/news" },
+  { label: "Liên hệ", to: "/contact" },
+  { label: "Xu thưởng", to: "/coins" },
+  { label: "Gói thành viên", to: "/membership" },
+  { label: "So sánh sản phẩm", to: "/compare" },
+];
+
+const serviceItems = [
+  {
+    icon: Truck,
+    title: "Giao hàng linh hoạt",
+    description: "Theo dõi trạng thái đơn hàng trực tuyến.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Thanh toán an toàn",
+    description: "Bảo vệ thông tin tài khoản và giao dịch.",
+  },
+  {
+    icon: BadgePercent,
+    title: "Ưu đãi thường xuyên",
+    description: "Voucher, xu thưởng và quyền lợi thành viên.",
+  },
+  {
+    icon: ShoppingBag,
+    title: "Mua sắm tiện lợi",
+    description: "Lưu giỏ hàng, địa chỉ và sản phẩm yêu thích.",
+  },
+];
+
+const socialLinks = [
+  {
+    label: "Facebook",
+    href: APP_META.facebookUrl || "#",
+    icon: Facebook,
+    className: "bg-blue-600",
+  },
+  {
+    label: "Youtube",
+    href: APP_META.youtubeUrl || "#",
+    icon: Youtube,
+    className: "bg-red-600",
+  },
+  {
+    label: "Instagram",
+    href: APP_META.instagramUrl || "#",
+    icon: Instagram,
+    className: "bg-pink-600",
+  },
+];
+
+function normalizeList(value) {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.content)) return value.content;
+  if (Array.isArray(value?.items)) return value.items;
+  if (Array.isArray(value?.result)) return value.result;
+  if (Array.isArray(value?.result?.content)) return value.result.content;
+  return [];
+}
+
+function getDateYear(value) {
+  const date = value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) return new Date().getFullYear();
+  return date.getFullYear();
+}
+
 function Footer() {
+  const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [newsPosts, setNewsPosts] = useState([]);
+  const [vouchers, setVouchers] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    Promise.allSettled([
+      categoryService.getCategories(),
+      brandService.getBrands(),
+      userNewsService.getTrendingPosts(),
+      userVoucherService.getActiveVouchers(),
+    ]).then(([categoryResult, brandResult, newsResult, voucherResult]) => {
+      if (!mounted) return;
+
+      setCategories(
+        categoryResult.status === "fulfilled"
+          ? normalizeList(categoryResult.value).slice(0, FOOTER_LIMIT)
+          : [],
+      );
+      setBrands(
+        brandResult.status === "fulfilled"
+          ? normalizeList(brandResult.value).slice(0, FOOTER_LIMIT)
+          : [],
+      );
+      setNewsPosts(
+        newsResult.status === "fulfilled"
+          ? normalizeList(newsResult.value).slice(0, FOOTER_LIMIT)
+          : [],
+      );
+      setVouchers(
+        voucherResult.status === "fulfilled"
+          ? normalizeList(voucherResult.value).slice(0, 4)
+          : [],
+      );
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const paymentMethods = useMemo(
+    () => PAYMENT_METHOD_OPTIONS.map((item) => item.label).slice(0, 4),
+    [],
+  );
+
   return (
     <footer className="mt-16 bg-[#1a202c] text-slate-300">
-      {/* PHẦN 1: CÁC TIỆN ÍCH DỊCH VỤ (Dòng trên cùng) */}
+      {/* PHẦN 1: Tiện ích dịch vụ được map từ cấu hình để dễ chỉnh sửa về sau. */}
       <div className="border-b border-slate-700 bg-[#111827]">
         <div className="container-padded grid grid-cols-1 gap-6 py-8 md:grid-cols-2 xl:grid-cols-4">
-          <div className="flex items-center gap-4">
-            <Truck className="h-10 w-10 text-rose-500" />
-            <div>
-              <p className="font-bold text-white">Miễn phí vận chuyển</p>
-              <p className="text-xs">Cho đơn hàng trên 500k</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <ShieldCheck className="h-10 w-10 text-rose-500" />
-            <div>
-              <p className="font-bold text-white">Thanh toán an toàn</p>
-              <p className="text-xs">100% thanh toán bảo mật</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <Clock className="h-10 w-10 text-rose-500" />
-            <div>
-              <p className="font-bold text-white">Hỗ trợ khách hàng 24/7</p>
-              <p className="text-xs">Liên hệ với chúng tôi ngay</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <RotateCcw className="h-10 w-10 text-rose-500" />
-            <div>
-              <p className="font-bold text-white">Miễn phí hoàn hàng</p>
-              <p className="text-xs">Nếu sản phẩm có lỗi</p>
-            </div>
-          </div>
+          {serviceItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <div key={item.title} className="flex items-center gap-4">
+                <Icon className="h-10 w-10 text-rose-500" />
+                <div>
+                  <p className="font-bold text-white">{item.title}</p>
+                  <p className="text-xs">{item.description}</p>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* PHẦN 2: THÔNG TIN CHI TIẾT */}
-      <div className="container-padded grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {/* Cột 1: Thông tin thương hiệu */}
+      {/* PHẦN 2: Nội dung footer lấy từ dữ liệu thật: danh mục, thương hiệu, tin tức, voucher. */}
+      <div className="container-padded grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <div className="space-y-4 xl:col-span-1">
-          <h3 className="text-2xl font-black italic text-white tracking-tighter">
-            {APP_META.name.toUpperCase()}
+          <h3 className="text-2xl font-black italic tracking-tighter text-white">
+            {SHOP_NAME.toUpperCase()}
           </h3>
+          <p className="text-sm leading-6 text-slate-400">{APP_META.tagline}</p>
+
           <div className="space-y-3 text-sm">
-            <div className="flex gap-3">
-              <MapPin className="shrink-0 h-5 w-5 text-rose-500" />
-              <p>{APP_META.address}</p>
-            </div>
-            <div className="flex gap-3">
-              <Phone className="shrink-0 h-5 w-5 text-rose-500" />
-              <p>{APP_META.supportPhone}</p>
-            </div>
-            <div className="flex gap-3">
-              <Mail className="shrink-0 h-5 w-5 text-rose-500" />
-              <p>{APP_META.supportEmail}</p>
-            </div>
+            <FooterContactItem icon={MapPin}>{APP_META.address}</FooterContactItem>
+            <FooterContactItem icon={Phone}>{APP_META.supportPhone}</FooterContactItem>
+            <FooterContactItem icon={Mail}>{APP_META.supportEmail}</FooterContactItem>
           </div>
+
           <Link
-            to="/stores"
-            className="inline-block rounded bg-slate-800 px-4 py-2 text-xs font-bold text-white hover:bg-rose-600 transition-colors"
+            to="/contact"
+            className="inline-block rounded bg-slate-800 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-rose-600"
           >
-            Xem hệ thống cửa hàng
+            Liên hệ cửa hàng
           </Link>
         </div>
 
-        {/* Cột 2: Thông tin (Theo ảnh mẫu) */}
+        <FooterColumn title="Danh mục sản phẩm" emptyText="Chưa có danh mục">
+          {categories.map((category) => (
+            <FooterLink
+              key={category.id || category.name}
+              to={`/products?category=${category.id}`}
+            >
+              {category.name}
+            </FooterLink>
+          ))}
+        </FooterColumn>
+
+        <FooterColumn title="Thương hiệu" emptyText="Chưa có thương hiệu">
+          {brands.map((brand) => (
+            <FooterLink
+              key={brand.id || brand.name}
+              to={`/products?brands=${encodeURIComponent(brand.name)}`}
+            >
+              {brand.name}
+            </FooterLink>
+          ))}
+        </FooterColumn>
+
+        <FooterColumn title="Tin tức mới" emptyText="Chưa có tin tức">
+          {newsPosts.map((post) => (
+            <FooterLink key={post.id || post.slug} to={`/news/${post.slug}`}>
+              {post.title}
+            </FooterLink>
+          ))}
+        </FooterColumn>
+
         <div>
-          <h4 className="mb-6 text-base font-bold text-white uppercase">
-            Thông tin
+          <h4 className="mb-6 text-base font-bold uppercase text-white">
+            Ưu đãi hiện có
           </h4>
           <div className="grid gap-3 text-sm">
-            <Link to="/sale" className="hover:text-rose-500 transition">
-              Siêu sale 8/3
-            </Link>
-            <Link to="/best-price" className="hover:text-rose-500 transition">
-              Giá tốt mỗi ngày
-            </Link>
-            <Link to="/under-100k" className="hover:text-rose-500 transition">
-              Hot dưới 100k
-            </Link>
-            <Link to="/coupons" className="hover:text-rose-500 transition">
-              Mã giảm giá
-            </Link>
-            <Link to="/contact" className="hover:text-rose-500 transition">
-              Liên hệ với chúng tôi
-            </Link>
+            {vouchers.length > 0 ? (
+              vouchers.map((voucher) => (
+                <Link
+                  key={voucher.id || voucher.code}
+                  to="/vouchers"
+                  className="group flex items-center gap-2 text-slate-300 transition hover:text-rose-500"
+                >
+                  <Tags className="h-4 w-4 shrink-0 text-rose-500" />
+                  <span className="line-clamp-1">
+                    {voucher.code || voucher.name || voucher.title || "Voucher"}
+                  </span>
+                </Link>
+              ))
+            ) : (
+              <FooterLink to="/vouchers">Xem kho voucher</FooterLink>
+            )}
           </div>
         </div>
 
-        {/* Cột 3: Khách hàng (Theo ảnh mẫu) */}
-        <div>
-          <h4 className="mb-6 text-base font-bold text-white uppercase">
-            Khách hàng
-          </h4>
-          <div className="grid gap-3 text-sm">
-            <Link
-              to="/policy/buying"
-              className="hover:text-rose-500 transition"
-            >
-              Chính sách mua hàng
-            </Link>
-            <Link
-              to="/policy/return"
-              className="hover:text-rose-500 transition"
-            >
-              Chính sách đổi trả
-            </Link>
-            <Link
-              to="/policy/shipping"
-              className="hover:text-rose-500 transition"
-            >
-              Chính sách vận chuyển
-            </Link>
-            <Link
-              to="/policy/privacy"
-              className="hover:text-rose-500 transition"
-            >
-              Chính sách bảo mật
-            </Link>
-            <Link to="/commitment" className="hover:text-rose-500 transition">
-              Cam kết cửa hàng
-            </Link>
-          </div>
-        </div>
-
-        {/* Cột 4: Hướng dẫn (Theo ảnh mẫu) */}
-        <div>
-          <h4 className="mb-6 text-base font-bold text-white uppercase">
-            Hướng dẫn
-          </h4>
-          <div className="grid gap-3 text-sm">
-            <Link to="/guide/buying" className="hover:text-rose-500 transition">
-              Hướng dẫn mua hàng
-            </Link>
-            <Link to="/guide/return" className="hover:text-rose-500 transition">
-              Hướng dẫn đổi trả
-            </Link>
-            <Link
-              to="/guide/payment"
-              className="hover:text-rose-500 transition"
-            >
-              Hướng dẫn chuyển khoản
-            </Link>
-            <Link
-              to="/guide/installment"
-              className="hover:text-rose-500 transition"
-            >
-              Hướng dẫn trả góp
-            </Link>
-            <Link to="/guide/refund" className="hover:text-rose-500 transition">
-              Hướng dẫn hoàn hàng
-            </Link>
-          </div>
-        </div>
-
-        {/* Cột 5: Thanh toán & MXH */}
-        <div className="space-y-6">
-          <div>
-            <h4 className="mb-4 text-base font-bold text-white uppercase">
-              Chấp nhận thanh toán
-            </h4>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-white p-1 rounded h-10 flex items-center justify-center font-bold text-blue-800 italic">
-                VISA
-              </div>
-              <div className="bg-white p-1 rounded h-10 flex items-center justify-center font-bold text-red-600 italic">
-                MasterCard
-              </div>
-              <div className="bg-white p-2 rounded h-10 flex items-center justify-center text-[10px] text-slate-800 font-bold leading-tight uppercase">
-                Tiền mặt
-              </div>
-              <div className="bg-white p-1 rounded h-10 flex items-center justify-center text-[10px] text-blue-600 font-bold leading-tight uppercase">
-                Chuyển khoản
-              </div>
-            </div>
-          </div>
-          <div>
-            <h4 className="mb-4 text-base font-bold text-white uppercase">
-              Theo dõi chúng tôi
-            </h4>
-            <div className="flex gap-3">
-              <a
-                href="#"
-                className="p-2 bg-blue-600 rounded-full text-white hover:scale-110 transition"
-              >
-                <Facebook size={18} />
-              </a>
-              <a
-                href="#"
-                className="p-2 bg-red-600 rounded-full text-white hover:scale-110 transition"
-              >
-                <Youtube size={18} />
-              </a>
-              <a
-                href="#"
-                className="p-2 bg-pink-600 rounded-full text-white hover:scale-110 transition"
-              >
-                <Instagram size={18} />
-              </a>
-            </div>
-          </div>
-        </div>
+        <FooterColumn title="Lối tắt" emptyText="Chưa có lối tắt">
+          {quickLinks.map((item) => (
+            <FooterLink key={item.to} to={item.to}>
+              {item.label}
+            </FooterLink>
+          ))}
+        </FooterColumn>
       </div>
 
-      {/* PHẦN 3: BẢN QUYỀN */}
-      <div className="border-t border-slate-700 bg-[#111827] py-6 text-xs">
-        <div className="container-padded flex flex-col justify-between gap-4 md:flex-row">
-          <p>
-            Bản quyền thuộc về{" "}
-            <span className="font-bold text-white">OH!Team</span>. Cung cấp bởi{" "}
-            <span className="font-bold text-white">Sapo</span>
-          </p>
-          <p>
-            Giấy chứng nhận ĐKDN số 0123456789 do Sở kế hoạch và đầu tư thành
-            phố Hà Nội cấp ngày 22 tháng 03 năm 2026.
-          </p>
+      {/* PHẦN 3: Thanh phụ lấy từ route thật và cấu hình thanh toán hiện có. */}
+      <div className="border-t border-slate-700 bg-[#111827] py-7 text-xs">
+        <div className="container-padded grid gap-6 lg:grid-cols-[1.2fr_1fr_0.8fr] lg:items-center">
+          <div>
+            <p>
+              Bản quyền © {getDateYear()} thuộc về{" "}
+              <span className="font-bold text-white">{SHOP_NAME}</span>.
+            </p>
+            <p className="mt-1 text-slate-500">
+              Thông tin hiển thị được đồng bộ từ dữ liệu danh mục, thương hiệu,
+              tin tức và voucher trong hệ thống.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {paymentMethods.map((method) => (
+              <span
+                key={method}
+                className="rounded bg-white px-3 py-2 text-[10px] font-black uppercase leading-none text-slate-800"
+              >
+                {method}
+              </span>
+            ))}
+          </div>
+
+          <div className="flex gap-3 lg:justify-end">
+            {socialLinks.map((social) => {
+              const Icon = social.icon;
+              return (
+                <a
+                  key={social.label}
+                  href={social.href}
+                  aria-label={social.label}
+                  className={`rounded-full p-2 text-white transition hover:scale-110 ${social.className}`}
+                  target={social.href === "#" ? undefined : "_blank"}
+                  rel={social.href === "#" ? undefined : "noreferrer"}
+                >
+                  <Icon size={18} />
+                </a>
+              );
+            })}
+          </div>
         </div>
       </div>
     </footer>
+  );
+}
+
+function FooterContactItem({ icon: Icon, children }) {
+  if (!children) return null;
+
+  return (
+    <div className="flex gap-3">
+      <Icon className="h-5 w-5 shrink-0 text-rose-500" />
+      <p>{children}</p>
+    </div>
+  );
+}
+
+function FooterColumn({ title, children, emptyText }) {
+  const hasItems = Array.isArray(children) ? children.length > 0 : Boolean(children);
+
+  return (
+    <div>
+      <h4 className="mb-6 text-base font-bold uppercase text-white">{title}</h4>
+      <div className="grid gap-3 text-sm">
+        {hasItems ? (
+          children
+        ) : (
+          <span className="text-slate-500">{emptyText}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FooterLink({ to, children }) {
+  return (
+    <Link to={to} className="line-clamp-1 transition hover:text-rose-500">
+      {children}
+    </Link>
   );
 }
 
