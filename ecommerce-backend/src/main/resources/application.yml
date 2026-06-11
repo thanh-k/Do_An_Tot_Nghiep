@@ -82,4 +82,4 @@ app:
 
 vision:
   service:
-    url: http://localhost:8001
+    url: ${VISION_SERVICE_URL}
