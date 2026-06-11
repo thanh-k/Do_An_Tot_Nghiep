@@ -41,6 +41,16 @@ public class GlobalExceptionHandler {
                                                 .message("Bạn không có quyền truy cập chức năng này").build());
         }
 
+
+        @ExceptionHandler(IllegalArgumentException.class)
+        public ResponseEntity<ApiResponse<Object>> handleIllegalArgument(IllegalArgumentException ex) {
+                return ResponseEntity.badRequest()
+                                .body(ApiResponse.builder()
+                                                .code(HttpStatus.BAD_REQUEST.value())
+                                                .message(ex.getMessage() == null ? "Dữ liệu không hợp lệ" : ex.getMessage())
+                                                .build());
+        }
+
         // 4. Bắt các lỗi hệ thống chưa xác định (Lỗi 500) để không làm trắng trang
         @ExceptionHandler(Exception.class)
         public ResponseEntity<ApiResponse<Object>> handleGeneric(Exception ex) {

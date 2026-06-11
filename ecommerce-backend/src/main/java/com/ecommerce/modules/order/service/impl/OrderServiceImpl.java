@@ -11,6 +11,8 @@ import com.ecommerce.modules.order.mapper.OrderMapper;
 import com.ecommerce.modules.order.repository.OrderRepository;
 import com.ecommerce.modules.order.service.OrderService;
 import com.ecommerce.modules.product.repository.ProductVariantRepository;
+import com.ecommerce.modules.livestream.entity.LivestreamDeal;
+import com.ecommerce.modules.livestream.repository.LivestreamDealRepository;
 import com.ecommerce.entity.Order;
 import com.ecommerce.entity.OrderDetail;
 import com.ecommerce.entity.ProductVariant;
@@ -35,6 +37,7 @@ public class OrderServiceImpl implements OrderService {
     private final VoucherService voucherService;
     private final CoinTaskService coinTaskService;
     private final VoucherRepository voucherRepository;
+    private final LivestreamDealRepository livestreamDealRepository;
 
     @Override
     @Transactional
@@ -62,6 +65,8 @@ public class OrderServiceImpl implements OrderService {
                 // chuẩn hơn)
             }
 
+            double priceAtPurchase = resolvePriceAtPurchase(item, variant);
+
             // Trừ số lượng tồn kho
             variant.setStock(variant.getStock() - item.getQuantity());
 
@@ -69,11 +74,11 @@ public class OrderServiceImpl implements OrderService {
                     .order(order)
                     .productVariant(variant)
                     .quantity(item.getQuantity())
-                    .priceAtPurchase(variant.getPrice())
+                    .priceAtPurchase(priceAtPurchase)
                     .build();
 
             details.add(detail);
-            total += variant.getPrice() * item.getQuantity();
+            total += priceAtPurchase * item.getQuantity();
         }
 
         double shippingFee = total >= 500000 ? 0D : 30000D;
@@ -95,6 +100,52 @@ public class OrderServiceImpl implements OrderService {
 
         // Trả về DTO (Ní tự viết hàm convertToResponse nhé)
         return orderMapper.toResponse(order);
+    }
+
+    /**
+     * Đơn hàng thường: không gửi liveDealId/livestreamId => dùng giá variant như cũ.
+     * Đơn hàng live: chỉ áp giá deal khi deal còn active, đúng livestream và đúng product của variant.
+     */
+    private double resolvePriceAtPurchase(CartItemRequest item, ProductVariant variant) {
+        if (item.getLiveDealId() == null || item.getLivestreamId() == null) {
+            return variant.getPrice();
+        }
+
+        // Dùng PESSIMISTIC_WRITE ở repository để khóa dòng deal khi nhiều user đặt cùng lúc.
+        // Nếu deal chỉ còn 1 suất, request thứ 2 sẽ đợi request thứ 1 cập nhật quantitySold xong,
+        // sau đó tự quay về giá thường nếu deal đã hết số lượng.
+        LivestreamDeal deal = livestreamDealRepository
+                .findUsableDeal(item.getLiveDealId(), item.getLivestreamId(), LocalDateTime.now())
+                .orElse(null);
+
+        // Deal live hết giờ / hết số lượng / bị tắt: quay về giá thường, không làm vỡ luồng mua hàng thường.
+        if (deal == null) {
+            return variant.getPrice();
+        }
+
+        Long dealProductId = deal.getProduct() == null ? null : deal.getProduct().getId();
+        Long variantProductId = variant.getProduct() == null ? null : variant.getProduct().getId();
+        if (dealProductId == null || !dealProductId.equals(variantProductId)) {
+            throw new RuntimeException("Deal livestream không khớp với sản phẩm thanh toán");
+        }
+
+        int quantitySold = deal.getQuantitySold() == null ? 0 : deal.getQuantitySold();
+        int quantityLimit = deal.getQuantityLimit() == null ? Integer.MAX_VALUE : deal.getQuantityLimit();
+        if (quantitySold + item.getQuantity() > quantityLimit) {
+            deal.setActive(false);
+            deal.setStatus("EXPIRED");
+            livestreamDealRepository.save(deal);
+            return variant.getPrice();
+        }
+
+        deal.setQuantitySold(quantitySold + item.getQuantity());
+        if (deal.getQuantityLimit() != null && deal.getQuantitySold() >= deal.getQuantityLimit()) {
+            deal.setActive(false);
+            deal.setStatus("EXPIRED");
+        }
+        livestreamDealRepository.save(deal);
+
+        return deal.getDealPrice();
     }
 
     @Override

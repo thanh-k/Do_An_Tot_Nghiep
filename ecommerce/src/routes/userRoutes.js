@@ -21,6 +21,7 @@ import MembershipCheckoutPage from "@/pages/user/MembershipCheckoutPage";
 import FAQPage from "@/pages/user/FAQPage";
 import OrderDetailPage from "@/pages/user/OrderDetailPage";
 import CoinRewardsPage from "@/pages/user/CoinRewardsPage";
+import LivestreamPage from "@/pages/user/LivestreamPage";
 
 export const userRoutes = [
   { index: true, component: HomePage },
@@ -45,4 +46,6 @@ export const userRoutes = [
   { path: "orders/:id", component: OrderDetailPage, roles: ["user", "admin"] },
   { path: "faq", component: FAQPage },
   { path: "coins", component: CoinRewardsPage, roles: ["user", "admin"] },
+  { path: "livestreams", component: LivestreamPage },
+  { path: "livestreams/:id", component: LivestreamPage },
 ];

@@ -5,8 +5,7 @@ import ProductGrid from "@/components/product/ProductGrid";
 import recommendationService from "@/services/user/recommendationService";
 
 function RecommendedProducts({
-  title = "Gợi ý dành cho bạn",
-  description = "Dựa trên sản phẩm bạn đã xem, tìm kiếm, thêm giỏ hàng hoặc bỏ dở thanh toán.",
+  title = "Sản phẩm đề xuất",
   type = "me",
   productId,
   limit = 8,
@@ -24,9 +23,11 @@ function RecommendedProducts({
 
     let mounted = true;
     setLoading(true);
-    const request = type === "similar"
-      ? recommendationService.getSimilarProducts(productId, limit)
-      : recommendationService.getMyRecommendations(limit);
+
+    const request =
+      type === "similar"
+        ? recommendationService.getSimilarProducts(productId, limit)
+        : recommendationService.getMyRecommendations(limit);
 
     request
       .then((items) => {
@@ -54,7 +55,7 @@ function RecommendedProducts({
 
   return (
     <section className="space-y-5">
-      <SectionHeader title={title} description={description} />
+      <SectionHeader title={title} />
       <ProductGrid products={products} />
     </section>
   );

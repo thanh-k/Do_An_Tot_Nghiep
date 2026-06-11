@@ -353,6 +353,8 @@ function CheckoutPage() {
         items: checkoutItems.map((item) => ({
           variantId: item.variantId,
           quantity: item.quantity,
+          livestreamId: item.livestreamId || null,
+          liveDealId: item.liveDealId || null,
         })),
         voucherCode: appliedVoucher ? appliedVoucher.code : null,
       };
