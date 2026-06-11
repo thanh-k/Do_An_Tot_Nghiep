@@ -20,6 +20,7 @@ import {
   Activity,
   Megaphone,
   UserX,
+  Radio,
 } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import logo from "@/assets/logo.svg";
@@ -88,6 +89,12 @@ const items = [
     label: "Hành vi người dùng",
     icon: Activity,
     permissions: ["BEHAVIOR_VIEW", "RECOMMENDATION_VIEW", "RECOMMENDATION_MANAGE"],
+  },
+  {
+    to: "/admin/livestreams",
+    label: "Livestream",
+    icon: Radio,
+    permissions: ["PRODUCT_VIEW", "PRODUCT_MANAGE"],
   },
   {
     to: "/admin/announcement-bars",

@@ -855,3 +855,70 @@ Nội dung thực hiện:
     + Fix truy vấn laptop dưới 20 triệu không tìm thấy dữ liệu
     + Fix AI trả lời chưa đầy đủ khi hỏi thông số sản phẩm
     + Tối ưu cấu trúc module AI phục vụ mở rộng sau này
+
+📅 Ngày: 11/06/2026
+🧩 Nội dung công việc:
+1. FE:
+- Tối ưu lại cấu trúc trang Home
+- Tách trang Home thành nhiều component nhỏ để dễ bảo trì và mở rộng
+- Điều chỉnh lại các khu vực hiển thị trên trang chủ:
+    + Banner
+    + Sản phẩm nổi bật
+    + Sản phẩm đề xuất
+    + Tin tức
+    + Các khu vực khuyến mãi
+- Sửa hiển thị đánh giá sản phẩm trên trang chủ
+- Không hiển thị sao giả khi sản phẩm chưa có đánh giá
+- Tối ưu giao diện trang Livestream phía người dùng
+- Điều chỉnh bố cục khung live theo hướng giống các nền tảng bán hàng realtime
+- Thêm icon giỏ hàng và bình luận trực tiếp trong màn hình live
+- Tối ưu hiển thị sản phẩm đang ghim, deal live và danh sách sản phẩm trong live
+- Sửa nút “Mua ngay” trong live để chuyển đúng sang luồng thanh toán
+- Tối ưu giao diện quản lý Livestream bên admin
+- Tách giao diện quản lý livestream thành từng form:
+    + Form tạo phiên live
+    + Danh sách livestream
+    + Form thêm / xóa sản phẩm trong live
+    + Form tạo deal nhanh
+    + Form bình luận realtime
+- Bổ sung nút bỏ ghim sản phẩm đang giới thiệu
+- Sửa lỗi xóa sản phẩm khỏi live nhưng giao diện vẫn còn hiển thị
+
+2. BE:
+- Hoàn thiện module Livestream realtime
+- Tích hợp MongoDB phục vụ dữ liệu realtime cho livestream
+- Bổ sung cấu hình MongoDB trong `application.yml` để hỗ trợ deploy
+- Xây dựng xử lý chat realtime theo từng phiên livestream
+- Đảm bảo live mới không hiển thị lại tin nhắn của phiên live cũ
+- Hoàn thiện xử lý deal live:
+    + Tạo deal theo thời gian 1-5 phút
+    + Tự động hết hiệu lực khi hết thời gian
+    + Tự động hết hiệu lực khi hết số lượng deal
+    + Khi deal hết hạn, giá sản phẩm trở về giá gốc
+- Bổ sung xử lý khóa đồng thời khi nhiều người đặt hàng cùng lúc trong live
+- Đảm bảo khi số lượng deal còn 1, chỉ một đơn hàng được áp dụng giá giảm
+- Sửa logic thanh toán sản phẩm live không ảnh hưởng đến luồng mua hàng thường
+- Bổ sung xử lý xóa sản phẩm khỏi livestream và đồng bộ lại danh sách sản phẩm live
+- Bổ sung xử lý bỏ ghim sản phẩm trong livestream
+
+3. Fix lỗi phát sinh:
+- Fix lỗi tạo deal live trả về 500 do thiếu giá trị `updated_at`
+- Fix lỗi tạo deal live chưa đúng dữ liệu giảm giá
+- Fix lỗi sản phẩm live thiếu `variantId` khiến thanh toán bị lỗi
+- Fix lỗi mua sản phẩm trong live chỉ thêm giỏ hàng nhưng chưa đi thẳng đến thanh toán
+- Fix lỗi bỏ ghim sản phẩm bị lỗi 500
+- Fix lỗi xóa sản phẩm live báo thành công nhưng chưa mất khỏi giao diện
+- Fix lỗi hiển thị trạng thái WebSocket vừa báo đã kết nối vừa báo không kết nối
+- Fix lỗi giao diện trang live chưa cân xứng
+- Fix lỗi trùng khung bình luận khi đã có icon chat trong màn live
+- Kiểm tra lại luồng:
+    + Tạo livestream
+    + Thêm sản phẩm vào live
+    + Ghim / bỏ ghim sản phẩm
+    + Tạo deal live
+    + Chat realtime
+    + Mua ngay trong live
+    + Thanh toán sản phẩm live
+    + Hết hạn deal và hết số lượng deal
+    
+✍️ Người thực hiện: Thanh

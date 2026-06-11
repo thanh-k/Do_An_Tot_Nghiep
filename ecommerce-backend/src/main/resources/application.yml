@@ -8,6 +8,10 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://mongo:27017/ecommerce_realtime}
+
   servlet:
     multipart:
       max-file-size: 10MB
@@ -78,7 +82,7 @@ app:
   gemini:
     api:
       key: ${GEMINI_API_KEY}
-      model: ${GEMINI_API_MODEL} 
+      model: ${GEMINI_API_MODEL}
 
 vision:
   service:
