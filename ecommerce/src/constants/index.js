@@ -15,10 +15,16 @@ export const ORDER_STATUS_OPTIONS = [
 ];
 
 export const PAYMENT_METHOD_OPTIONS = [
-  { value: "cod", label: "Thanh toán khi nhận hàng" },
-  { value: "banking", label: "Chuyển khoản ngân hàng" },
-  { value: "card", label: "Thẻ tín dụng / ghi nợ" },
-  { value: "momo", label: "Ví điện tử MoMo" },
+  {
+    value: "cod",
+    label: "Thanh toán khi nhận hàng",
+    description: "Thanh toán bằng tiền mặt khi nhận được hàng.",
+  },
+  {
+    value: "banking",
+    label: "Thanh toán ngân hàng",
+    description: "Quét mã VNPay QR, mã thanh toán có hiệu lực trong 15 phút.",
+  },
 ];
 
 export const APP_META = {
