@@ -19,6 +19,7 @@ import BehaviorManagementPage from "@/pages/admin/BehaviorManagementPage";
 import AnnouncementBarManagementPage from "@/pages/admin/AnnouncementBarManagementPage";
 import AccountCancellationManagementPage from "@/pages/admin/AccountCancellationManagementPage";
 import LivestreamManagementPage from "@/pages/admin/LivestreamManagementPage";
+import ProductVideoManagementPage from "@/pages/admin/ProductVideoManagementPage";
 
 export const adminRoutes = [
   {
@@ -69,6 +70,11 @@ export const adminRoutes = [
   {
     path: "livestreams",
     component: LivestreamManagementPage,
+    permissions: ["PRODUCT_VIEW", "PRODUCT_MANAGE"],
+  },
+  {
+    path: "product-videos",
+    component: ProductVideoManagementPage,
     permissions: ["PRODUCT_VIEW", "PRODUCT_MANAGE"],
   },
   {

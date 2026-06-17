@@ -5,9 +5,11 @@ import Input from "@/components/common/Input";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import PageHeader from "@/components/common/PageHeader";
 import ProductGrid from "@/components/product/ProductGrid";
+import ProductVideoSection from "@/components/productVideo/ProductVideoSection";
 import { useDebounce } from "@/hooks/useDebounce";
 import userProductService from "@/services/user/productService";
 import behaviorService from "@/services/user/behaviorService";
+import productVideoService from "@/services/productVideo/productVideoService";
 
 function SearchResultPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -16,6 +18,7 @@ function SearchResultPage() {
   const debouncedKeyword = useDebounce(keyword, 350);
   const [loading, setLoading] = useState(true);
   const [response, setResponse] = useState({ items: [], total: 0 });
+  const [videos, setVideos] = useState([]);
 
   useEffect(() => {
     setKeyword(queryParam);
@@ -24,14 +27,18 @@ function SearchResultPage() {
   useEffect(() => {
     if (!debouncedKeyword) {
       setResponse({ items: [], total: 0 });
+      setVideos([]);
       setLoading(false);
       return;
     }
     setLoading(true);
-    userProductService
-      .searchProducts(debouncedKeyword, 1, 12)
-      .then((data) => {
+    Promise.all([
+      userProductService.searchProducts(debouncedKeyword, 1, 12),
+      productVideoService.searchVideos(debouncedKeyword, 6).catch(() => []),
+    ])
+      .then(([data, videoData]) => {
         setResponse(data);
+        setVideos(Array.isArray(videoData) ? videoData : []);
         if (debouncedKeyword?.trim()) {
           behaviorService.track({
             eventType: "SEARCH_PRODUCT",
@@ -46,6 +53,15 @@ function SearchResultPage() {
   const handleSubmit = (event) => {
     event.preventDefault();
     setSearchParams(keyword.trim() ? { q: keyword.trim() } : {});
+  };
+
+
+  const handleVideoProductClick = (video) => {
+    productVideoService.trackProductClick(video.id).catch(() => {});
+  };
+
+  const handleVideoView = (video) => {
+    productVideoService.trackView(video.id, 0).catch(() => {});
   };
 
   return (
@@ -86,11 +102,27 @@ function SearchResultPage() {
       {loading ? (
         <LoadingSpinner label="Đang tìm sản phẩm..." />
       ) : (
-        <ProductGrid
-          products={response.items}
-          emptyTitle="Không có sản phẩm phù hợp"
-          emptyDescription="Hãy thử dùng từ khoá ngắn hơn hoặc tên thương hiệu phổ biến."
-        />
+        <div className="space-y-10">
+          <section>
+            <h2 className="mb-4 text-2xl font-black text-slate-950">
+              Sản phẩm phù hợp
+            </h2>
+            <ProductGrid
+              products={response.items}
+              emptyTitle="Không có sản phẩm phù hợp"
+              emptyDescription="Hãy thử dùng từ khoá ngắn hơn hoặc tên thương hiệu phổ biến."
+            />
+          </section>
+
+          <ProductVideoSection
+            title="Video mô tả sản phẩm liên quan"
+            description="Các video ngắn giúp bạn xem nhanh thiết kế, tính năng và trải nghiệm thực tế của sản phẩm."
+            videos={videos}
+            autoPlayFirst
+            onProductClick={handleVideoProductClick}
+            onView={handleVideoView}
+          />
+        </div>
       )}
     </div>
   );

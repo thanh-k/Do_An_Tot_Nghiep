@@ -44,7 +44,7 @@ public class LivestreamController {
     @PostMapping("/api/v1/admin/livestreams/upload-thumbnail")
     public ApiResponse<String> uploadThumbnail(@RequestParam("file") MultipartFile file) throws IOException {
         return ApiResponse.<String>builder()
-                .result(localStorageService.uploadFile(file, "livestreams"))
+                .result(localStorageService.uploadImage(file, "livestreams"))
                 .build();
     }
 

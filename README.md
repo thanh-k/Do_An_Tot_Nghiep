@@ -922,3 +922,50 @@ Nội dung thực hiện:
     + Hết hạn deal và hết số lượng deal
     
 ✍️ Người thực hiện: Thanh
+
+📅 Ngày: 17/06/2026
+🧩 Nội dung công việc:
+
+1. FE:
+- Xây dựng giao diện quản lý Video mô tả sản phẩm cho admin
+- Thêm form tạo và cập nhật video mô tả sản phẩm
+- Cho phép admin nhập:
+    + Tiêu đề video
+    + Mô tả ngắn
+    + Video mô tả sản phẩm
+    + Ảnh đại diện video
+    + Sản phẩm liên kết
+- Tối ưu phần chọn sản phẩm liên kết bằng ô tìm kiếm realtime
+- Hỗ trợ tìm kiếm sản phẩm theo:
+    + Tên sản phẩm
+    + Thương hiệu
+    + Danh mục
+- Tách trang quản lý video mô tả sản phẩm thành nhiều component nhỏ để dễ bảo trì
+- Hiển thị video mô tả sản phẩm trong khung gallery của trang chi tiết sản phẩm
+- Kết hợp hình ảnh sản phẩm và video mô tả trong cùng khu vực hiển thị
+
+2. BE:
+- Xây dựng module Video mô tả sản phẩm
+- Thiết kế API quản lý video mô tả sản phẩm cho admin
+- Cho phép thêm, sửa, xóa và ẩn/hiện video mô tả sản phẩm
+- Liên kết mỗi video với một sản phẩm chính
+- Bổ sung API lấy video theo sản phẩm
+- Bổ sung API thống kê video mô tả sản phẩm
+- Sử dụng `LocalStorageService` để lưu trữ video và ảnh đại diện video trên local
+
+3. Fix lỗi phát sinh:
+- Fix lỗi video mô tả sản phẩm không phát được
+- Fix lỗi không hiển thị ảnh đại diện video
+- Fix lỗi video chưa hiển thị đúng vị trí trong trang chi tiết sản phẩm
+- Fix lỗi thống kê video trả về 500 do thiếu dữ liệu sản phẩm liên kết
+- Fix lỗi giao diện chọn sản phẩm liên kết khó sử dụng
+- Kiểm tra lại luồng:
+    + Tạo video mô tả sản phẩm
+    + Cập nhật video mô tả sản phẩm
+    + Xóa video mô tả sản phẩm
+    + Chọn sản phẩm liên kết
+    + Upload video
+    + Upload ảnh đại diện
+    + Hiển thị video trong gallery sản phẩm
+
+✍️ Người thực hiện: Thanh

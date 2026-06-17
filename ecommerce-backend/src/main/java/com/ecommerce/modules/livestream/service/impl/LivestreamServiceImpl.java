@@ -9,6 +9,7 @@ import com.ecommerce.modules.livestream.entity.*;
 import com.ecommerce.modules.livestream.repository.*;
 import com.ecommerce.modules.livestream.service.LivestreamService;
 import com.ecommerce.modules.product.repository.ProductRepository;
+import com.ecommerce.modules.upload.service.LocalStorageService;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -26,17 +27,20 @@ public class LivestreamServiceImpl implements LivestreamService {
     private final LivestreamDealRepository livestreamDealRepository;
     private final ProductRepository productRepository;
     private final LivestreamChatMessageRepository chatMessageRepository;
+    private final LocalStorageService localStorageService;
 
     public LivestreamServiceImpl(LivestreamRepository livestreamRepository,
                                  LivestreamProductRepository livestreamProductRepository,
                                  LivestreamDealRepository livestreamDealRepository,
                                  ProductRepository productRepository,
-                                 LivestreamChatMessageRepository chatMessageRepository) {
+                                 LivestreamChatMessageRepository chatMessageRepository,
+                                 LocalStorageService localStorageService) {
         this.livestreamRepository = livestreamRepository;
         this.livestreamProductRepository = livestreamProductRepository;
         this.livestreamDealRepository = livestreamDealRepository;
         this.productRepository = productRepository;
         this.chatMessageRepository = chatMessageRepository;
+        this.localStorageService = localStorageService;
     }
 
     @Override
@@ -71,7 +75,10 @@ public class LivestreamServiceImpl implements LivestreamService {
         Livestream livestream = findLivestream(id);
         livestream.setTitle(nonBlank(request.getTitle(), livestream.getTitle()));
         livestream.setDescription(request.getDescription());
-        livestream.setThumbnailUrl(request.getThumbnailUrl());
+        if (request.getThumbnailUrl() != null && !Objects.equals(livestream.getThumbnailUrl(), request.getThumbnailUrl())) {
+            localStorageService.deleteFile(livestream.getThumbnailUrl());
+            livestream.setThumbnailUrl(request.getThumbnailUrl());
+        }
         livestream.setScheduledAt(request.getScheduledAt());
         if (livestream.getStatus() == LivestreamStatus.DRAFT && request.getScheduledAt() != null) {
             livestream.setStatus(LivestreamStatus.SCHEDULED);
@@ -82,6 +89,7 @@ public class LivestreamServiceImpl implements LivestreamService {
     @Override
     public void delete(Long id) {
         Livestream livestream = findLivestream(id);
+        localStorageService.deleteFile(livestream.getThumbnailUrl());
         livestreamRepository.delete(livestream);
     }
 

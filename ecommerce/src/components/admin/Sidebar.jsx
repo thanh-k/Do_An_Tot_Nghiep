@@ -21,6 +21,7 @@ import {
   Megaphone,
   UserX,
   Radio,
+  Clapperboard,
 } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import logo from "@/assets/logo.svg";
@@ -94,6 +95,12 @@ const items = [
     to: "/admin/livestreams",
     label: "Livestream",
     icon: Radio,
+    permissions: ["PRODUCT_VIEW", "PRODUCT_MANAGE"],
+  },
+  {
+    to: "/admin/product-videos",
+    label: "Video sản phẩm",
+    icon: Clapperboard,
     permissions: ["PRODUCT_VIEW", "PRODUCT_MANAGE"],
   },
   {
