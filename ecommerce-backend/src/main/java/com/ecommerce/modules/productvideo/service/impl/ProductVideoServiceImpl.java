@@ -72,7 +72,7 @@ public class ProductVideoServiceImpl implements ProductVideoService {
                     .thumbnailUrl(thumbnailUrl)
                     .build());
         } catch (Exception e) {
-            throw new IllegalStateException("Không thể tải video mô tả sản phẩm", e);
+            throw new IllegalArgumentException(e.getMessage() == null ? "Không thể tải video mô tả sản phẩm" : e.getMessage());
         }
     }
 
@@ -114,7 +114,7 @@ public class ProductVideoServiceImpl implements ProductVideoService {
                     .thumbnailUrl(thumbnailUrl)
                     .build());
         } catch (Exception e) {
-            throw new IllegalStateException("Không thể cập nhật video mô tả sản phẩm", e);
+            throw new IllegalArgumentException(e.getMessage() == null ? "Không thể cập nhật video mô tả sản phẩm" : e.getMessage());
         }
     }
 
