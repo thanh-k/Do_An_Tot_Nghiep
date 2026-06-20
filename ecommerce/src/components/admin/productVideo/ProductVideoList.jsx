@@ -1,7 +1,7 @@
 import { Trash2 } from "lucide-react";
 import { formatCurrency } from "@/utils/format";
 
-function ProductVideoList({ videos, loading, onEdit, onDelete }) {
+function ProductVideoList({ videos, loading, onEdit, onDelete, canManage }) {
   return (
     <section className="rounded-[28px] bg-white p-5 shadow-sm">
       <h2 className="text-xl font-black text-slate-950">Danh sách video mô tả sản phẩm</h2>
@@ -55,22 +55,24 @@ function ProductVideoList({ videos, loading, onEdit, onDelete }) {
                     <div className="rounded-xl bg-white p-2"><p className="font-black">{video.productClickCount || 0}</p><p className="text-slate-500">Click</p></div>
                   </div>
 
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onEdit(video)}
-                      className="flex-1 rounded-xl bg-blue-600 px-3 py-2 text-sm font-black text-white hover:bg-blue-700"
-                    >
-                      Sửa
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onDelete(video.id)}
-                      className="rounded-xl bg-rose-50 px-3 py-2 text-rose-600 hover:bg-rose-100"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+                  {canManage && (
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onEdit(video)}
+                        className="flex-1 rounded-xl bg-blue-600 px-3 py-2 text-sm font-black text-white hover:bg-blue-700"
+                      >
+                        Sửa
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDelete(video.id)}
+                        className="rounded-xl bg-rose-50 px-3 py-2 text-rose-600 hover:bg-rose-100"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </article>

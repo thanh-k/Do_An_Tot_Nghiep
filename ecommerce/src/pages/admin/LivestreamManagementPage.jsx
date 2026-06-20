@@ -27,6 +27,8 @@ import categoryService from "@/services/admin/categoryService";
 import brandService from "@/services/admin/brandService";
 import useLivestreamHost from "@/hooks/useLivestreamHost";
 import { formatVnd } from "@/utils/livestream";
+import useAuth from "@/hooks/useAuth";
+import { hasPermission } from "@/utils/permission";
 
 const initialForm = { title: "", description: "", thumbnailUrl: "", scheduledAt: "" };
 const normalizeText = (value = "") => String(value).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d");
@@ -95,13 +97,13 @@ function LivestreamForm({ form, setForm, onSubmit, editMode, onCancel, onThumbna
   );
 }
 
-function LivestreamList({ livestreams, selectedLive, onSelect, onCreate, onEdit, onDelete }) {
+function LivestreamList({ livestreams, selectedLive, onSelect, onCreate, onEdit, onDelete, canManage }) {
   return (
     <SectionCard
       title="Danh sách livestream"
       description="Chọn một phiên live để mở studio hoặc bấm tạo phiên mới để bắt đầu."
       icon={Radio}
-      right={<button onClick={onCreate} className="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-black text-white hover:bg-blue-700"><Plus className="mr-1 inline h-4 w-4" /> Tạo phiên mới</button>}
+      right={canManage && <button onClick={onCreate} className="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-black text-white hover:bg-blue-700"><Plus className="mr-1 inline h-4 w-4" /> Tạo phiên mới</button>}
     >
       <div className="mt-5 space-y-3">
         {livestreams.length === 0 && <div className="rounded-2xl bg-slate-50 p-5 text-center text-sm text-slate-500">Chưa có livestream. Bấm “Tạo phiên mới” để bắt đầu.</div>}
@@ -118,10 +120,12 @@ function LivestreamList({ livestreams, selectedLive, onSelect, onCreate, onEdit,
                   <span className={`w-fit rounded-full px-3 py-1 text-xs font-black ${live.status === "LIVE" ? "bg-rose-100 text-rose-700" : "bg-slate-100 text-slate-600"}`}>{live.status}</span>
                 </div>
               </button>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <button onClick={() => onEdit(live)} className="rounded-xl bg-white px-3 py-2 text-xs font-black text-blue-600 shadow-sm hover:bg-blue-50"><Edit3 className="mr-1 inline h-3.5 w-3.5" /> Sửa</button>
-                <button onClick={() => onDelete(live)} className="rounded-xl bg-white px-3 py-2 text-xs font-black text-rose-600 shadow-sm hover:bg-rose-50"><Trash2 className="mr-1 inline h-3.5 w-3.5" /> Xóa</button>
-              </div>
+              {canManage && (
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button onClick={() => onEdit(live)} className="rounded-xl bg-white px-3 py-2 text-xs font-black text-blue-600 shadow-sm hover:bg-blue-50"><Edit3 className="mr-1 inline h-3.5 w-3.5" /> Sửa</button>
+                  <button onClick={() => onDelete(live)} className="rounded-xl bg-white px-3 py-2 text-xs font-black text-rose-600 shadow-sm hover:bg-rose-50"><Trash2 className="mr-1 inline h-3.5 w-3.5" /> Xóa</button>
+                </div>
+              )}
             </div>
           );
         })}
@@ -169,7 +173,7 @@ function ProductPicker({ products, liveProducts, categories, brands, onAdd, onRe
   );
 }
 
-function AdminLiveChat({ liveId, broadcastLiveEvent, incomingMessage }) {
+function AdminLiveChat({ liveId, broadcastLiveEvent, incomingMessage, canManage }) {
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
   const endRef = useRef(null);
@@ -194,11 +198,11 @@ function AdminLiveChat({ liveId, broadcastLiveEvent, incomingMessage }) {
       {messages.map((item, index) => <div key={item.id || `${item.createdAt || "msg"}-${index}`} className="mb-2"><span className="font-black text-slate-900">{item.senderName || "Khách"}: </span><span className="text-slate-700">{item.message}</span></div>)}
       <div ref={endRef} />
     </div>
-    <div className="mt-3 flex gap-2"><input value={message} onChange={(e) => setMessage(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendMessage()} placeholder="Nhập tin nhắn cho người xem..." className="min-w-0 flex-1 rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" /><button onClick={sendMessage} className="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-black text-white">Gửi</button></div>
+    {canManage && <div className="mt-3 flex gap-2"><input value={message} onChange={(e) => setMessage(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendMessage()} placeholder="Nhập tin nhắn cho người xem..." className="min-w-0 flex-1 rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" /><button onClick={sendMessage} className="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-black text-white">Gửi</button></div>}
   </div>;
 }
 
-function AdminLiveStudio({ live, onReload, onRemoveProduct, onOpenProductManager }) {
+function AdminLiveStudio({ live, onReload, onRemoveProduct, onOpenProductManager, canManage }) {
   const [dealProductId, setDealProductId] = useState("");
   const [dealPrice, setDealPrice] = useState("");
   const [discountPercent, setDiscountPercent] = useState("");
@@ -280,7 +284,7 @@ function AdminLiveStudio({ live, onReload, onRemoveProduct, onOpenProductManager
     }
   };
 
-  return <SectionCard title="Live Studio" icon={Camera} right={!started ? <button onClick={startLive} className="rounded-2xl bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700"><Camera className="mr-2 inline h-4 w-4" /> Bắt đầu live</button> : <button onClick={endLive} className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800"><WifiOff className="mr-2 inline h-4 w-4" /> Kết thúc live</button>}>
+  return <SectionCard title="Live Studio" icon={Camera} right={canManage && (!started ? <button onClick={startLive} className="rounded-2xl bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700"><Camera className="mr-2 inline h-4 w-4" /> Bắt đầu live</button> : <button onClick={endLive} className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800"><WifiOff className="mr-2 inline h-4 w-4" /> Kết thúc live</button>)}>
     <div className="mt-5 space-y-5">
       <div><p className="text-xs font-bold uppercase text-rose-500">Phiên đang quản lý</p><h3 className="text-xl font-black text-slate-950">{live.title}</h3></div>
       {error && <p className="rounded-2xl bg-rose-50 p-3 text-sm font-semibold text-rose-600">{error}</p>}
@@ -288,10 +292,10 @@ function AdminLiveStudio({ live, onReload, onRemoveProduct, onOpenProductManager
         <div className="overflow-hidden rounded-3xl bg-slate-950"><video ref={videoRef} autoPlay muted playsInline className="aspect-video w-full bg-slate-950 object-cover" /><div className="flex items-center justify-between px-4 py-3 text-white"><span className="inline-flex items-center rounded-full bg-rose-600 px-3 py-1 text-xs font-black"><Radio className="mr-1 h-3.5 w-3.5" /> {started ? "ĐANG LIVE" : "CHƯA LIVE"}</span><span className="text-sm"><Eye className="mr-1 inline h-4 w-4" /> {viewerCount} người xem</span></div></div>
         <div className="space-y-4">
           <div className="rounded-3xl border border-slate-200 p-4">
-            <div className="flex items-center justify-between gap-3"><p className="text-sm font-black text-slate-900">Sản phẩm đang ghim</p>{pinned && <button type="button" onClick={unpinProduct} className="rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-rose-50 hover:text-rose-600"><X className="mr-1 inline h-3.5 w-3.5" /> Bỏ ghim</button>}</div>
+            <div className="flex items-center justify-between gap-3"><p className="text-sm font-black text-slate-900">Sản phẩm đang ghim</p>{canManage && pinned && <button type="button" onClick={unpinProduct} className="rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-rose-50 hover:text-rose-600"><X className="mr-1 inline h-3.5 w-3.5" /> Bỏ ghim</button>}</div>
             {pinned ? <div className="mt-3 flex gap-3"><img src={pinned.thumbnail} alt={pinned.name} className="h-16 w-16 rounded-2xl object-contain bg-slate-50" /><div><p className="font-bold text-slate-900">{pinned.name}</p><p className="text-sm text-rose-600">{formatVnd(pinned.price)}</p></div></div> : <p className="mt-2 text-sm text-slate-500">Chưa ghim sản phẩm</p>}
           </div>
-          <div className="rounded-3xl border border-slate-200 p-4">
+          {canManage && <div className="rounded-3xl border border-slate-200 p-4">
             <p className="text-sm font-black text-slate-900">Tạo deal nhanh 1-5 phút</p>
             <p className="mt-1 text-xs text-slate-500">Nhập <b>% giảm thêm</b> hoặc <b>số tiền muốn giảm</b>, hệ thống sẽ tự điền vào ô <b>giá sau khi giảm</b>.</p>
             <select value={dealProductId} onChange={(e) => setDealProductId(e.target.value)} className="mt-3 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"><option value="">Chọn sản phẩm cần giảm</option>{liveProducts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
@@ -305,24 +309,26 @@ function AdminLiveStudio({ live, onReload, onRemoveProduct, onOpenProductManager
               <label className="text-xs font-bold text-slate-600">Số lượng deal<input value={quantityLimit} onChange={(e) => setQuantityLimit(e.target.value)} min="1" type="number" className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm font-normal" /></label>
             </div>
             <button onClick={createDeal} className="mt-3 w-full rounded-2xl bg-amber-500 px-4 py-2 text-sm font-black text-white hover:bg-amber-600"><Tag className="mr-2 inline h-4 w-4" /> Tạo deal live</button>
-          </div>
+          </div>}
         </div>
       </div>
-      <AdminLiveChat liveId={live.id} broadcastLiveEvent={broadcastLiveEvent} incomingMessage={incomingMessage} />
+      <AdminLiveChat liveId={live.id} broadcastLiveEvent={broadcastLiveEvent} incomingMessage={incomingMessage} canManage={canManage} />
       <div className="rounded-3xl border border-slate-200 p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-black text-slate-900">Sản phẩm trong live</p>
           </div>
-          <button onClick={onOpenProductManager} className="rounded-2xl bg-blue-600 px-4 py-2 text-xs font-black text-white hover:bg-blue-700"><PackagePlus className="mr-1 inline h-3.5 w-3.5" /> Quản lý sản phẩm live</button>
+          {canManage && <button onClick={onOpenProductManager} className="rounded-2xl bg-blue-600 px-4 py-2 text-xs font-black text-white hover:bg-blue-700"><PackagePlus className="mr-1 inline h-3.5 w-3.5" /> Quản lý sản phẩm live</button>}
         </div>
-        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{liveProducts.map((item) => <div key={item.id} className="flex items-center gap-3 rounded-2xl border border-slate-100 p-3"><img src={item.thumbnail} alt={item.name} className="h-14 w-14 rounded-xl bg-slate-50 object-contain" /><div className="min-w-0 flex-1"><p className="truncate font-bold text-slate-900">{item.name}</p><p className="text-sm text-rose-600">{formatVnd(item.price)}</p></div><div className="flex shrink-0 flex-col gap-1"><button onClick={() => pinProduct(item.id)} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold hover:bg-rose-50 hover:text-rose-600"><Pin className="mr-1 inline h-3.5 w-3.5" />Ghim</button><button onClick={() => removeProductFromLive(item.id)} className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-100"><Trash2 className="mr-1 inline h-3.5 w-3.5" />Xóa</button></div></div>)}</div>
+        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{liveProducts.map((item) => <div key={item.id} className="flex items-center gap-3 rounded-2xl border border-slate-100 p-3"><img src={item.thumbnail} alt={item.name} className="h-14 w-14 rounded-xl bg-slate-50 object-contain" /><div className="min-w-0 flex-1"><p className="truncate font-bold text-slate-900">{item.name}</p><p className="text-sm text-rose-600">{formatVnd(item.price)}</p></div>{canManage && <div className="flex shrink-0 flex-col gap-1"><button onClick={() => pinProduct(item.id)} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold hover:bg-rose-50 hover:text-rose-600"><Pin className="mr-1 inline h-3.5 w-3.5" />Ghim</button><button onClick={() => removeProductFromLive(item.id)} className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-100"><Trash2 className="mr-1 inline h-3.5 w-3.5" />Xóa</button></div>}</div>)}</div>
       </div>
     </div>
   </SectionCard>;
 }
 
 function LivestreamManagementPage() {
+  const { currentUser } = useAuth();
+  const canManage = hasPermission(currentUser, "LIVESTREAM_MANAGE");
   const [livestreams, setLivestreams] = useState([]);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -349,9 +355,10 @@ function LivestreamManagementPage() {
   useEffect(() => { loadData().catch(() => toast.error("Không tải được dữ liệu livestream")); }, []);
 
   const resetForm = () => { setForm(initialForm); setEditId(null); setThumbnailFile(null); setThumbnailPreview(""); setShowForm(false); };
-  const openCreateForm = () => { setForm(initialForm); setEditId(null); setThumbnailFile(null); setThumbnailPreview(""); setShowForm(true); };
+  const openCreateForm = () => { if (!canManage) return; setForm(initialForm); setEditId(null); setThumbnailFile(null); setThumbnailPreview(""); setShowForm(true); };
   const submitLive = async (e) => {
     e.preventDefault();
+    if (!canManage) return toast.error("Bạn không có quyền quản lý livestream");
     let thumbnailUrl = form.thumbnailUrl;
     if (thumbnailFile) thumbnailUrl = await livestreamService.uploadThumbnail(thumbnailFile);
     const payload = { ...form, thumbnailUrl, scheduledAt: form.scheduledAt || null };
@@ -361,11 +368,12 @@ function LivestreamManagementPage() {
     await loadData();
     setSelectedLiveId(saved.id);
   };
-  const editLive = (live) => { setEditId(live.id); setForm({ title: live.title || "", description: live.description || "", thumbnailUrl: live.thumbnailUrl || "", scheduledAt: live.scheduledAt ? String(live.scheduledAt).slice(0, 16) : "" }); setThumbnailPreview(live.thumbnailUrl || ""); setShowForm(true); window.scrollTo({ top: 0, behavior: "smooth" }); };
-  const deleteLive = async (live) => { if (!window.confirm(`Xóa livestream "${live.title}"?`)) return; await livestreamService.deleteLivestream(live.id); toast.success("Đã xóa livestream"); if (Number(selectedLiveId) === Number(live.id)) setSelectedLiveId(null); loadData(); };
+  const editLive = (live) => { if (!canManage) return; setEditId(live.id); setForm({ title: live.title || "", description: live.description || "", thumbnailUrl: live.thumbnailUrl || "", scheduledAt: live.scheduledAt ? String(live.scheduledAt).slice(0, 16) : "" }); setThumbnailPreview(live.thumbnailUrl || ""); setShowForm(true); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const deleteLive = async (live) => { if (!canManage) return; if (!window.confirm(`Xóa livestream "${live.title}"?`)) return; await livestreamService.deleteLivestream(live.id); toast.success("Đã xóa livestream"); if (Number(selectedLiveId) === Number(live.id)) setSelectedLiveId(null); loadData(); };
   const handleThumbnailChange = (event) => { const file = event.target.files?.[0]; if (!file) return; setThumbnailFile(file); setThumbnailPreview(URL.createObjectURL(file)); };
-  const addProduct = async (productId) => { await livestreamService.addProduct(selectedLive.id, productId); toast.success("Đã thêm sản phẩm vào live"); loadData(); };
+  const addProduct = async (productId) => { if (!canManage) return; await livestreamService.addProduct(selectedLive.id, productId); toast.success("Đã thêm sản phẩm vào live"); loadData(); };
   const removeProduct = async (productId) => {
+    if (!canManage) return;
     const updated = await livestreamService.removeProduct(selectedLive.id, productId);
     setLivestreams((prev) => prev.map((live) => {
       if (Number(live.id) !== Number(selectedLive.id)) return live;
@@ -402,7 +410,7 @@ function LivestreamManagementPage() {
       </div>
     </section>
 
-    {(showForm || livestreams.length === 0) && (
+    {canManage && (showForm || livestreams.length === 0) && (
       <LivestreamForm
         form={form}
         setForm={setForm}
@@ -421,6 +429,7 @@ function LivestreamManagementPage() {
       onCreate={openCreateForm}
       onEdit={editLive}
       onDelete={deleteLive}
+      canManage={canManage}
     />
 
     {selectedLive ? (
@@ -432,9 +441,10 @@ function LivestreamManagementPage() {
           onOpenProductManager={() =>
             setShowProductManager((value) => !value)
           }
+          canManage={canManage}
         />
 
-        {showProductManager && (
+        {canManage && showProductManager && (
           <ProductPicker
             products={products}
             liveProducts={selectedLive.products || []}

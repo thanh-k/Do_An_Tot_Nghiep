@@ -6,6 +6,8 @@ import ProductVideoList from "@/components/admin/productVideo/ProductVideoList";
 import ProductVideoStats from "@/components/admin/productVideo/ProductVideoStats";
 import productVideoAdminService from "@/services/admin/productVideoAdminService";
 import { productService } from "@/services/admin/productService";
+import useAuth from "@/hooks/useAuth";
+import { hasPermission } from "@/utils/permission";
 
 const emptyForm = {
   id: null,
@@ -18,6 +20,8 @@ const emptyForm = {
 };
 
 function ProductVideoManagementPage() {
+  const { currentUser } = useAuth();
+  const canManage = hasPermission(currentUser, "PRODUCT_VIDEO_MANAGE");
   const [videos, setVideos] = useState([]);
   const [products, setProducts] = useState([]);
   const [stats, setStats] = useState(null);
@@ -54,6 +58,7 @@ function ProductVideoManagementPage() {
   }, []);
 
   const openCreateForm = () => {
+    if (!canManage) return;
     setForm(emptyForm);
     setProductKeyword("");
     setShowProductDropdown(false);
@@ -68,6 +73,7 @@ function ProductVideoManagementPage() {
   };
 
   const editVideo = (video) => {
+    if (!canManage) return;
     setForm({
       id: video.id,
       title: video.title || "",
@@ -85,6 +91,11 @@ function ProductVideoManagementPage() {
 
   const submitForm = async (event) => {
     event.preventDefault();
+
+    if (!canManage) {
+      toast.error("Bạn không có quyền quản lý video sản phẩm");
+      return;
+    }
 
     if (!form.title.trim()) {
       toast.error("Vui lòng nhập tiêu đề video");
@@ -127,6 +138,7 @@ function ProductVideoManagementPage() {
   };
 
   const deleteVideo = async (id) => {
+    if (!canManage) return;
     if (!window.confirm("Xóa video mô tả sản phẩm này?")) return;
 
     try {
@@ -140,11 +152,11 @@ function ProductVideoManagementPage() {
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-6">
-      <ProductVideoHeader onCreate={openCreateForm} onRefresh={loadData} />
+      <ProductVideoHeader onCreate={openCreateForm} onRefresh={loadData} canManage={canManage} />
 
       <ProductVideoStats stats={stats} videos={videos} />
 
-      {showForm && (
+      {showForm && canManage && (
         <ProductVideoForm
           form={form}
           setForm={setForm}
@@ -164,6 +176,7 @@ function ProductVideoManagementPage() {
         loading={loading}
         onEdit={editVideo}
         onDelete={deleteVideo}
+        canManage={canManage}
       />
     </div>
   );

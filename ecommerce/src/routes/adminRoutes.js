@@ -25,7 +25,7 @@ export const adminRoutes = [
   {
     index: true,
     component: AdminDashboardPage,
-    permissions: ["ANALYTICS_VIEW", "USER_VIEW", "PRODUCT_VIEW", "ORDER_VIEW"],
+    permissions: ["DASHBOARD_VIEW", "ANALYTICS_VIEW", "USER_VIEW", "PRODUCT_VIEW", "ORDER_VIEW"],
   },
   {
     path: "products",
@@ -70,12 +70,12 @@ export const adminRoutes = [
   {
     path: "livestreams",
     component: LivestreamManagementPage,
-    permissions: ["PRODUCT_VIEW", "PRODUCT_MANAGE"],
+    permissions: ["LIVESTREAM_VIEW", "LIVESTREAM_MANAGE"],
   },
   {
     path: "product-videos",
     component: ProductVideoManagementPage,
-    permissions: ["PRODUCT_VIEW", "PRODUCT_MANAGE"],
+    permissions: ["PRODUCT_VIDEO_VIEW", "PRODUCT_VIDEO_MANAGE"],
   },
   {
     path: "vouchers",

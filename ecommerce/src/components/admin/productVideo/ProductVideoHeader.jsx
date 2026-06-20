@@ -1,6 +1,6 @@
 import { Plus, RefreshCw } from "lucide-react";
 
-function ProductVideoHeader({ onCreate, onRefresh }) {
+function ProductVideoHeader({ onCreate, onRefresh, canManage }) {
   return (
     <section className="rounded-[28px] border border-slate-100 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -17,14 +17,16 @@ function ProductVideoHeader({ onCreate, onRefresh }) {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={onCreate}
-            className="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-black text-white hover:bg-blue-700"
-          >
-            <Plus className="mr-1 inline h-4 w-4" />
-            Thêm video
-          </button>
+          {canManage && (
+            <button
+              type="button"
+              onClick={onCreate}
+              className="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-black text-white hover:bg-blue-700"
+            >
+              <Plus className="mr-1 inline h-4 w-4" />
+              Thêm video
+            </button>
+          )}
 
           <button
             type="button"

@@ -8,10 +8,14 @@ import PageHeader from "@/components/common/PageHeader";
 import { useDebounce } from "@/hooks/useDebounce";
 import phonePrefixService from "@/services/admin/phonePrefixService";
 import { sortNewestFirst } from "@/utils/sortNewest";
+import useAuth from "@/hooks/useAuth";
+import { hasPermission } from "@/utils/permission";
 
 const initialForm = { prefix: "", providerName: "", active: true };
 
 function PhonePrefixManagementPage() {
+  const { currentUser } = useAuth();
+  const canManage = hasPermission(currentUser, "PHONE_PREFIX_MANAGE");
   const [loading, setLoading] = useState(true);
   const [prefixes, setPrefixes] = useState([]);
   const [prefixForm, setPrefixForm] = useState(initialForm);
@@ -47,6 +51,7 @@ function PhonePrefixManagementPage() {
   const resetForm = () => setPrefixForm(initialForm);
 
   const submitPrefix = async () => {
+    if (!canManage) return;
     if (!prefixForm.prefix || !prefixForm.providerName) {
       toast.error("Vui lòng nhập đủ đầu số và nhà mạng");
       return;
@@ -78,7 +83,7 @@ function PhonePrefixManagementPage() {
     {
       key: "actions",
       title: "Thao tác",
-      render: (row) => (
+      render: (row) => canManage ? (
         <div className="flex gap-2">
           <Button
             size="sm"
@@ -110,7 +115,7 @@ function PhonePrefixManagementPage() {
             Xóa
           </Button>
         </div>
-      ),
+      ) : null,
     },
   ];
 
@@ -121,7 +126,7 @@ function PhonePrefixManagementPage() {
         description="Tách riêng thành một trang để dễ quản lý validate số điện thoại, tránh dồn quá nhiều logic vào màn người dùng."
       />
 
-      <div className="card p-6 space-y-4">
+      {canManage && <div className="card p-6 space-y-4">
         <div className="grid gap-4 md:grid-cols-4">
           <Input
             label="Đầu số"
@@ -163,7 +168,7 @@ function PhonePrefixManagementPage() {
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
         />
-      </div>
+      </div>}
 
       {loading ? (
         <div className="card p-8 text-center text-sm text-slate-500">Đang tải danh sách đầu số...</div>

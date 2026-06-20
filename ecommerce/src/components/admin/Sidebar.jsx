@@ -36,6 +36,7 @@ const items = [
     icon: LayoutDashboard,
     end: true,
     permissions: [
+      "DASHBOARD_VIEW",
       "ANALYTICS_VIEW",
       "USER_VIEW",
       "PRODUCT_VIEW",
@@ -47,6 +48,8 @@ const items = [
       "BEHAVIOR_VIEW",
       "RECOMMENDATION_VIEW",
       "ANNOUNCEMENT_VIEW",
+      "LIVESTREAM_VIEW",
+      "PRODUCT_VIDEO_VIEW",
     ],
   },
   {
@@ -95,13 +98,13 @@ const items = [
     to: "/admin/livestreams",
     label: "Livestream",
     icon: Radio,
-    permissions: ["PRODUCT_VIEW", "PRODUCT_MANAGE"],
+    permissions: ["LIVESTREAM_VIEW", "LIVESTREAM_MANAGE"],
   },
   {
     to: "/admin/product-videos",
     label: "Video sản phẩm",
     icon: Clapperboard,
-    permissions: ["PRODUCT_VIEW", "PRODUCT_MANAGE"],
+    permissions: ["PRODUCT_VIDEO_VIEW", "PRODUCT_VIDEO_MANAGE"],
   },
   {
     to: "/admin/announcement-bars",

@@ -129,6 +129,7 @@ public class DataInitializer implements CommandLineRunner {
                 permission("CONTACT_REPLY", "Phản hồi liên hệ", "CONTACT"),
                 permission("CONTACT_UPDATE", "Cập nhật trạng thái liên hệ", "CONTACT"),
 
+                permission("DASHBOARD_VIEW", "Xem bảng điều khiển tổng quan", "DASHBOARD"),
                 permission("ANALYTICS_VIEW", "Xem thống kê", "ANALYTICS"),
                 permission("ANALYTICS_EXPORT", "Xuất báo cáo thống kê", "ANALYTICS"),
 
@@ -164,6 +165,18 @@ public class DataInitializer implements CommandLineRunner {
                 permission("PRODUCT_CREATE", "Thêm sản phẩm", "PRODUCT"),
                 permission("PRODUCT_UPDATE", "Sửa sản phẩm", "PRODUCT"),
                 permission("PRODUCT_DELETE", "Xóa sản phẩm", "PRODUCT"),
+                permission("PRODUCT_MANAGE", "Quản lý sản phẩm", "PRODUCT"),
+
+                permission("BRAND_VIEW", "Xem thương hiệu", "BRAND"),
+                permission("BRAND_CREATE", "Thêm thương hiệu", "BRAND"),
+                permission("BRAND_UPDATE", "Sửa thương hiệu", "BRAND"),
+                permission("BRAND_DELETE", "Xóa thương hiệu", "BRAND"),
+
+                permission("LIVESTREAM_VIEW", "Xem quản lý livestream", "LIVESTREAM"),
+                permission("LIVESTREAM_MANAGE", "Quản lý livestream", "LIVESTREAM"),
+
+                permission("PRODUCT_VIDEO_VIEW", "Xem video mô tả sản phẩm", "PRODUCT_VIDEO"),
+                permission("PRODUCT_VIDEO_MANAGE", "Quản lý video mô tả sản phẩm", "PRODUCT_VIDEO"),
 
                 permission("CATEGORY_VIEW", "Xem danh mục", "CATEGORY"),
                 permission("CATEGORY_CREATE", "Thêm danh mục", "CATEGORY"),
@@ -239,6 +252,7 @@ public class DataInitializer implements CommandLineRunner {
                         "CONTACT_REPLY",
                         "CONTACT_UPDATE",
 
+                        "DASHBOARD_VIEW",
                         "ANALYTICS_VIEW",
                         "ANALYTICS_EXPORT",
 
@@ -273,6 +287,18 @@ public class DataInitializer implements CommandLineRunner {
                         "PRODUCT_CREATE",
                         "PRODUCT_UPDATE",
                         "PRODUCT_DELETE",
+                        "PRODUCT_MANAGE",
+
+                        "BRAND_VIEW",
+                        "BRAND_CREATE",
+                        "BRAND_UPDATE",
+                        "BRAND_DELETE",
+
+                        "LIVESTREAM_VIEW",
+                        "LIVESTREAM_MANAGE",
+
+                        "PRODUCT_VIDEO_VIEW",
+                        "PRODUCT_VIDEO_MANAGE",
 
                         "CATEGORY_VIEW",
                         "CATEGORY_CREATE",
@@ -337,6 +363,7 @@ public class DataInitializer implements CommandLineRunner {
                         "CONTACT_REPLY",
                         "CONTACT_UPDATE",
 
+                        "DASHBOARD_VIEW",
                         "ANALYTICS_VIEW",
                         "ANALYTICS_EXPORT",
 
@@ -371,6 +398,18 @@ public class DataInitializer implements CommandLineRunner {
                         "PRODUCT_CREATE",
                         "PRODUCT_UPDATE",
                         "PRODUCT_DELETE",
+                        "PRODUCT_MANAGE",
+
+                        "BRAND_VIEW",
+                        "BRAND_CREATE",
+                        "BRAND_UPDATE",
+                        "BRAND_DELETE",
+
+                        "LIVESTREAM_VIEW",
+                        "LIVESTREAM_MANAGE",
+
+                        "PRODUCT_VIDEO_VIEW",
+                        "PRODUCT_VIDEO_MANAGE",
 
                         "CATEGORY_VIEW",
                         "CATEGORY_CREATE",

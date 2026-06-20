@@ -6,6 +6,7 @@ import com.ecommerce.modules.productvideo.dto.ProductVideoResponse;
 import com.ecommerce.modules.productvideo.dto.ProductVideoStatsResponse;
 import com.ecommerce.modules.productvideo.service.ProductVideoService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -70,6 +71,7 @@ public class ProductVideoController {
                 .build();
     }
 
+    @PreAuthorize("hasAuthority('PRODUCT_VIDEO_VIEW') or hasAuthority('PRODUCT_VIDEO_MANAGE')")
     @GetMapping("/api/v1/admin/product-videos")
     public ApiResponse<List<ProductVideoResponse>> getAllAdmin() {
         return ApiResponse.<List<ProductVideoResponse>>builder()
@@ -77,6 +79,7 @@ public class ProductVideoController {
                 .build();
     }
 
+    @PreAuthorize("hasAuthority('PRODUCT_VIDEO_VIEW') or hasAuthority('PRODUCT_VIDEO_MANAGE')")
     @GetMapping("/api/v1/admin/product-videos/stats")
     public ApiResponse<ProductVideoStatsResponse> getStats() {
         return ApiResponse.<ProductVideoStatsResponse>builder()
@@ -84,6 +87,7 @@ public class ProductVideoController {
                 .build();
     }
 
+    @PreAuthorize("hasAuthority('PRODUCT_VIDEO_MANAGE')")
     @PostMapping(value = "/api/v1/admin/product-videos", consumes = {"multipart/form-data"})
     public ApiResponse<ProductVideoResponse> create(@RequestParam String title,
                                                     @RequestParam(required = false) String description,
@@ -96,6 +100,7 @@ public class ProductVideoController {
                 .build();
     }
 
+    @PreAuthorize("hasAuthority('PRODUCT_VIDEO_MANAGE')")
     @PostMapping(value = "/api/v1/admin/product-videos/json")
     public ApiResponse<ProductVideoResponse> createJson(@RequestBody ProductVideoRequest request) {
         return ApiResponse.<ProductVideoResponse>builder()
@@ -103,6 +108,7 @@ public class ProductVideoController {
                 .build();
     }
 
+    @PreAuthorize("hasAuthority('PRODUCT_VIDEO_MANAGE')")
     @PutMapping(value = "/api/v1/admin/product-videos/{id}", consumes = {"multipart/form-data"})
     public ApiResponse<ProductVideoResponse> update(@PathVariable Long id,
                                                     @RequestParam String title,
@@ -116,6 +122,7 @@ public class ProductVideoController {
                 .build();
     }
 
+    @PreAuthorize("hasAuthority('PRODUCT_VIDEO_MANAGE')")
     @PutMapping("/api/v1/admin/product-videos/{id}/json")
     public ApiResponse<ProductVideoResponse> updateJson(@PathVariable Long id,
                                                         @RequestBody ProductVideoRequest request) {
@@ -124,6 +131,7 @@ public class ProductVideoController {
                 .build();
     }
 
+    @PreAuthorize("hasAuthority('PRODUCT_VIDEO_MANAGE')")
     @DeleteMapping("/api/v1/admin/product-videos/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         productVideoService.delete(id);
