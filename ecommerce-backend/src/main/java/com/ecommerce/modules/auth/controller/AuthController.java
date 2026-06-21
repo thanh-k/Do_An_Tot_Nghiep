@@ -10,6 +10,9 @@ import com.ecommerce.modules.auth.dto.request.SendOtpRequest;
 import com.ecommerce.modules.auth.dto.response.AuthResponse;
 import com.ecommerce.modules.auth.service.AuthService;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -58,13 +61,19 @@ public class AuthController {
     }
 
     @GetMapping("/oauth2/authorize/google")
-    public ResponseEntity<Void> authorizeGoogle(@RequestParam(defaultValue = "login") String mode, HttpServletResponse response) {
+    public ResponseEntity<Void> authorizeGoogle(@RequestParam(defaultValue = "login") String mode, HttpServletRequest request, HttpServletResponse response) {
         Cookie cookie = new Cookie("oauth2_mode", mode);
         cookie.setHttpOnly(true);
         cookie.setPath("/");
         cookie.setMaxAge(300);
         response.addCookie(cookie);
-        return ResponseEntity.status(302).header(HttpHeaders.LOCATION, "/oauth2/authorization/google").build();
+        
+        // Build absolute URL, tự động dùng đúng scheme nhờ forward-headers-strategy
+        String redirectUrl = ServletUriComponentsBuilder.fromContextPath(request)
+            .path("/oauth2/authorization/google")
+            .build()
+            .toUriString();
+        return ResponseEntity.status(302).header(HttpHeaders.LOCATION, redirectUrl).build();
     }
 
     @PostMapping("/google/complete-registration")
