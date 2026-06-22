@@ -5,6 +5,7 @@ import com.ecommerce.modules.phoneprefix.dto.request.PhonePrefixRequest;
 import com.ecommerce.modules.phoneprefix.dto.response.PhonePrefixResponse;
 import com.ecommerce.modules.phoneprefix.service.PhonePrefixService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,6 +24,7 @@ public class PhonePrefixController {
                 .build();
     }
 
+    @PreAuthorize("hasAuthority('PHONE_PREFIX_VIEW') or hasAuthority('PHONE_PREFIX_MANAGE')")
     @GetMapping("/admin/phone-prefixes")
     public ApiResponse<List<PhonePrefixResponse>> getAllPrefixes() {
         return ApiResponse.<List<PhonePrefixResponse>>builder()
@@ -30,6 +32,7 @@ public class PhonePrefixController {
                 .build();
     }
 
+    @PreAuthorize("hasAuthority('PHONE_PREFIX_MANAGE')")
     @PostMapping("/admin/phone-prefixes")
     public ApiResponse<PhonePrefixResponse> create(@RequestBody PhonePrefixRequest request) {
         return ApiResponse.<PhonePrefixResponse>builder()
@@ -38,6 +41,7 @@ public class PhonePrefixController {
                 .build();
     }
 
+    @PreAuthorize("hasAuthority('PHONE_PREFIX_MANAGE')")
     @PutMapping("/admin/phone-prefixes/{id}")
     public ApiResponse<PhonePrefixResponse> update(@PathVariable Long id, @RequestBody PhonePrefixRequest request) {
         return ApiResponse.<PhonePrefixResponse>builder()
@@ -46,6 +50,7 @@ public class PhonePrefixController {
                 .build();
     }
 
+    @PreAuthorize("hasAuthority('PHONE_PREFIX_MANAGE')")
     @DeleteMapping("/admin/phone-prefixes/{id}")
     public ApiResponse<String> delete(@PathVariable Long id) {
         phonePrefixService.delete(id);

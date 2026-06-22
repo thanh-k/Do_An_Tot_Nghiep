@@ -26,6 +26,7 @@ import {
 } from "@/utils/categoryConfig";
 
 import ProductReviews from "@/components/product/ProductReviews";
+import productVideoService from "@/services/productVideo/productVideoService";
 
 const normalizeValue = (value) => {
   if (value === null || value === undefined) {
@@ -81,6 +82,7 @@ function ProductDetailPage() {
   const [productData, setProductData] = useState(null);
   const [selectedAttributes, setSelectedAttributes] = useState({});
   const [quantity, setQuantity] = useState(1);
+  const [productVideos, setProductVideos] = useState([]);
 
   useEffect(() => {
     setLoading(true);
@@ -88,6 +90,10 @@ function ProductDetailPage() {
       .getProductBySlug(slug)
       .then((product) => {
         setProductData(product);
+        productVideoService
+          .getProductVideos(product.id)
+          .then(setProductVideos)
+          .catch(() => setProductVideos([]));
         behaviorService.track({
           eventType: "VIEW_PRODUCT",
           productId: product.id,
@@ -224,6 +230,15 @@ function ProductDetailPage() {
     }
   };
 
+
+  const handleVideoProductClick = (video) => {
+    productVideoService.trackProductClick(video.id).catch(() => {});
+  };
+
+  const handleVideoView = (video) => {
+    productVideoService.trackView(video.id, 0).catch(() => {});
+  };
+
   if (loading) {
     return <LoadingSpinner label="Đang tải chi tiết sản phẩm..." />;
   }
@@ -290,8 +305,10 @@ function ProductDetailPage() {
       <section className="grid gap-8 xl:grid-cols-[1.05fr_0.95fr]">
         <ProductGallery
           images={productData.images || []}
+          videos={productVideos}
           selectedImage={selectedVariant?.image}
           onImageClick={handleImageClick}
+          onVideoView={handleVideoView}
         />
 
         <div className="space-y-6">
@@ -500,6 +517,7 @@ function ProductDetailPage() {
           </div>
         </div>
       </section>
+
 
       {/* THÊM PHẦN ĐÁNH GIÁ VÀO ĐÂY */}
       <section id="reviews">

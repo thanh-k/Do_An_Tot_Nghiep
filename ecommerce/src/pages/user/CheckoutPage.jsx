@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useLocation, Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { MapPin, Plus, Ticket, X } from "lucide-react";
+import { Landmark, MapPin, Plus, Ticket, Truck, X } from "lucide-react";
 import AddressSelector from "@/components/user/Mapp";
 import Button from "@/components/common/Button";
 import Input from "@/components/common/Input";
 import PageHeader from "@/components/common/PageHeader";
 import Modal from "@/components/common/Modal";
+import VnpayQrModal from "@/components/payment/VnpayQrModal";
 import useAuth from "@/hooks/useAuth";
 import useCart from "@/hooks/useCart";
 import useVoucherWallet from "@/hooks/useVoucherWallet";
@@ -47,6 +48,8 @@ function CheckoutPage() {
     note: "",
   });
   const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [showVnpayQrModal, setShowVnpayQrModal] = useState(false);
+  const [vnpaySession, setVnpaySession] = useState(null);
   const orderCompletedRef = useRef(false);
 
   // --- VOUCHER STATES ---
@@ -335,36 +338,45 @@ function CheckoutPage() {
     setShipping((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handlePlaceOrder = async (event) => {
-    event.preventDefault();
-    if (!canSubmit) {
-      toast.error(addresses.length ? "Vui lòng chọn địa chỉ giao hàng." : "Bạn cần thêm địa chỉ nhận hàng trong hồ sơ trước khi thanh toán.");
-      return;
-    }
+  const buildOrderPayload = () => ({
+    userId: currentUser.id,
+    phoneNumber: selectedAddress.phone || shipping.phone,
+    shippingAddress: `${selectedAddress.addressLine}${shipping.note ? ` (Ghi chú: ${shipping.note})` : ""}`,
+    paymentMethod: paymentMethod === "banking" ? "VNPAY" : "COD",
+    items: checkoutItems.map((item) => ({
+      variantId: item.variantId,
+      quantity: item.quantity,
+      livestreamId: item.livestreamId || null,
+      liveDealId: item.liveDealId || null,
+    })),
+    voucherCode: appliedVoucher ? appliedVoucher.code : null,
+  });
 
+  const createVnpaySession = () => {
+    const paymentCode = `VNPAY${Date.now()}`;
+    const expiredAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
+    setVnpaySession({
+      paymentCode,
+      amount: finalTotal,
+      expiredAt,
+      // Backend VNPay sau này có thể trả paymentUrl/qrUrl thật, component sẽ ưu tiên dùng giá trị đó.
+      paymentUrl: `vnpay://pay?code=${paymentCode}&amount=${finalTotal}`,
+    });
+    setShowVnpayQrModal(true);
+  };
+
+  const submitOrder = async () => {
     try {
       setLoading(true);
 
-      // Chuẩn bị payload chuẩn xác theo Backend OrderRequest
-      const payload = {
-        userId: currentUser.id, // Truyền ID của user đang đăng nhập
-        phoneNumber: selectedAddress.phone || shipping.phone,
-        shippingAddress: `${selectedAddress.addressLine}${shipping.note ? ` (Ghi chú: ${shipping.note})` : ""}`,
-        items: checkoutItems.map((item) => ({
-          variantId: item.variantId,
-          quantity: item.quantity,
-        })),
-        voucherCode: appliedVoucher ? appliedVoucher.code : null,
-      };
-
-      await orderService.createOrder(payload);
+      await orderService.createOrder(buildOrderPayload());
       orderCompletedRef.current = true;
       behaviorService.track({
         eventType: "PLACE_ORDER",
         productIds: checkoutProductIds,
       });
 
-      // Chỉ xoá những sản phẩm đã được chọn thanh toán khỏi giỏ hàng
       if (!directItems) {
         if (removeMultipleFromCart) {
           removeMultipleFromCart(checkoutItems.map((item) => item.id));
@@ -384,6 +396,21 @@ function CheckoutPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePlaceOrder = async (event) => {
+    event.preventDefault();
+    if (!canSubmit) {
+      toast.error(addresses.length ? "Vui lòng chọn địa chỉ giao hàng." : "Bạn cần thêm địa chỉ nhận hàng trong hồ sơ trước khi thanh toán.");
+      return;
+    }
+
+    if (paymentMethod === "banking") {
+      createVnpaySession();
+      return;
+    }
+
+    await submitOrder();
   };
 
   return (
@@ -469,25 +496,42 @@ function CheckoutPage() {
               Phương thức thanh toán
             </h2>
             <div className="grid gap-3">
-              {PAYMENT_METHOD_OPTIONS.map((method) => (
-                <label
-                  key={method.value}
-                  className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 px-4 py-4"
-                >
-                  <input
-                    type="radio"
-                    checked={paymentMethod === method.value}
-                    onChange={() => setPaymentMethod(method.value)}
-                    className="h-4 w-4 border-slate-300 text-brand-600 focus:ring-brand-500"
-                  />
-                  <div>
-                    <p className="font-medium text-slate-900">{method.label}</p>
-                    <p className="text-sm text-slate-500">
-                      Dùng cho mock checkout frontend.
-                    </p>
-                  </div>
-                </label>
-              ))}
+              {PAYMENT_METHOD_OPTIONS.map((method) => {
+                const checked = paymentMethod === method.value;
+                const Icon = method.value === "banking" ? Landmark : Truck;
+
+                return (
+                  <label
+                    key={method.value}
+                    className={`flex cursor-pointer items-start gap-4 rounded-2xl border px-4 py-4 transition ${
+                      checked
+                        ? "border-brand-500 bg-brand-50/50 shadow-sm"
+                        : "border-slate-200 bg-white hover:border-brand-200"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      checked={checked}
+                      onChange={() => setPaymentMethod(method.value)}
+                      className="mt-1 h-4 w-4 border-slate-300 text-brand-600 focus:ring-brand-500"
+                    />
+                    <div className={`rounded-2xl p-3 ${checked ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-500"}`}>
+                      <Icon size={20} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-slate-900">{method.label}</p>
+                      <p className="mt-1 text-sm leading-6 text-slate-500">
+                        {method.description}
+                      </p>
+                      {method.value === "banking" && checked ? (
+                        <div className="mt-3 rounded-2xl border border-dashed border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
+                          Sau khi bấm xác nhận, hệ thống sẽ mở mã VNPay QR. Mã thanh toán chỉ có hiệu lực trong 15 phút.
+                        </div>
+                      ) : null}
+                    </div>
+                  </label>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -616,7 +660,7 @@ function CheckoutPage() {
           </div>
 
           <Button type="submit" fullWidth className="mt-6" loading={loading}>
-            Xác nhận đặt hàng
+            {paymentMethod === "banking" ? "Tạo mã QR thanh toán" : "Xác nhận đặt hàng"}
           </Button>
         </aside>
       </form>
@@ -760,6 +804,18 @@ function CheckoutPage() {
           </div>
         </div>
       </Modal>
+
+      <VnpayQrModal
+        isOpen={showVnpayQrModal}
+        onClose={() => setShowVnpayQrModal(false)}
+        paymentSession={vnpaySession}
+        loading={loading}
+        onRefresh={createVnpaySession}
+        onPaid={async () => {
+          setShowVnpayQrModal(false);
+          await submitOrder();
+        }}
+      />
 
       {/* --- VOUCHER MODAL --- */}
       <Modal

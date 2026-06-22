@@ -4,10 +4,14 @@ import com.ecommerce.common.response.ApiResponse;
 import com.ecommerce.modules.behavior.dto.admin.AdminBehaviorEventResponse;
 import com.ecommerce.modules.behavior.dto.admin.AdminBehaviorInterestResponse;
 import com.ecommerce.modules.behavior.dto.admin.AdminBehaviorSummaryResponse;
+import com.ecommerce.modules.behavior.dto.admin.AdminBehaviorProductReportResponse;
 import com.ecommerce.modules.behavior.entity.BehaviorEventType;
 import com.ecommerce.modules.behavior.service.AdminBehaviorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -57,4 +61,30 @@ public class AdminBehaviorController {
                 .result(adminBehaviorService.getInterests(keyword, userKeyword, productKeyword, limit))
                 .build();
     }
+    @PreAuthorize("hasAuthority('BEHAVIOR_VIEW') or hasAuthority('RECOMMENDATION_VIEW')")
+    @GetMapping("/product-report")
+    public ApiResponse<AdminBehaviorProductReportResponse> getProductReport(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(defaultValue = "10") int limit
+    ) {
+        return ApiResponse.<AdminBehaviorProductReportResponse>builder()
+                .result(adminBehaviorService.getProductReport(fromDate, toDate, limit))
+                .build();
+    }
+
+    @PreAuthorize("hasAuthority('BEHAVIOR_VIEW') or hasAuthority('RECOMMENDATION_VIEW')")
+    @GetMapping("/product-report/export")
+    public ResponseEntity<byte[]> exportProductReport(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(defaultValue = "10") int limit
+    ) {
+        byte[] file = adminBehaviorService.exportProductReportExcel(fromDate, toDate, limit);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=behavior-product-report.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
+    }
+
 }

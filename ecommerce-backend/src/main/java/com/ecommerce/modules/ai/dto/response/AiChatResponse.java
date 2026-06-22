@@ -14,4 +14,6 @@ public class AiChatResponse {
     private String intent;
     private List<AiProductSuggestionResponse> suggestedProducts;
     private AiActionResponse action;
+    private List<AiActionResponse> actions;
 }
+

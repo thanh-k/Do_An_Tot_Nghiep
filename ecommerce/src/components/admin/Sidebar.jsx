@@ -20,6 +20,8 @@ import {
   Activity,
   Megaphone,
   UserX,
+  Radio,
+  Clapperboard,
 } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import logo from "@/assets/logo.svg";
@@ -34,6 +36,7 @@ const items = [
     icon: LayoutDashboard,
     end: true,
     permissions: [
+      "DASHBOARD_VIEW",
       "ANALYTICS_VIEW",
       "USER_VIEW",
       "PRODUCT_VIEW",
@@ -45,6 +48,8 @@ const items = [
       "BEHAVIOR_VIEW",
       "RECOMMENDATION_VIEW",
       "ANNOUNCEMENT_VIEW",
+      "LIVESTREAM_VIEW",
+      "PRODUCT_VIDEO_VIEW",
     ],
   },
   {
@@ -88,6 +93,18 @@ const items = [
     label: "Hành vi người dùng",
     icon: Activity,
     permissions: ["BEHAVIOR_VIEW", "RECOMMENDATION_VIEW", "RECOMMENDATION_MANAGE"],
+  },
+  {
+    to: "/admin/livestreams",
+    label: "Livestream",
+    icon: Radio,
+    permissions: ["LIVESTREAM_VIEW", "LIVESTREAM_MANAGE"],
+  },
+  {
+    to: "/admin/product-videos",
+    label: "Video sản phẩm",
+    icon: Clapperboard,
+    permissions: ["PRODUCT_VIDEO_VIEW", "PRODUCT_VIDEO_MANAGE"],
   },
   {
     to: "/admin/announcement-bars",

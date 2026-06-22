@@ -802,3 +802,170 @@ Nội dung thực hiện:
 - Kiểm tra và tối ưu lại luồng tư vấn sản phẩm theo thương hiệu, danh mục và ngân sách
 
 ✍️ Người thực hiện: Thanh
+
+📅 07/06/2026
+Nội dung thực hiện:
+1  FE:
+- Tối ưu giao diện trang AuthLayout
+    + Giảm tông màu nền khu vực giới thiệu
+    + Chuyển nền sang gradient nhạt dần
+    + Điều chỉnh độ nổi của các thẻ chức năng
+    + Đồng bộ giao diện với chủ đề InsightShop
+- Tối ưu giao diện quản lý hành vi người dùng
+    + Sắp xếp lại các khối thống kê
+    + Hiển thị sản phẩm được quan tâm nhiều nhất
+    + Hiển thị sản phẩm được xem nhiều nhất
+    + Hiển thị sản phẩm được thêm giỏ hàng nhiều nhất
+    + Hiển thị sản phẩm bị bỏ dở thanh toán nhiều nhất
+    + Hiển thị sản phẩm được mua nhiều nhất
+    + Thêm chức năng xuất file Excel thống kê top sản phẩm
+- Tái cấu trúc module Chat AI
+    + Tách ChatWidget thành nhiều file theo chức năng
+    + Tách phần giao diện chat
+    + Tách phần xử lý tin nhắn
+    + Tách phần xử lý hành động AI
+    + Tách phần xử lý thêm sản phẩm vào giỏ hàng
+    + Thêm comment mô tả chức năng và luồng gọi
+    + Chuẩn hóa import phục vụ tự động deploy
+
+2  BE:
+- Tối ưu AI Chat hỗ trợ khách hàng
+    + Thêm xử lý câu chào hỏi cơ bản
+    + Thêm lời chào mặc định cho người dùng
+    + Thêm gợi ý thao tác nhanh
+- Tối ưu nhận diện từ khóa người dùng
+    + Hỗ trợ từ khóa không dấu
+    + Hỗ trợ từ khóa nhập sai
+    + Hỗ trợ từ khóa đồng nghĩa
+    + Tự động nhận diện category theo dữ liệu hệ thống
+- Tối ưu tìm kiếm sản phẩm theo ngân sách
+    + Hỗ trợ tìm kiếm theo khoảng giá
+    + Hỗ trợ tìm kiếm theo category
+    + Hỗ trợ tìm kiếm theo thương hiệu
+    + Chỉ trả về sản phẩm đúng danh mục yêu cầu
+- Bổ sung trả lời thông tin sản phẩm
+    + Trả lời thông số sản phẩm
+    + Trả lời cấu hình sản phẩm
+    + Trả lời mô tả sản phẩm
+    + Trả lời thông tin chi tiết sản phẩm
+    + Trả lời giá sản phẩm
+- Sửa lỗi hệ thống AI
+    + Fix AI hiểu nhầm câu chào thành tìm kiếm sản phẩm
+    + Fix trả về sai danh mục khi tìm sản phẩm theo giá
+    + Fix truy vấn laptop dưới 20 triệu không tìm thấy dữ liệu
+    + Fix AI trả lời chưa đầy đủ khi hỏi thông số sản phẩm
+    + Tối ưu cấu trúc module AI phục vụ mở rộng sau này
+
+📅 Ngày: 11/06/2026
+🧩 Nội dung công việc:
+1. FE:
+- Tối ưu lại cấu trúc trang Home
+- Tách trang Home thành nhiều component nhỏ để dễ bảo trì và mở rộng
+- Điều chỉnh lại các khu vực hiển thị trên trang chủ:
+    + Banner
+    + Sản phẩm nổi bật
+    + Sản phẩm đề xuất
+    + Tin tức
+    + Các khu vực khuyến mãi
+- Sửa hiển thị đánh giá sản phẩm trên trang chủ
+- Không hiển thị sao giả khi sản phẩm chưa có đánh giá
+- Tối ưu giao diện trang Livestream phía người dùng
+- Điều chỉnh bố cục khung live theo hướng giống các nền tảng bán hàng realtime
+- Thêm icon giỏ hàng và bình luận trực tiếp trong màn hình live
+- Tối ưu hiển thị sản phẩm đang ghim, deal live và danh sách sản phẩm trong live
+- Sửa nút “Mua ngay” trong live để chuyển đúng sang luồng thanh toán
+- Tối ưu giao diện quản lý Livestream bên admin
+- Tách giao diện quản lý livestream thành từng form:
+    + Form tạo phiên live
+    + Danh sách livestream
+    + Form thêm / xóa sản phẩm trong live
+    + Form tạo deal nhanh
+    + Form bình luận realtime
+- Bổ sung nút bỏ ghim sản phẩm đang giới thiệu
+- Sửa lỗi xóa sản phẩm khỏi live nhưng giao diện vẫn còn hiển thị
+
+2. BE:
+- Hoàn thiện module Livestream realtime
+- Tích hợp MongoDB phục vụ dữ liệu realtime cho livestream
+- Bổ sung cấu hình MongoDB trong `application.yml` để hỗ trợ deploy
+- Xây dựng xử lý chat realtime theo từng phiên livestream
+- Đảm bảo live mới không hiển thị lại tin nhắn của phiên live cũ
+- Hoàn thiện xử lý deal live:
+    + Tạo deal theo thời gian 1-5 phút
+    + Tự động hết hiệu lực khi hết thời gian
+    + Tự động hết hiệu lực khi hết số lượng deal
+    + Khi deal hết hạn, giá sản phẩm trở về giá gốc
+- Bổ sung xử lý khóa đồng thời khi nhiều người đặt hàng cùng lúc trong live
+- Đảm bảo khi số lượng deal còn 1, chỉ một đơn hàng được áp dụng giá giảm
+- Sửa logic thanh toán sản phẩm live không ảnh hưởng đến luồng mua hàng thường
+- Bổ sung xử lý xóa sản phẩm khỏi livestream và đồng bộ lại danh sách sản phẩm live
+- Bổ sung xử lý bỏ ghim sản phẩm trong livestream
+
+3. Fix lỗi phát sinh:
+- Fix lỗi tạo deal live trả về 500 do thiếu giá trị `updated_at`
+- Fix lỗi tạo deal live chưa đúng dữ liệu giảm giá
+- Fix lỗi sản phẩm live thiếu `variantId` khiến thanh toán bị lỗi
+- Fix lỗi mua sản phẩm trong live chỉ thêm giỏ hàng nhưng chưa đi thẳng đến thanh toán
+- Fix lỗi bỏ ghim sản phẩm bị lỗi 500
+- Fix lỗi xóa sản phẩm live báo thành công nhưng chưa mất khỏi giao diện
+- Fix lỗi hiển thị trạng thái WebSocket vừa báo đã kết nối vừa báo không kết nối
+- Fix lỗi giao diện trang live chưa cân xứng
+- Fix lỗi trùng khung bình luận khi đã có icon chat trong màn live
+- Kiểm tra lại luồng:
+    + Tạo livestream
+    + Thêm sản phẩm vào live
+    + Ghim / bỏ ghim sản phẩm
+    + Tạo deal live
+    + Chat realtime
+    + Mua ngay trong live
+    + Thanh toán sản phẩm live
+    + Hết hạn deal và hết số lượng deal
+    
+✍️ Người thực hiện: Thanh
+
+📅 Ngày: 17/06/2026
+🧩 Nội dung công việc:
+
+1. FE:
+- Xây dựng giao diện quản lý Video mô tả sản phẩm cho admin
+- Thêm form tạo và cập nhật video mô tả sản phẩm
+- Cho phép admin nhập:
+    + Tiêu đề video
+    + Mô tả ngắn
+    + Video mô tả sản phẩm
+    + Ảnh đại diện video
+    + Sản phẩm liên kết
+- Tối ưu phần chọn sản phẩm liên kết bằng ô tìm kiếm realtime
+- Hỗ trợ tìm kiếm sản phẩm theo:
+    + Tên sản phẩm
+    + Thương hiệu
+    + Danh mục
+- Tách trang quản lý video mô tả sản phẩm thành nhiều component nhỏ để dễ bảo trì
+- Hiển thị video mô tả sản phẩm trong khung gallery của trang chi tiết sản phẩm
+- Kết hợp hình ảnh sản phẩm và video mô tả trong cùng khu vực hiển thị
+
+2. BE:
+- Xây dựng module Video mô tả sản phẩm
+- Thiết kế API quản lý video mô tả sản phẩm cho admin
+- Cho phép thêm, sửa, xóa và ẩn/hiện video mô tả sản phẩm
+- Liên kết mỗi video với một sản phẩm chính
+- Bổ sung API lấy video theo sản phẩm
+- Bổ sung API thống kê video mô tả sản phẩm
+- Sử dụng `LocalStorageService` để lưu trữ video và ảnh đại diện video trên local
+
+3. Fix lỗi phát sinh:
+- Fix lỗi video mô tả sản phẩm không phát được
+- Fix lỗi không hiển thị ảnh đại diện video
+- Fix lỗi video chưa hiển thị đúng vị trí trong trang chi tiết sản phẩm
+- Fix lỗi thống kê video trả về 500 do thiếu dữ liệu sản phẩm liên kết
+- Fix lỗi giao diện chọn sản phẩm liên kết khó sử dụng
+- Kiểm tra lại luồng:
+    + Tạo video mô tả sản phẩm
+    + Cập nhật video mô tả sản phẩm
+    + Xóa video mô tả sản phẩm
+    + Chọn sản phẩm liên kết
+    + Upload video
+    + Upload ảnh đại diện
+    + Hiển thị video trong gallery sản phẩm
+
+✍️ Người thực hiện: Thanh

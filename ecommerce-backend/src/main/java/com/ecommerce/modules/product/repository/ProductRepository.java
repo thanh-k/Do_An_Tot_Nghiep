@@ -23,6 +23,10 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     List<Product> findAll();
 
     @EntityGraph(attributePaths = {"category", "brand", "variants", "images"})
+    @Query("select p from Product p where p.id = :id")
+    Optional<Product> findByIdWithRelations(@Param("id") Long id);
+
+    @EntityGraph(attributePaths = {"category", "brand", "variants", "images"})
     @Query("""
             select distinct p from Product p
             left join p.category c

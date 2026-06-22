@@ -79,9 +79,9 @@ function getProductPrice(product) {
 function getCompareAtPrice(product) {
   return Number(
     product?.variants?.[0]?.compareAtPrice ||
-      product?.compareAtPrice ||
-      product?.compare_at_price ||
-      0,
+    product?.compareAtPrice ||
+    product?.compare_at_price ||
+    0,
   );
 }
 
@@ -443,40 +443,24 @@ export const userProductService = {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("k", String(k));
 
-      const baseUrl = (
-        import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1"
-      ).replace("/api/v1", "");
+      const res = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/vision/search?limit=${k}`,
+        { method: "POST", body: formData }
+      );
 
-      const visionUrl = import.meta.env.DEV
-        ? "http://localhost:8001"
-        : `${baseUrl}/vision`;
+      if (!res.ok) throw new Error("Vision service lỗi");
 
-      const visionRes = await fetch(`${visionUrl}/search`, {
-        method: "POST",
-        body: formData,
-      });
+      const data = await res.json();
+      const products = data.result || [];
 
-      if (!visionRes.ok) throw new Error("Vision service lỗi");
-
-      const visionData = await visionRes.json();
-      const productIds = visionData.product_ids || [];
-
-      if (productIds.length === 0) {
+      if (products.length === 0) {
         return { label: "Không tìm thấy sản phẩm tương đồng", items: [] };
       }
 
-      const products = await apiClient.request(`${API_URL}/batch`, {
-        method: "POST",
-        body: JSON.stringify(productIds),
-      });
-
-      const normalizedProducts = normalizeProducts(products);
-
       return {
-        label: `Tìm thấy ${normalizedProducts.length} sản phẩm tương tự`,
-        items: normalizedProducts,
+        label: `Tìm thấy ${products.length} sản phẩm tương tự`,
+        items: normalizeProducts(products),
       };
     } catch (error) {
       console.error("Lỗi khi tìm kiếm bằng hình ảnh:", error);

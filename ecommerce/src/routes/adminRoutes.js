@@ -18,12 +18,14 @@ import CoinTaskManagementPage from "@/pages/admin/CoinTaskManagementPage";
 import BehaviorManagementPage from "@/pages/admin/BehaviorManagementPage";
 import AnnouncementBarManagementPage from "@/pages/admin/AnnouncementBarManagementPage";
 import AccountCancellationManagementPage from "@/pages/admin/AccountCancellationManagementPage";
+import LivestreamManagementPage from "@/pages/admin/LivestreamManagementPage";
+import ProductVideoManagementPage from "@/pages/admin/ProductVideoManagementPage";
 
 export const adminRoutes = [
   {
     index: true,
     component: AdminDashboardPage,
-    permissions: ["ANALYTICS_VIEW", "USER_VIEW", "PRODUCT_VIEW", "ORDER_VIEW"],
+    permissions: ["DASHBOARD_VIEW", "ANALYTICS_VIEW", "USER_VIEW", "PRODUCT_VIEW", "ORDER_VIEW"],
   },
   {
     path: "products",
@@ -64,6 +66,16 @@ export const adminRoutes = [
     path: "announcement-bars",
     component: AnnouncementBarManagementPage,
     permissions: ["ANNOUNCEMENT_VIEW", "ANNOUNCEMENT_MANAGE"],
+  },
+  {
+    path: "livestreams",
+    component: LivestreamManagementPage,
+    permissions: ["LIVESTREAM_VIEW", "LIVESTREAM_MANAGE"],
+  },
+  {
+    path: "product-videos",
+    component: ProductVideoManagementPage,
+    permissions: ["PRODUCT_VIDEO_VIEW", "PRODUCT_VIDEO_MANAGE"],
   },
   {
     path: "vouchers",

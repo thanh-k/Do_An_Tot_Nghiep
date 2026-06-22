@@ -11,8 +11,15 @@ import { brandService } from "@/services/admin/brandService";
 import productService from "@/services/admin/productService";
 import Pagination from "@/components/common/Pagination";
 import { useDebounce } from "@/hooks/useDebounce";
+import useAuth from "@/hooks/useAuth";
+import { hasPermission } from "@/utils/permission";
 
 function BrandManagementPage() {
+  const { currentUser } = useAuth();
+  const canCreate = hasPermission(currentUser, "BRAND_CREATE");
+  const canUpdate = hasPermission(currentUser, "BRAND_UPDATE");
+  const canDelete = hasPermission(currentUser, "BRAND_DELETE");
+  const canManage = canCreate || canUpdate || canDelete;
   const [loading, setLoading] = useState(true);
   const [brands, setBrands] = useState([]);
   const [products, setProducts] = useState([]); // Thêm state để lưu danh sách sản phẩm
@@ -126,24 +133,29 @@ function BrandManagementPage() {
       key: "actions",
       title: "Thao tác",
       align: "right",
-      render: (row) => (
+      render: (row) => canManage ? (
         <div className="flex justify-end gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setModalState({ open: true, brand: row })}
-          >
-            <Pencil size={14} />
-          </Button>
-          <Button size="sm" variant="danger" onClick={() => handleDelete(row)}>
-            <Trash2 size={14} />
-          </Button>
+          {canUpdate && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setModalState({ open: true, brand: row })}
+            >
+              <Pencil size={14} />
+            </Button>
+          )}
+          {canDelete && (
+            <Button size="sm" variant="danger" onClick={() => handleDelete(row)}>
+              <Trash2 size={14} />
+            </Button>
+          )}
         </div>
-      ),
+      ) : null,
     },
   ];
 
   const handleDelete = async (row) => {
+    if (!canDelete) return;
     // 1. Kiểm tra xem có sản phẩm nào đang dùng Thương hiệu này không
     const relatedProducts = products.filter(
       (p) => p.brandId === row.id || p.brand?.id === row.id,
@@ -184,6 +196,7 @@ function BrandManagementPage() {
   };
 
   const handleSave = async (payload) => {
+    if ((payload.id && !canUpdate) || (!payload.id && !canCreate)) return;
     try {
       await brandService.saveBrand(payload);
       toast.success(
@@ -213,9 +226,11 @@ function BrandManagementPage() {
         title="Quản lý Thương hiệu"
         description="Quản lý các hãng sản xuất, đối tác cung cấp sản phẩm cho hệ thống."
         actions={
-          <Button onClick={() => setModalState({ open: true, brand: null })}>
-            <Plus size={16} /> Thêm Brand
-          </Button>
+          canCreate ? (
+            <Button onClick={() => setModalState({ open: true, brand: null })}>
+              <Plus size={16} /> Thêm Brand
+            </Button>
+          ) : null
         }
       />
 
@@ -244,12 +259,12 @@ function BrandManagementPage() {
           />
         </>
       )}
-      <BrandFormModal
+      {canManage && <BrandFormModal
         isOpen={modalState.open}
         onClose={() => setModalState({ open: false, brand: null })}
         initialBrand={modalState.brand}
         onSubmit={handleSave}
-      />
+      />}
     </div>
   );
 }

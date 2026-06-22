@@ -33,7 +33,8 @@ export function CartProvider({ children }) {
   };
 
   const addToCart = (product, variant, quantity = 1) => {
-    const itemId = `${product.id}_${variant.id}`;
+    const liveSuffix = variant.liveDealId ? `_live_${variant.livestreamId}_${variant.liveDealId}` : "";
+    const itemId = `${product.id}_${variant.id}${liveSuffix}`;
     const label = buildVariantLabel(variant);
 
     updateCart((prev) => {
@@ -63,6 +64,9 @@ export function CartProvider({ children }) {
           price: variant.price,
           compareAtPrice: variant.compareAtPrice,
           maxStock: variant.stock || 1,
+          livestreamId: variant.livestreamId || null,
+          liveDealId: variant.liveDealId || null,
+          isLivestreamDeal: Boolean(variant.isLivestreamDeal),
         },
         ...prev,
       ];

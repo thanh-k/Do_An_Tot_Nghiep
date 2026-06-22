@@ -7,6 +7,7 @@ import com.ecommerce.modules.brand.service.BrandService;
 import com.ecommerce.modules.upload.service.LocalStorageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -37,6 +38,7 @@ public class BrandController {
                 .build();
     }
 
+    @PreAuthorize("hasAuthority('BRAND_CREATE')")
     @PostMapping("/with-image")
     public ApiResponse<BrandResponse> createWithImage(
             @RequestPart("data") @Valid BrandRequest request,
@@ -55,6 +57,7 @@ public class BrandController {
     }
 
     // API Cập nhật thương hiệu kèm khả năng đổi ảnh mới
+    @PreAuthorize("hasAuthority('BRAND_UPDATE')")
     @PutMapping("/with-image/{id}")
     public ApiResponse<BrandResponse> updateWithImage(
             @PathVariable Long id,
@@ -68,6 +71,7 @@ public class BrandController {
                 .build();
     }
 
+    @PreAuthorize("hasAuthority('BRAND_DELETE')")
     @DeleteMapping("/{id}")
     public ApiResponse<String> delete(@PathVariable Long id) {
         brandService.delete(id);

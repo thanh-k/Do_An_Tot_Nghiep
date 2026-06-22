@@ -10,4 +10,5 @@ public class OrderRequest {
     private String phoneNumber;
     private List<CartItemRequest> items;
     private String voucherCode;
+    private String paymentMethod;
 }
