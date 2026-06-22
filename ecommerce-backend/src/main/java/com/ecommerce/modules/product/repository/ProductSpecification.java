@@ -38,13 +38,19 @@ public class ProductSpecification {
 
                 String cleanKeyword = stripAccents(keyword.trim());
                 String smartPattern = "%" + cleanKeyword.replace(" ", "%") + "%"; // VD: "dien thoai" -> "%dien%thoai%"
-                 predicates.add(cb.or(
-                        cb.like(cb.lower(root.get("name")), exactPattern), // Tìm theo tên có dấu
-                        cb.like(cb.lower(root.get("slug")), smartPattern)  // Tìm theo slug không dấu cực kỳ mạnh mẽ
-            
-                ));
-        }
-            
+
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("name")), exactPattern),
+                        cb.like(cb.lower(root.get("slug")), smartPattern),
+                        cb.like(cb.lower(root.join("category", JoinType.LEFT).get("name")), exactPattern),
+                        cb.like(cb.lower(root.join("brand", JoinType.LEFT).get("name")), exactPattern),
+                        // Bổ sung tìm kiếm vào cột slug của bảng Category và Brand để bắt trường hợp gõ
+                        // tiếng Việt không dấu (VD: "dien thoai")
+                        cb.like(cb.lower(root.join("category", JoinType.LEFT).get("slug")), smartPattern),
+                        cb.like(cb.lower(root.join("brand", JoinType.LEFT).get("slug")), smartPattern)));
+
+                query.distinct(true); // Đảm bảo không trả về sản phẩm trùng lặp khi JOIN
+            }
 
             // 2. Lọc theo Category
             if (categoryId != null) {
