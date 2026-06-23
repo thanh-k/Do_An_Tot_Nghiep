@@ -207,7 +207,17 @@ public class ProductServiceImpl implements ProductService {
         @Transactional
         public void deleteProduct(Long id) {
                 Product product = productRepository.findById(id)
-                                .orElseThrow(() -> new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION));
+                                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
+
+                // KIỂM TRA KHÓA NGOẠI VỚI ĐƠN HÀNG
+                if (product.getVariants() != null) {
+                        boolean hasOrders = product.getVariants().stream()
+                                        .anyMatch(variant -> orderDetailRepository.existsByProductVariant_Id(variant.getId()));
+
+                        if (hasOrders) {
+                                throw new AppException(ErrorCode.PRODUCT_IN_ORDER);
+                        }
+                }
 
                 cleanOldResources(product);
                 productRepository.delete(product);

@@ -20,12 +20,16 @@ function ProductManagementPage() {
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
   const [keyword, setKeyword] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [filterBrand, setFilterBrand] = useState("");
+  const [filterStock, setFilterStock] = useState("");
   const debouncedKeyword = useDebounce(keyword, 300);
   const [modalState, setModalState] = useState({
     open: false,
     product: null,
   });
   const [lastEditedId, setLastEditedId] = useState(null); // State lưu ID sản phẩm vừa sửa
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
@@ -57,7 +61,7 @@ function ProductManagementPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedKeyword]);
+  }, [debouncedKeyword, filterCategory, filterBrand, filterStock]);
 
   const filteredProducts = useMemo(() => {
     const search = debouncedKeyword.trim().toLowerCase();
@@ -72,22 +76,48 @@ function ProductManagementPage() {
           .includes(search),
       );
     }
-
-    // 2. Sắp xếp mặc định: Sản phẩm mới nhất lên đầu (Dựa vào ID) -> Xử lý case Thêm mới
+    // 2. Lọc theo Danh mục
+    if (filterCategory) {
+      result = result.filter(
+        (p) => String(p.category?.id) === String(filterCategory),
+      );
+    }
+    // 3. Lọc theo Thương hiệu
+    if (filterBrand) {
+      result = result.filter(
+        (p) => String(p.brand?.id) === String(filterBrand),
+      );
+    }
+    // 4. Lọc theo Tồn kho
+    if (filterStock) {
+      result = result.filter((p) => {
+        const stock = getProductStock(p);
+        if (filterStock === "IN_STOCK") return stock > 10;
+        if (filterStock === "LOW_STOCK") return stock > 0 && stock <= 10;
+        if (filterStock === "OUT_OF_STOCK") return stock === 0;
+        return true;
+      });
+    }
+    // 5. Sắp xếp mặc định: Sản phẩm mới nhất lên đầu
     result.sort((a, b) => b.id - a.id);
-
-    // 3. Nếu vừa SỬA một sản phẩm, ép sản phẩm đó lên đầu tiên của mảng
+    // 6. Xử lý bump sản phẩm vừa sửa lên đầu
     if (lastEditedId && lastEditedId !== "NEW") {
       const editedIndex = result.findIndex((p) => p.id === lastEditedId);
       if (editedIndex > 0) {
-        // Nếu tìm thấy và nó đang không ở vị trí đầu
         const [editedItem] = result.splice(editedIndex, 1);
         result.unshift(editedItem);
       }
     }
 
     return result;
-  }, [debouncedKeyword, products, lastEditedId]);
+  }, [
+    debouncedKeyword,
+    filterCategory,
+    filterBrand,
+    filterStock,
+    products,
+    lastEditedId,
+  ]);
 
   const paginatedProducts = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -96,7 +126,68 @@ function ProductManagementPage() {
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
 
+  const visibleIds = paginatedProducts.map((p) => p.id);
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+  const toggleSelectAll = () => {
+    if (allVisibleSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+      return;
+    }
+    setSelectedIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+  };
+  const toggleOne = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+  const selectedProducts = products.filter((p) => selectedIds.includes(p.id));
+
+  const runBulkDelete = async () => {
+    if (!selectedProducts.length) return;
+    const confirmed = window.confirm(
+      `Xóa ${selectedProducts.length} sản phẩm đã chọn?`,
+    );
+    if (!confirmed) return;
+    let successCount = 0;
+    for (const product of selectedProducts) {
+      try {
+        await productService.deleteProduct(product.id);
+        successCount++;
+      } catch (error) {
+        // Lấy câu thông báo lỗi chi tiết từ phía Backend, ưu tiên message từ server
+        const serverError =
+          error.response?.data?.message ||
+          `Xóa sản phẩm "${product.name}" thất bại: ${error.message}`;
+        toast.error(serverError);
+      }
+    }
+    if (successCount > 0) {
+      toast.success(`Đã xóa thành công ${successCount} sản phẩm`);
+    }
+
+    setSelectedIds([]);
+    loadData();
+  };
+
   const columns = [
+    {
+      key: "select",
+      title: (
+        <input
+          type="checkbox"
+          checked={allVisibleSelected}
+          onChange={toggleSelectAll}
+        />
+      ),
+      render: (row) => (
+        <input
+          type="checkbox"
+          checked={selectedIds.includes(row.id)}
+          onChange={() => toggleOne(row.id)}
+        />
+      ),
+    },
     {
       key: "name",
       title: "Sản phẩm",
@@ -172,9 +263,11 @@ function ProductManagementPage() {
                 toast.success("Đã xoá sản phẩm");
                 loadData();
               } catch (e) {
-                toast.error(
-                  e.response?.data?.message || "Lỗi khi xoá sản phẩm",
-                );
+                // Lấy câu thông báo lỗi chi tiết từ phía Backend
+                const serverError =
+                  e.response?.data?.message ||
+                  `Lỗi khi xoá sản phẩm: ${e.message}`;
+                toast.error(serverError);
               }
             }}
           >
@@ -239,12 +332,60 @@ function ProductManagementPage() {
           </Button>
         }
       />
-      <div className="card p-4">
+      <div className="card grid gap-4 p-4 lg:grid-cols-[1fr_200px_200px_200px]">
+        {/* Ô Tìm kiếm */}
         <Input
           placeholder="Tìm theo tên, slug hoặc thương hiệu..."
           value={keyword}
           onChange={(event) => setKeyword(event.target.value)}
         />
+        {/* Lọc theo Danh mục */}
+        <select
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
+        >
+          <option value="">Tất cả danh mục</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+        {/* Lọc theo Thương hiệu */}
+        <select
+          value={filterBrand}
+          onChange={(e) => setFilterBrand(e.target.value)}
+          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
+        >
+          <option value="">Tất cả thương hiệu</option>
+          {brands.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name}
+            </option>
+          ))}
+        </select>
+        {/* Lọc theo Tồn kho */}
+        <select
+          value={filterStock}
+          onChange={(e) => setFilterStock(e.target.value)}
+          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
+        >
+          <option value="">Tất cả tồn kho</option>
+          <option value="IN_STOCK">Còn hàng (&gt; 10)</option>
+          <option value="LOW_STOCK">Sắp hết (1 - 10)</option>
+          <option value="OUT_OF_STOCK">Hết hàng (0)</option>
+        </select>
+        {selectedIds.length > 0 && (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium text-slate-600">
+              Đã chọn {selectedIds.length} sản phẩm
+            </span>
+            <Button size="sm" variant="danger" onClick={runBulkDelete}>
+              <Trash2 size={14} /> Xóa đã chọn
+            </Button>
+          </div>
+        )}
       </div>
       {loading ? (
         <div className="card p-8 text-center text-sm text-slate-500">

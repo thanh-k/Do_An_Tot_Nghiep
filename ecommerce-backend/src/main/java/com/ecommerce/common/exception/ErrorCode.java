@@ -41,6 +41,7 @@ public enum ErrorCode {
             HttpStatus.BAD_REQUEST),
     INVALID_SPECIFICATION_FORMAT(1016, "Định dạng thông số kỹ thuật không hợp lệ", HttpStatus.BAD_REQUEST),
     INVALID_VARIANT_PRICE(1017, "Giá bán không được phép lớn hơn giá gốc", HttpStatus.BAD_REQUEST),
+    PRODUCT_IN_ORDER(1022, "Sản phẩm không thể xóa vì đang có đơn hàng liên kết", HttpStatus.BAD_REQUEST),
 
     USER_NOT_FOUND(1101, "Không tìm thấy người dùng", HttpStatus.NOT_FOUND),
     LOGIN_FAILED(1102, "Tài khoản hoặc mật khẩu không chính xác", HttpStatus.UNAUTHORIZED),
