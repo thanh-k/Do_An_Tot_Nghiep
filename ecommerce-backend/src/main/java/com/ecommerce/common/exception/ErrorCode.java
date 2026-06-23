@@ -9,7 +9,6 @@ public enum ErrorCode {
 
     PRODUCT_NOT_FOUND(1018, "Không tìm thấy sản phẩm", HttpStatus.NOT_FOUND),
 
-
     COIN_TASK_NOT_FOUND(1601, "Không tìm thấy nhiệm vụ xu", HttpStatus.NOT_FOUND),
     COIN_TASK_INVALID(1602, "Thông tin nhiệm vụ xu không hợp lệ", HttpStatus.BAD_REQUEST),
     COIN_TASK_CODE_EXISTS(1603, "Mã nhiệm vụ xu đã tồn tại", HttpStatus.BAD_REQUEST),
@@ -27,7 +26,6 @@ public enum ErrorCode {
 
     // Lỗi về Brand
 
-
     // Trong file common/exception/ErrorCode.java
     INVALID_BRAND_NAME(1019, "Tên thương hiệu không được để trống và phải từ 2-50 ký tự", HttpStatus.BAD_REQUEST),
     INVALID_FILE_FORMAT(1020, "Chỉ chấp nhận ảnh định dạng .jpg, .jpeg, .png, .webp", HttpStatus.BAD_REQUEST),
@@ -42,6 +40,7 @@ public enum ErrorCode {
     INVALID_SPECIFICATION_FORMAT(1016, "Định dạng thông số kỹ thuật không hợp lệ", HttpStatus.BAD_REQUEST),
     INVALID_VARIANT_PRICE(1017, "Giá bán không được phép lớn hơn giá gốc", HttpStatus.BAD_REQUEST),
     PRODUCT_IN_ORDER(1022, "Sản phẩm không thể xóa vì đang có đơn hàng liên kết", HttpStatus.BAD_REQUEST),
+    INVALID_EXCEL_DATA_FORMAT(1023, "Dữ liệu trong file Excel không đúng định dạng", HttpStatus.BAD_REQUEST),
 
     USER_NOT_FOUND(1101, "Không tìm thấy người dùng", HttpStatus.NOT_FOUND),
     LOGIN_FAILED(1102, "Tài khoản hoặc mật khẩu không chính xác", HttpStatus.UNAUTHORIZED),
@@ -49,15 +48,18 @@ public enum ErrorCode {
     PHONE_INVALID(1104, "Số điện thoại phải gồm đúng 10 chữ số", HttpStatus.BAD_REQUEST),
     PHONE_ALREADY_EXISTS(1105, "Số điện thoại đã được tài khoản khác sử dụng", HttpStatus.BAD_REQUEST),
     EMAIL_ALREADY_EXISTS(1106, "Email đã tồn tại", HttpStatus.BAD_REQUEST),
-    PASSWORD_INVALID(1107, "Mật khẩu phải có ít nhất 6 ký tự, gồm 1 chữ in hoa, 1 số và 1 ký tự đặc biệt", HttpStatus.BAD_REQUEST),
-    FULL_NAME_INVALID(1108, "Họ và tên chỉ được chứa chữ cái và khoảng trắng, tối thiểu 2 ký tự", HttpStatus.BAD_REQUEST),
+    PASSWORD_INVALID(1107, "Mật khẩu phải có ít nhất 6 ký tự, gồm 1 chữ in hoa, 1 số và 1 ký tự đặc biệt",
+            HttpStatus.BAD_REQUEST),
+    FULL_NAME_INVALID(1108, "Họ và tên chỉ được chứa chữ cái và khoảng trắng, tối thiểu 2 ký tự",
+            HttpStatus.BAD_REQUEST),
     ROLE_INVALID(1109, "Vai trò không hợp lệ", HttpStatus.BAD_REQUEST),
     USER_DISABLED(1110, "Tài khoản đã bị khóa", HttpStatus.FORBIDDEN),
     CURRENT_PASSWORD_INCORRECT(1111, "Mật khẩu hiện tại không chính xác", HttpStatus.BAD_REQUEST),
     ADMIN_CANNOT_DELETE(1112, "Không thể xóa tài khoản quản trị viên", HttpStatus.BAD_REQUEST),
     AVATAR_REQUIRED(1113, "Vui lòng chọn ảnh đại diện", HttpStatus.BAD_REQUEST),
     PHONE_REQUIRED(1114, "Số điện thoại là bắt buộc", HttpStatus.BAD_REQUEST),
-    LOGIN_USE_GOOGLE(1115, "Tài khoản này được đăng ký bằng Google. Vui lòng đăng nhập bằng Google", HttpStatus.BAD_REQUEST),
+    LOGIN_USE_GOOGLE(1115, "Tài khoản này được đăng ký bằng Google. Vui lòng đăng nhập bằng Google",
+            HttpStatus.BAD_REQUEST),
     ACCOUNT_NOT_FOUND_BY_GOOGLE(1116, "Email Google này chưa có tài khoản trong hệ thống", HttpStatus.BAD_REQUEST),
     GOOGLE_EMAIL_ALREADY_EXISTS(1117, "Email Google này đã có tài khoản", HttpStatus.BAD_REQUEST),
     GOOGLE_TEMP_TOKEN_INVALID(1118, "Phiên đăng ký Google không hợp lệ hoặc đã hết hạn", HttpStatus.BAD_REQUEST),
@@ -65,10 +67,12 @@ public enum ErrorCode {
     ADDRESS_REQUIRED(1120, "Địa chỉ là bắt buộc", HttpStatus.BAD_REQUEST),
     OTP_INVALID(1121, "Mã xác thực không hợp lệ", HttpStatus.BAD_REQUEST),
     OTP_EXPIRED(1122, "Mã xác thực đã hết hạn", HttpStatus.BAD_REQUEST),
-    ACCOUNT_CANCELLATION_REQUEST_EXISTS(1123, "Bạn đã gửi yêu cầu hủy tài khoản và đang chờ quản trị viên xử lý", HttpStatus.BAD_REQUEST),
+    ACCOUNT_CANCELLATION_REQUEST_EXISTS(1123, "Bạn đã gửi yêu cầu hủy tài khoản và đang chờ quản trị viên xử lý",
+            HttpStatus.BAD_REQUEST),
     ACCOUNT_CANCELLATION_REQUEST_NOT_FOUND(1124, "Không tìm thấy yêu cầu hủy tài khoản", HttpStatus.NOT_FOUND),
     ACCOUNT_CANCELLATION_REQUEST_PROCESSED(1125, "Yêu cầu hủy tài khoản đã được xử lý", HttpStatus.BAD_REQUEST),
-    ACCOUNT_CANCELLATION_HAS_UNFINISHED_ORDERS(1126, "Không thể hủy tài khoản vì khách hàng còn đơn hàng chưa hoàn thành", HttpStatus.BAD_REQUEST),
+    ACCOUNT_CANCELLATION_HAS_UNFINISHED_ORDERS(1126,
+            "Không thể hủy tài khoản vì khách hàng còn đơn hàng chưa hoàn thành", HttpStatus.BAD_REQUEST),
 
     PHONE_PREFIX_NOT_FOUND(1201, "Không tìm thấy đầu số", HttpStatus.NOT_FOUND),
     PHONE_PREFIX_ALREADY_EXISTS(1202, "Đầu số đã tồn tại", HttpStatus.BAD_REQUEST),
@@ -118,9 +122,11 @@ public enum ErrorCode {
     REVIEW_ALREADY_EXISTS(1704, "Bạn đã đánh giá sản phẩm này rồi", HttpStatus.BAD_REQUEST),
 
     // Lỗi về AI Compare
-    NOT_ENOUGH_PRODUCTS_TO_COMPARE(1801, "Vui lòng chọn ít nhất 2 sản phẩm để thực hiện so sánh", HttpStatus.BAD_REQUEST),
-    AI_ANALYSIS_FAILED(1802, "Hệ thống AI đang bận hoặc không thể phân tích lúc này, vui lòng thử lại", HttpStatus.INTERNAL_SERVER_ERROR),
-    ;
+    NOT_ENOUGH_PRODUCTS_TO_COMPARE(1801, "Vui lòng chọn ít nhất 2 sản phẩm để thực hiện so sánh",
+            HttpStatus.BAD_REQUEST),
+    AI_ANALYSIS_FAILED(1802, "Hệ thống AI đang bận hoặc không thể phân tích lúc này, vui lòng thử lại",
+            HttpStatus.INTERNAL_SERVER_ERROR),
+            ;
 
     private final int code;
     private final String message;

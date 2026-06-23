@@ -194,12 +194,17 @@ function ProductManagementPage() {
     const file = event.target.files[0];
     if (!file) return;
 
+    // LOGGING: Hiển thị thông tin file đang được upload
+    console.log("[Frontend] Chuẩn bị import file:", { name: file.name, size: file.size, type: file.type });
+
     try {
       toast.loading("Đang xử lý dữ liệu...", { id: "import" });
       await productService.importProductsExcel(file);
       toast.success("Nhập dữ liệu thành công!", { id: "import" });
       loadData();
     } catch (error) {
+      // LOGGING: In ra toàn bộ đối tượng lỗi để debug
+      console.error("Lỗi khi import Excel:", error.response || error);
       const errorMsg =
         error.response?.data?.message || "Lỗi khi nhập file Excel";
       toast.error(errorMsg, { id: "import" });

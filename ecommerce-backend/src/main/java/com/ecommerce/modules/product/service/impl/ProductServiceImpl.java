@@ -104,6 +104,9 @@ public class ProductServiceImpl implements ProductService {
         @Transactional
         public ProductResponse createProduct(ProductRequest request) {
                 productValidator.validate(request, null);
+                
+                // LOGGING: Kiểm tra dữ liệu đầu vào của service
+                System.out.println("[ProductService] Bắt đầu tạo sản phẩm: " + request.getName() + " với " + (request.getVariants() != null ? request.getVariants().size() : 0) + " biến thể.");
 
                 Category category = categoryRepository.findById(request.getCategoryId())
                                 .orElseThrow(() -> new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION));
@@ -489,9 +492,19 @@ public class ProductServiceImpl implements ProductService {
 
         private void saveVariantsAndImages(ProductRequest request, Product product) {
                 if (request.getVariants() != null) {
+                        // LOGGING: Kiểm tra số lượng biến thể trước khi lưu
+                        System.out.println("  [ProductService] Chuẩn bị lưu " + request.getVariants().size() + " biến thể cho sản phẩm ID: " + product.getId());
+
                         List<ProductVariant> variants = request.getVariants().stream()
                                         .map(vReq -> ProductVariant.builder()
-                                                        .sku(vReq.getSku())
+                                                        // === FIX: Tự động sinh SKU nếu nó null ===
+                                                        .sku(vReq.getSku() != null && !vReq.getSku().isBlank()
+                                                                        ? vReq.getSku()
+                                                                        : buildUniqueVariantSku(
+                                                                                        product.getSlug() + "-"
+                                                                                                        + generateSkuFromAttributes(
+                                                                                                                        vReq.getAttributes())))
+                                                        // =======================================
                                                         .price(vReq.getPrice())
                                                         .compareAtPrice(vReq.getCompareAtPrice())
                                                         .stock(vReq.getStock())
@@ -589,6 +602,26 @@ public class ProductServiceImpl implements ProductService {
                                 System.err.println("Lỗi xóa ảnh Local ID " + publicId + ": " + e.getMessage());
                         }
                 }
+        }
+
+        private String generateSkuFromAttributes(String attributesJson) {
+                if (attributesJson == null || attributesJson.isBlank()) {
+                        return "DEFAULT";
+                }
+                try {
+                        Map<String, String> attributes = objectMapper.readValue(attributesJson,
+                                        new TypeReference<Map<String, String>>() {
+                                        });
+                        return attributes.values().stream()
+                                        .map(value -> normalizeTextForSku(value).toUpperCase())
+                                        .collect(Collectors.joining("-"));
+                } catch (Exception e) {
+                        return "ATTR-ERR";
+                }
+        }
+
+        private String normalizeTextForSku(String text) {
+                return text.replaceAll("\\s+", "-").replaceAll("[^a-zA-Z0-9-]", "");
         }
 
         private Product mapRequestToEntity(ProductRequest request, Product product) {
