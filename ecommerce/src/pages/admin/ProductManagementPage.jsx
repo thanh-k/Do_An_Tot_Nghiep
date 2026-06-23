@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { DownloadCloud, Pencil, Plus, Trash2, UploadCloud } from "lucide-react";
 import DataTable from "@/components/admin/DataTable";
 import ProductFormModal from "@/components/admin/ProductFormModal";
 import Button from "@/components/common/Button";
@@ -170,6 +170,43 @@ function ProductManagementPage() {
     loadData();
   };
 
+  const handleDownloadTemplate = async () => {
+    try {
+      toast.loading("Đang tạo file mẫu...", { id: "template" });
+      await productService.downloadImportTemplate();
+      toast.success("Đã tải file mẫu!", { id: "template" });
+    } catch (error) {
+      toast.error("Lỗi khi tải file mẫu", { id: "template" });
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      toast.loading("Đang xuất dữ liệu...", { id: "export" });
+      await productService.exportProductsExcel();
+      toast.success("Xuất dữ liệu thành công!", { id: "export" });
+    } catch (error) {
+      toast.error("Lỗi khi xuất file Excel", { id: "export" });
+    }
+  };
+
+  const handleImportExcel = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      toast.loading("Đang xử lý dữ liệu...", { id: "import" });
+      await productService.importProductsExcel(file);
+      toast.success("Nhập dữ liệu thành công!", { id: "import" });
+      loadData();
+    } catch (error) {
+      const errorMsg =
+        error.response?.data?.message || "Lỗi khi nhập file Excel";
+      toast.error(errorMsg, { id: "import" });
+    } finally {
+      event.target.value = null;
+    }
+  };
   const columns = [
     {
       key: "select",
@@ -327,9 +364,37 @@ function ProductManagementPage() {
         title="Quản lý sản phẩm"
         description="Quản lý danh sách sản phẩm, biến thể, giá bán, tồn kho và trạng thái hiển thị."
         actions={
-          <Button onClick={() => setModalState({ open: true, product: null })}>
-            <Plus size={16} /> Thêm sản phẩm
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={handleExportExcel}>
+              <DownloadCloud size={16} /> Xuất dữ liệu
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={handleDownloadTemplate}
+              title="Tải file Excel rỗng với các cột chuẩn"
+            >
+              Tải File Mẫu
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => document.getElementById("import-excel").click()}
+            >
+              <UploadCloud size={16} /> Nhập từ Excel
+            </Button>
+            <input
+              type="file"
+              id="import-excel"
+              accept=".xlsx, .xls"
+              className="hidden"
+              onChange={handleImportExcel}
+            />
+            <Button
+              onClick={() => setModalState({ open: true, product: null })}
+            >
+              <Plus size={16} /> Thêm sản phẩm
+            </Button>
+          </div>
         }
       />
       <div className="card grid gap-4 p-4 lg:grid-cols-[1fr_200px_200px_200px]">

@@ -229,9 +229,7 @@ public class ProductServiceImpl implements ProductService {
         @Override
         @Transactional(readOnly = true)
         public List<ProductResponse> getAllProducts() {
-                return productRepository.findAll().stream()
-                                .map(this::getProductResponse)
-                                .collect(Collectors.toList());
+                return productRepository.findAll().stream().map(this::getProductResponse).collect(Collectors.toList());
         }
 
         @Override

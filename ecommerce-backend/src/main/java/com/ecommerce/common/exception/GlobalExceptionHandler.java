@@ -41,13 +41,13 @@ public class GlobalExceptionHandler {
                                                 .message("Bạn không có quyền truy cập chức năng này").build());
         }
 
-
         @ExceptionHandler(IllegalArgumentException.class)
         public ResponseEntity<ApiResponse<Object>> handleIllegalArgument(IllegalArgumentException ex) {
                 return ResponseEntity.badRequest()
                                 .body(ApiResponse.builder()
                                                 .code(HttpStatus.BAD_REQUEST.value())
-                                                .message(ex.getMessage() == null ? "Dữ liệu không hợp lệ" : ex.getMessage())
+                                                .message(ex.getMessage() == null ? "Dữ liệu không hợp lệ"
+                                                                : ex.getMessage())
                                                 .build());
         }
 
@@ -58,7 +58,10 @@ public class GlobalExceptionHandler {
                 ex.printStackTrace();
 
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body(ApiResponse.builder().code(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode())
-                                                .message(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage()).build());
+                                .body(ApiResponse.builder()
+                                                .code(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode())
+                                                .message("Lỗi hệ thống: " + ex.getMessage()) // Trả về thông điệp lỗi
+                                                                                             // chi tiết
+                                                .build());
         }
 }
