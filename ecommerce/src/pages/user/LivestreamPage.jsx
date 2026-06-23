@@ -5,6 +5,7 @@ import {
   Clock,
   Eye,
   MessageCircle,
+  Pin,
   Radio,
   ShoppingCart,
   Tag,
@@ -14,11 +15,11 @@ import {
 import livestreamService from "@/services/livestreamService";
 import useLivestreamViewer from "@/hooks/useLivestreamViewer";
 import useCart from "@/hooks/useCart";
+import useAuth from "@/hooks/useAuth";
 import {
   formatVnd,
   getDealForProduct,
   isLiveDealUsable,
-  withLiveDealVariant,
 } from "@/utils/livestream";
 
 function getDealEndTime(deal) {
@@ -33,6 +34,74 @@ function formatDealCountdown(deal, now) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function formatDurationMs(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function messagePinEndTime(message) {
+  const raw = message?.pinExpiresAt;
+  const value = raw ? new Date(raw).getTime() : 0;
+  return Number.isFinite(value) ? value : 0;
+}
+
+function isPinnedMessageUsable(message, now = Date.now()) {
+  return Boolean(message?.pinned) && messagePinEndTime(message) > now;
+}
+
+function mergeChatMessage(list, message) {
+  if (!message) return list;
+  if (!message.id) return [...list, message];
+  const exists = list.some((item) => String(item.id) === String(message.id));
+  if (!exists) return [...list, message];
+  return list.map((item) => String(item.id) === String(message.id) ? { ...item, ...message } : item);
+}
+
+function parseVariantAttributes(attributes) {
+  if (!attributes) return {};
+  if (typeof attributes === "object") return attributes;
+
+  try {
+    const parsed = JSON.parse(attributes);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function getVariantLabel(variant) {
+  const attrs = parseVariantAttributes(variant?.attributes);
+  const label = Object.entries(attrs)
+    .filter(([, value]) => value !== null && value !== undefined && value !== "")
+    .map(([key, value]) => `${key}: ${value}`)
+    .join(" • ");
+
+  return label || variant?.sku || `Biến thể #${variant?.id}`;
+}
+
+function getAvailableVariants(product) {
+  if (Array.isArray(product?.variants) && product.variants.length) {
+    return product.variants.filter((variant) => Number(variant?.stock || 0) > 0);
+  }
+
+  if (product?.variantId && Number(product?.stock || 0) > 0) {
+    return [
+      {
+        id: product.variantId,
+        price: product.price,
+        compareAtPrice: product.compareAtPrice,
+        stock: product.stock || 0,
+        attributes: {},
+        image: product.thumbnail,
+      },
+    ];
+  }
+
+  return [];
 }
 
 function LiveProductCard({ product, livestream, onAdd, compact = false }) {
@@ -109,12 +178,154 @@ function LiveProductCard({ product, livestream, onAdd, compact = false }) {
   );
 }
 
+function VariantSelectModal({ product, deal, onClose, onConfirm }) {
+  const variants = getAvailableVariants(product);
+  const firstAvailable = variants[0];
+  const [selectedVariantId, setSelectedVariantId] = useState(firstAvailable?.id || "");
+  const selectedVariant = variants.find(
+    (variant) => Number(variant.id) === Number(selectedVariantId)
+  );
+
+  useEffect(() => {
+    setSelectedVariantId(firstAvailable?.id || "");
+  }, [firstAvailable?.id, product?.id]);
+
+  if (!product) return null;
+
+  const canBuy = selectedVariant && Number(selectedVariant.stock || 0) > 0;
+  const finalPrice = deal?.dealPrice || selectedVariant?.price || product.price;
+  const comparePrice = deal?.originalPrice || selectedVariant?.compareAtPrice || product.compareAtPrice;
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-end bg-black/55 px-0 pt-6 sm:items-center sm:justify-center sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[28px] bg-white shadow-2xl sm:max-h-[88vh] sm:max-w-2xl sm:rounded-[28px] lg:max-w-3xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-6 sm:py-5">
+          <div className="min-w-0">
+            <h3 className="text-base font-black text-slate-950 sm:text-lg lg:text-xl">
+              Chọn biến thể để mua
+            </h3>
+            <p className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm">
+              Chọn đúng màu, dung lượng hoặc cấu hình trước khi thanh toán deal live.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-full bg-slate-100 p-2 text-slate-600 hover:bg-slate-200"
+            aria-label="Đóng chọn biến thể"
+          >
+            <X className="h-4 w-4 sm:h-5 sm:w-5" />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+          <div className="flex gap-3 rounded-2xl bg-slate-50 p-3 sm:gap-4 sm:p-4">
+            <img
+              src={selectedVariant?.image || product.thumbnail}
+              alt={product.name}
+              className="h-20 w-20 shrink-0 rounded-2xl bg-white object-contain p-1 sm:h-24 sm:w-24"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="line-clamp-2 text-sm font-black text-slate-950 sm:text-base">
+                {product.name}
+              </p>
+              <p className="mt-1 text-lg font-black text-rose-600 sm:text-xl">
+                {formatVnd(finalPrice)}
+              </p>
+              {comparePrice && Number(comparePrice) > Number(finalPrice) && (
+                <p className="text-xs text-slate-400 line-through sm:text-sm">
+                  {formatVnd(comparePrice)}
+                </p>
+              )}
+              <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-bold sm:text-xs">
+                <span className="rounded-full bg-white px-2.5 py-1 text-slate-600">
+                  Tồn biến thể: {Number(selectedVariant?.stock || 0)}
+                </span>
+                {deal && (
+                  <span className="rounded-full bg-rose-100 px-2.5 py-1 text-rose-600">
+                    Deal live đang áp dụng
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-2 sm:space-y-3">
+            {variants.length === 0 ? (
+              <div className="rounded-2xl bg-rose-50 p-3 text-sm font-bold text-rose-600">
+                Sản phẩm live chưa có biến thể hợp lệ để thanh toán.
+              </div>
+            ) : (
+              variants.map((variant) => {
+                const selected = Number(selectedVariantId) === Number(variant.id);
+
+                return (
+                  <button
+                    key={variant.id}
+                    type="button"
+                    onClick={() => setSelectedVariantId(variant.id)}
+                    className={`w-full rounded-2xl border p-3 text-left transition sm:p-4 ${
+                      selected
+                        ? "border-blue-600 bg-blue-50 ring-1 ring-blue-600"
+                        : "border-slate-200 bg-white hover:border-blue-300"
+                    }`}
+                  >
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                      <div className="min-w-0">
+                        <p className="break-words text-sm font-black text-slate-900 sm:text-base">
+                          {getVariantLabel(variant)}
+                        </p>
+                        <p className="mt-1 break-words text-xs text-slate-500 sm:text-sm">
+                          SKU: {variant.sku || "Không có"} • Tồn: {Number(variant.stock || 0)}
+                        </p>
+                      </div>
+                      <p className="shrink-0 text-sm font-black text-rose-600 sm:text-base">
+                        {formatVnd(deal?.dealPrice || variant.price)}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        <div className="shrink-0 border-t border-slate-100 bg-white px-4 py-3 sm:px-6 sm:py-4">
+          <button
+            type="button"
+            disabled={!canBuy}
+            onClick={() => onConfirm(selectedVariant)}
+            className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 sm:text-base"
+          >
+            Mua ngay biến thể đã chọn
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ChatPanel({ messages, chatText, setChatText, onSend }) {
+  const [now, setNow] = useState(Date.now());
   const chatEndRef = useRef(null);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const pinnedMessages = messages.filter((item) => isPinnedMessageUsable(item, now)).slice(0, 3);
 
   return (
     <div className="flex h-[360px] min-h-0 flex-col rounded-[26px] bg-white p-4 shadow-sm xl:h-[410px]">
@@ -122,6 +333,22 @@ function ChatPanel({ messages, chatText, setChatText, onSend }) {
         <MessageCircle className="mr-2 inline h-4 w-4 text-rose-600" />
         Bình luận live
       </h3>
+
+      {pinnedMessages.length > 0 && (
+        <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+          <p className="mb-2 text-xs font-black uppercase text-amber-700">
+            <Pin className="mr-1 inline h-3.5 w-3.5" /> Bình luận được ghim
+          </p>
+          <div className="space-y-2">
+            {pinnedMessages.map((item) => (
+              <div key={item.id} className="rounded-xl bg-white p-2 text-xs shadow-sm">
+                <p className="font-black text-slate-900">{item.senderName || "Khách"}</p>
+                <p className="break-words text-slate-700">{item.message}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl bg-slate-50 p-3 text-sm">
         {messages.length === 0 && (
@@ -134,6 +361,11 @@ function ChatPanel({ messages, chatText, setChatText, onSend }) {
               {item.senderName || "Khách"}:
             </span>{" "}
             <span className="text-slate-700">{item.message}</span>
+            {isPinnedMessageUsable(item, now) && (
+              <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-700">
+                Đang ghim
+              </span>
+            )}
           </div>
         ))}
 
@@ -160,18 +392,26 @@ function ChatPanel({ messages, chatText, setChatText, onSend }) {
   );
 }
 
-function LiveRoom({ livestream, onBack }) {
+function LiveRoom({ livestream, onBack, currentUser }) {
   const [currentLive, setCurrentLive] = useState(livestream);
   const [showProducts, setShowProducts] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [messages, setMessages] = useState([]);
   const [chatText, setChatText] = useState("");
   const [now, setNow] = useState(Date.now());
+  const [variantModal, setVariantModal] = useState(null);
 
   const { cartItems, removeMultipleFromCart } = useCart();
   const navigate = useNavigate();
 
-  useEffect(() => setCurrentLive(livestream), [livestream]);
+  useEffect(() => {
+    if (livestream?.status && livestream.status !== "LIVE") {
+      toast("Livestream đã kết thúc");
+      const timer = setTimeout(() => onBack(), 700);
+      return () => clearTimeout(timer);
+    }
+    setCurrentLive(livestream);
+  }, [livestream, onBack]);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -253,17 +493,29 @@ function LiveRoom({ livestream, onBack }) {
       }
 
       if (event.type === "chat" && event.message) {
-        setMessages((prev) => [...prev, event]);
+        setMessages((prev) => mergeChatMessage(prev, event));
+      }
+
+      if (event.type === "pin-chat-message" && event.message) {
+        setMessages((prev) => mergeChatMessage(prev, event.message));
+      }
+
+      if (event.type === "unpin-chat-message" && event.messageId) {
+        setMessages((prev) => prev.map((item) => String(item.id) === String(event.messageId) ? { ...item, pinned: false, pinExpiresAt: event.pinExpiresAt || new Date().toISOString() } : item));
       }
 
       if (event.type === "host-offline") {
         toast("Livestream đã kết thúc");
+        setVariantModal(null);
+        setShowProducts(false);
+        setShowChat(false);
         setCurrentLive((prev) =>
-          prev ? { ...prev, status: "ENDED", viewerCount: 0 } : prev
+          prev ? { ...prev, status: "ENDED", viewerCount: 0, activeDeals: [] } : prev
         );
+        setTimeout(() => onBack(), 700);
       }
     },
-    [cartItems, currentLive.id, removeMultipleFromCart]
+    [cartItems, currentLive.id, onBack, removeMultipleFromCart]
   );
 
   const { videoRef, connected, error, sendLiveEvent } = useLivestreamViewer(
@@ -277,10 +529,14 @@ function LiveRoom({ livestream, onBack }) {
   );
 
   useEffect(() => {
-    livestreamService
+    const loadMessages = () => livestreamService
       .getChatMessages(currentLive.id)
       .then(setMessages)
       .catch(() => setMessages([]));
+
+    loadMessages();
+    const timer = setInterval(loadMessages, 5000);
+    return () => clearInterval(timer);
   }, [currentLive.id]);
 
   useEffect(() => {
@@ -305,6 +561,16 @@ function LiveRoom({ livestream, onBack }) {
           removeMultipleFromCart(removedCartIds);
         }
 
+        if (fresh?.status && fresh.status !== "LIVE") {
+          toast("Livestream đã kết thúc");
+          setVariantModal(null);
+          setShowProducts(false);
+          setShowChat(false);
+          setCurrentLive({ ...fresh, activeDeals: [] });
+          setTimeout(() => onBack(), 700);
+          return;
+        }
+
         setCurrentLive(fresh);
       } catch (_) {
         // Bỏ qua lỗi poll để không làm vỡ trang live.
@@ -313,7 +579,7 @@ function LiveRoom({ livestream, onBack }) {
 
     const timer = setInterval(syncLive, 5000);
     return () => clearInterval(timer);
-  }, [cartItems, currentLive.id, removeMultipleFromCart]);
+  }, [cartItems, currentLive.id, onBack, removeMultipleFromCart]);
 
   const sendChat = () => {
     const message = chatText.trim();
@@ -322,8 +588,8 @@ function LiveRoom({ livestream, onBack }) {
     const payload = {
       type: "chat",
       liveId: currentLive.id,
-      senderName: "Khách",
-      senderRole: "USER",
+      senderName: currentUser?.name || currentUser?.fullName || currentUser?.email || "Khách",
+      senderRole: currentUser ? "USER" : "GUEST",
       message,
       createdAt: new Date().toISOString(),
     };
@@ -331,42 +597,53 @@ function LiveRoom({ livestream, onBack }) {
     setMessages((prev) => [...prev, payload]);
     sendLiveEvent(payload);
     setChatText("");
+    setTimeout(() => {
+      livestreamService.getChatMessages(currentLive.id).then(setMessages).catch(() => {});
+    }, 700);
   };
 
-  const addLiveProductToCart = (product, deal) => {
-    if (!product.variantId) {
-      toast.error("Sản phẩm live chưa có biến thể hợp lệ để thanh toán.");
+  const openVariantSelector = (product, deal) => {
+    setVariantModal({ product, deal });
+  };
+
+  const addLiveProductToCart = (product, deal, selectedVariant) => {
+    if (!selectedVariant?.id) {
+      toast.error("Vui lòng chọn biến thể sản phẩm trước khi mua.");
+      return;
+    }
+
+    if (Number(selectedVariant.stock || 0) <= 0) {
+      toast.error("Biến thể này đã hết hàng.");
       return;
     }
 
     // Nút Mua ngay trong live đi thẳng sang checkout, không chỉ thêm vào giỏ.
     // BE vẫn sẽ kiểm tra lại deal còn hạn/còn số lượng để không ảnh hưởng mua hàng thường.
     const usableDeal = deal && isLiveDealUsable(deal, Date.now()) ? deal : null;
-    const mappedProduct = withLiveDealVariant(
-      { ...product, variants: product.variants },
-      usableDeal,
-      currentLive.id
-    );
-    const variant = mappedProduct.variants?.[0];
+    const variantAttributes = parseVariantAttributes(selectedVariant.attributes);
 
     const directItem = {
-      id: `live_buy_now_${currentLive.id}_${product.id}_${variant.id}_${usableDeal?.id || "regular"}`,
+      id: `live_buy_now_${currentLive.id}_${product.id}_${selectedVariant.id}_${usableDeal?.id || "regular"}`,
       productId: product.id,
       name: product.name,
       slug: product.slug,
-      image: variant.images?.[0] || product.thumbnail,
-      variantId: variant.id,
-      variantLabel: "Livestream",
-      attributes: variant.attributes || {},
+      image: selectedVariant.image || product.thumbnail,
+      variantId: selectedVariant.id,
+      variantLabel: getVariantLabel(selectedVariant),
+      attributes: variantAttributes,
       quantity: 1,
-      price: variant.price,
-      compareAtPrice: variant.compareAtPrice,
-      maxStock: variant.stock || product.stock || 1,
+      price: usableDeal?.dealPrice || selectedVariant.price || product.price,
+      compareAtPrice:
+        usableDeal?.originalPrice ||
+        selectedVariant.compareAtPrice ||
+        product.compareAtPrice,
+      maxStock: selectedVariant.stock || product.stock || 1,
       livestreamId: currentLive.id,
       liveDealId: usableDeal?.id || null,
       isLivestreamDeal: Boolean(usableDeal?.id),
     };
 
+    setVariantModal(null);
     navigate("/checkout", { state: { directItems: [directItem] } });
   };
 
@@ -454,7 +731,7 @@ function LiveRoom({ livestream, onBack }) {
                   <LiveProductCard
                     product={pinned}
                     livestream={currentLive}
-                    onAdd={addLiveProductToCart}
+                    onAdd={openVariantSelector}
                   />
                 ) : (
                   <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
@@ -517,7 +794,7 @@ function LiveRoom({ livestream, onBack }) {
                   key={product.id}
                   product={product}
                   livestream={currentLive}
-                  onAdd={addLiveProductToCart}
+                  onAdd={openVariantSelector}
                 />
               ))}
             </div>
@@ -557,7 +834,7 @@ function LiveRoom({ livestream, onBack }) {
                   key={product.id}
                   product={product}
                   livestream={currentLive}
-                  onAdd={addLiveProductToCart}
+                  onAdd={openVariantSelector}
                   compact
                 />
               ))}
@@ -584,6 +861,17 @@ function LiveRoom({ livestream, onBack }) {
           </div>
         </div>
       )}
+
+      {variantModal && (
+        <VariantSelectModal
+          product={variantModal.product}
+          deal={variantModal.deal}
+          onClose={() => setVariantModal(null)}
+          onConfirm={(variant) =>
+            addLiveProductToCart(variantModal.product, variantModal.deal, variant)
+          }
+        />
+      )}
     </div>
   );
 }
@@ -591,6 +879,7 @@ function LiveRoom({ livestream, onBack }) {
 function LivestreamPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [livestreams, setLivestreams] = useState([]);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -632,6 +921,7 @@ function LivestreamPage() {
       <LiveRoom
         livestream={selected}
         onBack={() => navigate("/livestreams")}
+        currentUser={currentUser}
       />
     );
   }

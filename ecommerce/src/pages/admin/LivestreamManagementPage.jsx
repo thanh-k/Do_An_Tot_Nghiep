@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import {
   Camera,
   Check,
+  Clock,
   Edit3,
   Eye,
   ImageIcon,
@@ -26,7 +27,7 @@ import userProductService from "@/services/user/productService";
 import categoryService from "@/services/admin/categoryService";
 import brandService from "@/services/admin/brandService";
 import useLivestreamHost from "@/hooks/useLivestreamHost";
-import { formatVnd } from "@/utils/livestream";
+import { formatVnd, isLiveDealUsable } from "@/utils/livestream";
 import useAuth from "@/hooks/useAuth";
 import { hasPermission } from "@/utils/permission";
 
@@ -38,6 +39,63 @@ const categoryIdOf = (product) => String(product?.category?.id || product?.categ
 const brandIdOf = (product) => String(product?.brand?.id || product?.brandId || "");
 const categoryNameOf = (product) => product?.category?.name || product?.categoryName || "Không có danh mục";
 const brandNameOf = (product) => product?.brand?.name || product?.brandName || "Không có thương hiệu";
+const productStock = (product) => {
+  const variants = Array.isArray(product?.variants) ? product.variants : [];
+  if (variants.length > 0) {
+    return variants.reduce((total, variant) => total + Math.max(0, Number(variant?.stock || 0)), 0);
+  }
+  return Math.max(0, Number(product?.stock || 0));
+};
+const variantStockDetails = (product) => {
+  const variants = Array.isArray(product?.variants) ? product.variants : [];
+  if (variants.length === 0) return [];
+  return variants
+    .filter((variant) => Number(variant?.stock || 0) > 0)
+    .map((variant) => {
+      let label = variant?.sku || `Biến thể #${variant?.id || ""}`.trim();
+      try {
+        const attributes = typeof variant?.attributes === "string" ? JSON.parse(variant.attributes) : variant?.attributes;
+        if (attributes && typeof attributes === "object") {
+          const attributeText = Object.entries(attributes).map(([key, value]) => `${key}: ${value}`).join(" • ");
+          if (attributeText) label = attributeText;
+        }
+      } catch {
+        // Giữ SKU nếu attributes cũ không phải JSON hợp lệ.
+      }
+      return { id: variant?.id, label, stock: Math.max(0, Number(variant?.stock || 0)) };
+    });
+};
+
+function formatCountdownMs(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function dealEndTime(deal) {
+  const raw = deal?.endsAt || deal?.endedAt || deal?.expireAt;
+  const value = raw ? new Date(raw).getTime() : 0;
+  return Number.isFinite(value) ? value : 0;
+}
+
+function messagePinEndTime(message) {
+  const raw = message?.pinExpiresAt;
+  const value = raw ? new Date(raw).getTime() : 0;
+  return Number.isFinite(value) ? value : 0;
+}
+
+function isPinnedMessageUsable(message, now = Date.now()) {
+  return Boolean(message?.pinned) && messagePinEndTime(message) > now;
+}
+
+function mergeChatMessage(list, message) {
+  if (!message) return list;
+  if (!message.id) return [...list, message];
+  const exists = list.some((item) => String(item.id) === String(message.id));
+  if (!exists) return [...list, message];
+  return list.map((item) => String(item.id) === String(message.id) ? { ...item, ...message } : item);
+}
 
 function SectionCard({ title, description, icon: Icon, children, right }) {
   return (
@@ -164,7 +222,7 @@ function ProductPicker({ products, liveProducts, categories, brands, onAdd, onRe
           const selected = selectedIds.has(String(product.id));
           return <div key={product.id} className={`flex items-center gap-3 rounded-2xl border p-3 ${selected ? "border-blue-200 bg-blue-50" : "border-slate-100 bg-white"}`}>
             <img src={productThumb(product)} alt={product.name} className="h-12 w-12 rounded-xl bg-slate-50 object-contain" />
-            <div className="min-w-0 flex-1"><p className="truncate text-sm font-black text-slate-900">{product.name}</p><p className="truncate text-xs text-slate-500">{categoryNameOf(product)} • {brandNameOf(product)}</p><p className="text-xs font-bold text-rose-600">{formatVnd(productPrice(product))}</p></div>
+            <div className="min-w-0 flex-1"><p className="truncate text-sm font-black text-slate-900">{product.name}</p><p className="truncate text-xs text-slate-500">{categoryNameOf(product)} • {brandNameOf(product)}</p><p className="text-xs font-bold text-rose-600">{formatVnd(productPrice(product))}</p><p className="text-[11px] font-bold text-emerald-600">Tồn tổng: {productStock(product)}</p></div>
             <button type="button" onClick={() => selected ? onRemove(product.id) : onAdd(product.id)} className={`rounded-xl px-3 py-2 text-xs font-black ${selected ? "bg-rose-100 text-rose-700 hover:bg-rose-200" : "bg-slate-900 text-white hover:bg-slate-800"}`}>{selected ? <><Trash2 className="mr-1 inline h-3.5 w-3.5" /> Xóa</> : <><Check className="mr-1 inline h-3.5 w-3.5" /> Chọn</>}</button>
           </div>;
         })}
@@ -176,26 +234,118 @@ function ProductPicker({ products, liveProducts, categories, brands, onAdd, onRe
 function AdminLiveChat({ liveId, broadcastLiveEvent, incomingMessage, canManage }) {
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
+  const [now, setNow] = useState(Date.now());
   const endRef = useRef(null);
 
-  useEffect(() => { if (liveId) livestreamService.getChatMessages(liveId).then(setMessages).catch(() => setMessages([])); }, [liveId]);
-  useEffect(() => { if (incomingMessage) setMessages((prev) => [...prev, incomingMessage]); }, [incomingMessage]);
+  const loadMessages = useCallback(() => {
+    if (!liveId) return Promise.resolve();
+    return livestreamService.getChatMessages(liveId).then(setMessages).catch(() => setMessages([]));
+  }, [liveId]);
+
+  useEffect(() => { loadMessages(); }, [loadMessages]);
+  useEffect(() => {
+    if (!liveId) return undefined;
+    const timer = setInterval(loadMessages, 5000);
+    return () => clearInterval(timer);
+  }, [liveId, loadMessages]);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  useEffect(() => {
+    if (!incomingMessage) return;
+    if (incomingMessage.type === "chat") {
+      setMessages((prev) => mergeChatMessage(prev, incomingMessage));
+      return;
+    }
+    if (incomingMessage.type === "pin-chat-message" && incomingMessage.message) {
+      setMessages((prev) => mergeChatMessage(prev, incomingMessage.message));
+      return;
+    }
+    if (incomingMessage.type === "unpin-chat-message" && incomingMessage.messageId) {
+      setMessages((prev) => prev.map((item) => String(item.id) === String(incomingMessage.messageId) ? { ...item, pinned: false, pinExpiresAt: incomingMessage.pinExpiresAt || new Date().toISOString() } : item));
+    }
+  }, [incomingMessage]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  const pinnedMessages = useMemo(
+    () => messages.filter((item) => isPinnedMessageUsable(item, now)).slice(0, 3),
+    [messages, now]
+  );
 
   const sendMessage = () => {
     const text = message.trim();
     if (!text) return;
-    const payload = { type: "chat", liveId, senderName: "Admin", senderRole: "ADMIN", message: text, createdAt: new Date().toISOString() };
+    const payload = {
+      type: "chat",
+      liveId,
+      senderName: currentUser?.name || currentUser?.fullName || currentUser?.email || "Admin",
+      senderRole: "ADMIN",
+      message: text,
+      createdAt: new Date().toISOString(),
+    };
     setMessages((prev) => [...prev, payload]);
     broadcastLiveEvent(payload);
     setMessage("");
+    setTimeout(loadMessages, 500);
+  };
+
+  const pinMessage = async (item) => {
+    if (!item?.id) {
+      toast.error("Bình luận vừa gửi chưa kịp lưu, vui lòng chờ vài giây rồi ghim lại.");
+      return;
+    }
+    if (pinnedMessages.length >= 3 && !isPinnedMessageUsable(item, now)) {
+      toast.error("Chỉ được ghim tối đa 3 bình luận cùng lúc");
+      return;
+    }
+    try {
+      const pinned = await livestreamService.pinChatMessage(liveId, item.id);
+      setMessages((prev) => mergeChatMessage(prev, pinned));
+      broadcastLiveEvent({ type: "pin-chat-message", liveId, message: pinned });
+      toast.success("Đã ghim bình luận trong 1 phút");
+    } catch (error) {
+      toast.error(error?.message || "Không ghim được bình luận");
+    }
+  };
+
+  const unpinMessage = async (item) => {
+    if (!item?.id) return;
+    try {
+      const unpinned = await livestreamService.unpinChatMessage(liveId, item.id);
+      setMessages((prev) => mergeChatMessage(prev, unpinned));
+      broadcastLiveEvent({ type: "unpin-chat-message", liveId, messageId: item.id, pinExpiresAt: unpinned?.pinExpiresAt });
+      toast.success("Đã gỡ ghim bình luận");
+    } catch (error) {
+      toast.error(error?.message || "Không gỡ ghim được bình luận");
+    }
   };
 
   return <div className="rounded-3xl border border-slate-200 p-4">
-    <p className="text-sm font-black text-slate-900"><MessageCircle className="mr-2 inline h-4 w-4 text-blue-600" /> Bình luận</p>
+    <div className="flex items-center justify-between gap-3">
+      <p className="text-sm font-black text-slate-900"><MessageCircle className="mr-2 inline h-4 w-4 text-blue-600" /> Bình luận</p>
+      <span className="rounded-full bg-amber-50 px-3 py-1 text-[11px] font-black text-amber-700">Ghim tối đa 3 • tự gỡ sau 1 phút</span>
+    </div>
+
+    {pinnedMessages.length > 0 && <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+      <p className="mb-2 text-xs font-black uppercase text-amber-700"><Pin className="mr-1 inline h-3.5 w-3.5" /> Bình luận đang ghim</p>
+      <div className="space-y-2">
+        {pinnedMessages.map((item) => <div key={item.id} className="flex items-start gap-2 rounded-xl bg-white p-2 text-xs shadow-sm">
+          <div className="min-w-0 flex-1"><p className="font-black text-slate-900">{item.senderName || "Khách"}</p><p className="break-words text-slate-700">{item.message}</p></div>
+          {canManage && <button onClick={() => unpinMessage(item)} className="rounded-lg bg-slate-100 p-1.5 text-slate-600 hover:bg-rose-50 hover:text-rose-600" title="Gỡ ghim"><X className="h-3.5 w-3.5" /></button>}
+        </div>)}
+      </div>
+    </div>}
+
     <div className="mt-3 h-56 overflow-y-auto rounded-2xl bg-slate-50 p-3 text-sm">
       {messages.length === 0 && <p className="text-slate-500">Chưa có bình luận trong live.</p>}
-      {messages.map((item, index) => <div key={item.id || `${item.createdAt || "msg"}-${index}`} className="mb-2"><span className="font-black text-slate-900">{item.senderName || "Khách"}: </span><span className="text-slate-700">{item.message}</span></div>)}
+      {messages.map((item, index) => {
+        const pinned = isPinnedMessageUsable(item, now);
+        return <div key={item.id || `${item.createdAt || "msg"}-${index}`} className="mb-2 flex items-start gap-2 rounded-xl px-2 py-1 hover:bg-white">
+          <div className="min-w-0 flex-1"><span className="font-black text-slate-900">{item.senderName || "Khách"}: </span><span className="break-words text-slate-700">{item.message}</span>{pinned && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-700">Đang ghim</span>}</div>
+          {canManage && item.id && <button onClick={() => pinned ? unpinMessage(item) : pinMessage(item)} className={`shrink-0 rounded-lg px-2 py-1 text-[11px] font-black ${pinned ? "bg-amber-100 text-amber-700 hover:bg-amber-200" : "bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-600"}`}>{pinned ? "Gỡ" : "Ghim"}</button>}
+        </div>;
+      })}
       <div ref={endRef} />
     </div>
     {canManage && <div className="mt-3 flex gap-2"><input value={message} onChange={(e) => setMessage(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendMessage()} placeholder="Nhập tin nhắn cho người xem..." className="min-w-0 flex-1 rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500" /><button onClick={sendMessage} className="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-black text-white">Gửi</button></div>}
@@ -209,13 +359,19 @@ function AdminLiveStudio({ live, onReload, onRemoveProduct, onOpenProductManager
   const [discountMode, setDiscountMode] = useState("PERCENT");
   const [durationMinutes, setDurationMinutes] = useState(3);
   const [quantityLimit, setQuantityLimit] = useState(10);
+  const [dealNow, setDealNow] = useState(Date.now());
   const [incomingMessage, setIncomingMessage] = useState(null);
-  const handleLiveEvent = useCallback((event) => { if (event.type === "chat") setIncomingMessage(event); }, []);
+  const handleLiveEvent = useCallback((event) => { if (["chat", "pin-chat-message", "unpin-chat-message"].includes(event.type)) setIncomingMessage(event); }, []);
   const { videoRef, started, viewerCount, error, start, stop, broadcastLiveEvent } = useLivestreamHost(live?.id, handleLiveEvent);
   const liveProducts = live?.products || [];
   const pinned = liveProducts.find((item) => item.pinned);
   const selectedDealProduct = liveProducts.find((item) => Number(item.id) === Number(dealProductId));
   const selectedOriginalPrice = Number(selectedDealProduct?.price || 0);
+  const selectedProductStock = productStock(selectedDealProduct);
+  const selectedVariantStockDetails = useMemo(() => variantStockDetails(selectedDealProduct), [selectedDealProduct]);
+  const currentDeal = useMemo(() => (live?.activeDeals || []).find((deal) => isLiveDealUsable(deal, dealNow)) || null, [live?.activeDeals, dealNow]);
+  const currentDealRemaining = currentDeal ? Math.max(0, Number(currentDeal.quantityLimit || 0) - Number(currentDeal.quantitySold || 0)) : 0;
+  const currentDealCountdown = currentDeal ? formatCountdownMs(dealEndTime(currentDeal) - dealNow) : "00:00";
   const discountNumber = Number(discountPercent || 0);
   const manualFinalPrice = Number(dealPrice || 0);
   const previewDealPrice = useMemo(() => {
@@ -228,6 +384,25 @@ function AdminLiveStudio({ live, onReload, onRemoveProduct, onOpenProductManager
   const previewDiscountPercent = selectedOriginalPrice && previewDealPrice > 0
     ? Math.round((selectedOriginalPrice - previewDealPrice) * 10000 / selectedOriginalPrice) / 100
     : 0;
+
+  useEffect(() => {
+    const timer = setInterval(() => setDealNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!live?.id || !currentDeal) return undefined;
+    const timer = setInterval(() => onReload?.(), 2000);
+    return () => clearInterval(timer);
+  }, [live?.id, currentDeal?.id, onReload]);
+
+  useEffect(() => {
+    if (!selectedDealProduct) return;
+    const currentQuantity = Number(quantityLimit || 0);
+    if (selectedProductStock > 0 && (!currentQuantity || currentQuantity > selectedProductStock)) {
+      setQuantityLimit(Math.min(10, selectedProductStock));
+    }
+  }, [selectedDealProduct?.id, selectedProductStock]);
 
   const calculateDealPriceByDiscount = (value, mode = discountMode) => {
     const discountValue = Number(value || 0);
@@ -255,6 +430,7 @@ function AdminLiveStudio({ live, onReload, onRemoveProduct, onOpenProductManager
   const unpinProduct = async () => { await livestreamService.unpinProduct(live.id); broadcastLiveEvent({ type: "unpin-product", liveId: live.id }); toast.success("Đã bỏ ghim sản phẩm"); onReload(); };
   const removeProductFromLive = async (productId) => { await onRemoveProduct?.(productId); broadcastLiveEvent({ type: "product-removed", liveId: live.id, productId }); };
   const createDeal = async () => {
+    if (currentDeal) return toast.error("Đang có deal còn chạy. Chờ hết thời gian hoặc hết số lượng rồi mới tạo deal mới.");
     if (!dealProductId) return toast.error("Chọn sản phẩm tạo deal");
     if (!dealPrice && !discountPercent) return toast.error(discountMode === "AMOUNT" ? "Nhập giá sau khi giảm hoặc số tiền muốn giảm" : "Nhập giá sau khi giảm hoặc % giảm");
     try {
@@ -266,6 +442,7 @@ function AdminLiveStudio({ live, onReload, onRemoveProduct, onOpenProductManager
       if (!price || price <= 0 || price >= originalPrice) return toast.error("Giá sau khi giảm phải nhỏ hơn giá hiện tại");
       if (percent !== null && (percent <= 0 || percent >= 100)) return toast.error("% giảm phải lớn hơn 0 và nhỏ hơn 100");
       if (discountAmount !== null && (discountAmount <= 0 || discountAmount >= originalPrice)) return toast.error("Số tiền muốn giảm phải nhỏ hơn giá sản phẩm");
+      if (selectedProductStock > 0 && Number(quantityLimit) > selectedProductStock) return toast.error(`Số lượng deal không được vượt quá tồn kho hiện tại (${selectedProductStock})`);
       const payload = {
         productId: Number(dealProductId),
         dealPrice: Number(price),
@@ -298,17 +475,54 @@ function AdminLiveStudio({ live, onReload, onRemoveProduct, onOpenProductManager
           {canManage && <div className="rounded-3xl border border-slate-200 p-4">
             <p className="text-sm font-black text-slate-900">Tạo deal nhanh 1-5 phút</p>
             <p className="mt-1 text-xs text-slate-500">Nhập <b>% giảm thêm</b> hoặc <b>số tiền muốn giảm</b>, hệ thống sẽ tự điền vào ô <b>giá sau khi giảm</b>.</p>
-            <select value={dealProductId} onChange={(e) => setDealProductId(e.target.value)} className="mt-3 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"><option value="">Chọn sản phẩm cần giảm</option>{liveProducts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
+            {currentDeal ? (
+              <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs font-black uppercase text-amber-700">Deal đang chạy</p>
+                  <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-black text-white"><Clock className="mr-1 inline h-3.5 w-3.5" /> {currentDealCountdown}</span>
+                </div>
+                <p className="mt-2 line-clamp-1 text-sm font-black text-slate-950">{currentDeal.productName}</p>
+                <div className="mt-2 grid grid-cols-3 gap-2 text-center text-xs">
+                  <div className="rounded-xl bg-white p-2"><p className="text-slate-500">Còn lại</p><p className="text-base font-black text-rose-600">{currentDealRemaining}</p></div>
+                  <div className="rounded-xl bg-white p-2"><p className="text-slate-500">Đã bán</p><p className="text-base font-black text-slate-950">{currentDeal.quantitySold || 0}</p></div>
+                  <div className="rounded-xl bg-white p-2"><p className="text-slate-500">Tổng deal</p><p className="text-base font-black text-slate-950">{currentDeal.quantityLimit || 0}</p></div>
+                </div>
+                <p className="mt-2 text-[11px] font-semibold text-amber-700">Khi deal còn thời gian hoặc còn số lượng, hệ thống sẽ khóa nút tạo deal mới để tránh tạo trùng.</p>
+              </div>
+            ) : (
+              <div className="mt-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-xs font-bold text-emerald-700">Hiện chưa có deal đang chạy. Có thể tạo deal mới.</div>
+            )}
+            <select disabled={Boolean(currentDeal)} value={dealProductId} onChange={(e) => setDealProductId(e.target.value)} className="mt-3 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100"><option value="">Chọn sản phẩm cần giảm</option>{liveProducts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <label className="text-xs font-bold text-slate-600">Giá sau khi giảm<input value={dealPrice} onChange={(e) => setDealPrice(e.target.value)} placeholder={selectedDealProduct ? `VD: ${selectedOriginalPrice}` : "VD: 22990000"} type="number" min="1" className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm font-normal" />{selectedDealProduct && previewDiscountPercent > 0 && <span className="mt-1 block text-[11px] font-semibold text-rose-600">Giảm {previewDiscountPercent}% so với giá hiện tại {formatVnd(selectedOriginalPrice)}</span>}</label>
-              <label className="text-xs font-bold text-slate-600">
-                <div className="flex items-center justify-between gap-2"><span>{discountMode === "PERCENT" ? "% giảm thêm" : "Giá tiền muốn giảm"}</span><button type="button" onClick={handleDiscountModeToggle} className="rounded-full bg-blue-50 px-2 py-1 text-[10px] font-black text-blue-600 hover:bg-blue-100"><Repeat2 className="mr-1 inline h-3 w-3" /> Đổi</button></div>
-                <input value={discountPercent} onChange={(e) => handleDiscountChange(e.target.value)} placeholder={discountMode === "PERCENT" ? "VD: 15" : "VD: 100000"} type="number" min="1" max={discountMode === "PERCENT" ? "99" : undefined} className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm font-normal" />
+              <label className="text-xs font-bold text-slate-600 sm:col-span-2">
+                Tổng tồn kho sản phẩm
+                <input value={selectedDealProduct ? selectedProductStock : ""} readOnly placeholder="Chọn sản phẩm để xem tổng tồn kho" className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-normal text-slate-700" />
+                {selectedDealProduct && (
+                  <div className="mt-2 rounded-2xl border border-slate-100 bg-slate-50 p-2 text-[11px] font-semibold text-slate-500">
+                    <p className="font-black text-slate-700">Tổng tất cả biến thể: {selectedProductStock}</p>
+                    {selectedVariantStockDetails.length > 0 && (
+                      <div className="mt-1 max-h-28 space-y-1 overflow-y-auto pr-1">
+                        {selectedVariantStockDetails.map((variant, index) => (
+                          <div key={variant.id || index} className="flex items-center justify-between gap-2 rounded-xl bg-white px-2 py-1">
+                            <span className="line-clamp-1 min-w-0">{variant.label}</span>
+                            <span className="shrink-0 font-black text-emerald-600">{variant.stock}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="mt-1 text-[10px] text-slate-400">Deal được gắn theo sản phẩm, user chọn biến thể nào của sản phẩm này cũng dùng chung deal nếu còn thời gian và còn số lượng.</p>
+                  </div>
+                )}
               </label>
-              <label className="text-xs font-bold text-slate-600">Thời gian chạy phút<input value={durationMinutes} onChange={(e) => setDurationMinutes(e.target.value)} min="1" max="5" type="number" className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm font-normal" /></label>
-              <label className="text-xs font-bold text-slate-600">Số lượng deal<input value={quantityLimit} onChange={(e) => setQuantityLimit(e.target.value)} min="1" type="number" className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm font-normal" /></label>
+              <label className="text-xs font-bold text-slate-600">Giá sau khi giảm<input disabled={Boolean(currentDeal)} value={dealPrice} onChange={(e) => setDealPrice(e.target.value)} placeholder={selectedDealProduct ? `VD: ${selectedOriginalPrice}` : "VD: 22990000"} type="number" min="1" className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm font-normal disabled:bg-slate-100" />{selectedDealProduct && previewDiscountPercent > 0 && <span className="mt-1 block text-[11px] font-semibold text-rose-600">Giảm {previewDiscountPercent}% so với giá hiện tại {formatVnd(selectedOriginalPrice)}</span>}</label>
+              <label className="text-xs font-bold text-slate-600">
+                <div className="flex items-center justify-between gap-2"><span>{discountMode === "PERCENT" ? "% giảm thêm" : "Giá tiền muốn giảm"}</span><button type="button" disabled={Boolean(currentDeal)} onClick={handleDiscountModeToggle} className="rounded-full bg-blue-50 px-2 py-1 text-[10px] font-black text-blue-600 hover:bg-blue-100 disabled:opacity-50"><Repeat2 className="mr-1 inline h-3 w-3" /> Đổi</button></div>
+                <input disabled={Boolean(currentDeal)} value={discountPercent} onChange={(e) => handleDiscountChange(e.target.value)} placeholder={discountMode === "PERCENT" ? "VD: 15" : "VD: 100000"} type="number" min="1" max={discountMode === "PERCENT" ? "99" : undefined} className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm font-normal disabled:bg-slate-100" />
+              </label>
+              <label className="text-xs font-bold text-slate-600">Thời gian chạy phút<input disabled={Boolean(currentDeal)} value={durationMinutes} onChange={(e) => setDurationMinutes(e.target.value)} min="1" max="5" type="number" className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm font-normal disabled:bg-slate-100" /></label>
+              <label className="text-xs font-bold text-slate-600">Số lượng deal<input disabled={Boolean(currentDeal)} value={quantityLimit} onChange={(e) => setQuantityLimit(e.target.value)} min="1" max={selectedProductStock || undefined} type="number" className="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm font-normal disabled:bg-slate-100" />{selectedDealProduct && <span className="mt-1 block text-[11px] font-semibold text-slate-500">Tối đa theo tổng tồn kho hiện tại: {selectedProductStock}</span>}</label>
             </div>
-            <button onClick={createDeal} className="mt-3 w-full rounded-2xl bg-amber-500 px-4 py-2 text-sm font-black text-white hover:bg-amber-600"><Tag className="mr-2 inline h-4 w-4" /> Tạo deal live</button>
+            <button disabled={Boolean(currentDeal)} onClick={createDeal} className="mt-3 w-full rounded-2xl bg-amber-500 px-4 py-2 text-sm font-black text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:bg-slate-300"><Tag className="mr-2 inline h-4 w-4" /> {currentDeal ? "Đang khóa vì có deal chạy" : "Tạo deal live"}</button>
           </div>}
         </div>
       </div>
@@ -320,7 +534,7 @@ function AdminLiveStudio({ live, onReload, onRemoveProduct, onOpenProductManager
           </div>
           {canManage && <button onClick={onOpenProductManager} className="rounded-2xl bg-blue-600 px-4 py-2 text-xs font-black text-white hover:bg-blue-700"><PackagePlus className="mr-1 inline h-3.5 w-3.5" /> Quản lý sản phẩm live</button>}
         </div>
-        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{liveProducts.map((item) => <div key={item.id} className="flex items-center gap-3 rounded-2xl border border-slate-100 p-3"><img src={item.thumbnail} alt={item.name} className="h-14 w-14 rounded-xl bg-slate-50 object-contain" /><div className="min-w-0 flex-1"><p className="truncate font-bold text-slate-900">{item.name}</p><p className="text-sm text-rose-600">{formatVnd(item.price)}</p></div>{canManage && <div className="flex shrink-0 flex-col gap-1"><button onClick={() => pinProduct(item.id)} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold hover:bg-rose-50 hover:text-rose-600"><Pin className="mr-1 inline h-3.5 w-3.5" />Ghim</button><button onClick={() => removeProductFromLive(item.id)} className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-100"><Trash2 className="mr-1 inline h-3.5 w-3.5" />Xóa</button></div>}</div>)}</div>
+        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{liveProducts.map((item) => <div key={item.id} className="flex items-center gap-3 rounded-2xl border border-slate-100 p-3"><img src={item.thumbnail} alt={item.name} className="h-14 w-14 rounded-xl bg-slate-50 object-contain" /><div className="min-w-0 flex-1"><p className="truncate font-bold text-slate-900">{item.name}</p><p className="text-sm text-rose-600">{formatVnd(item.price)}</p><p className="text-xs font-bold text-emerald-600">Tồn tổng: {productStock(item)}</p></div>{canManage && <div className="flex shrink-0 flex-col gap-1"><button onClick={() => pinProduct(item.id)} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold hover:bg-rose-50 hover:text-rose-600"><Pin className="mr-1 inline h-3.5 w-3.5" />Ghim</button><button onClick={() => removeProductFromLive(item.id)} className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-100"><Trash2 className="mr-1 inline h-3.5 w-3.5" />Xóa</button></div>}</div>)}</div>
       </div>
     </div>
   </SectionCard>;

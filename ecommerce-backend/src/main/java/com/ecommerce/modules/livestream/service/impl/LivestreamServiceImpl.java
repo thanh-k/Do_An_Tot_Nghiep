@@ -8,6 +8,7 @@ import com.ecommerce.modules.livestream.repository.mongo.LivestreamChatMessageRe
 import com.ecommerce.modules.livestream.entity.*;
 import com.ecommerce.modules.livestream.repository.*;
 import com.ecommerce.modules.livestream.service.LivestreamService;
+import com.ecommerce.modules.product.dto.response.VariantResponse;
 import com.ecommerce.modules.product.repository.ProductRepository;
 import com.ecommerce.modules.upload.service.LocalStorageService;
 import jakarta.transaction.Transactional;
@@ -96,20 +97,59 @@ public class LivestreamServiceImpl implements LivestreamService {
     @Override
     public List<LiveChatMessageResponse> getChatMessages(Long livestreamId) {
         try {
+            expireExpiredPinnedComments(livestreamId, LocalDateTime.now());
             return chatMessageRepository.findTop80ByLivestreamIdOrderByCreatedAtDesc(livestreamId).stream()
                     .sorted(Comparator.comparing(LivestreamChatMessage::getCreatedAt))
-                    .map(message -> LiveChatMessageResponse.builder()
-                            .id(message.getId())
-                            .livestreamId(message.getLivestreamId())
-                            .senderName(message.getSenderName())
-                            .senderRole(message.getSenderRole())
-                            .message(message.getMessage())
-                            .createdAt(message.getCreatedAt())
-                            .build())
+                    .map(this::toChatMessageResponse)
                     .toList();
         } catch (Exception exception) {
             return Collections.emptyList();
         }
+    }
+
+    @Override
+    public LiveChatMessageResponse pinChatMessage(Long livestreamId, String messageId) {
+        findLivestream(livestreamId);
+        if (messageId == null || messageId.isBlank()) {
+            throw new IllegalArgumentException("Không tìm thấy bình luận cần ghim");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        expireExpiredPinnedComments(livestreamId, now);
+
+        LivestreamChatMessage message = chatMessageRepository.findByIdAndLivestreamId(messageId, livestreamId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bình luận cần ghim"));
+
+        boolean alreadyPinned = Boolean.TRUE.equals(message.getPinned())
+                && message.getPinExpiresAt() != null
+                && message.getPinExpiresAt().isAfter(now);
+
+        long activePinnedCount = chatMessageRepository.findByLivestreamIdAndPinnedTrueOrderByPinnedAtDesc(livestreamId).stream()
+                .filter(item -> item.getPinExpiresAt() != null && item.getPinExpiresAt().isAfter(now))
+                .filter(item -> !Objects.equals(item.getId(), message.getId()))
+                .count();
+
+        if (!alreadyPinned && activePinnedCount >= 3) {
+            throw new IllegalArgumentException("Chỉ được ghim tối đa 3 bình luận cùng lúc");
+        }
+
+        message.setPinned(true);
+        message.setPinnedAt(now);
+        message.setPinExpiresAt(now.plusMinutes(1));
+        return toChatMessageResponse(chatMessageRepository.save(message));
+    }
+
+    @Override
+    public LiveChatMessageResponse unpinChatMessage(Long livestreamId, String messageId) {
+        findLivestream(livestreamId);
+        if (messageId == null || messageId.isBlank()) {
+            throw new IllegalArgumentException("Không tìm thấy bình luận cần gỡ ghim");
+        }
+        LivestreamChatMessage message = chatMessageRepository.findByIdAndLivestreamId(messageId, livestreamId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bình luận cần gỡ ghim"));
+        message.setPinned(false);
+        message.setPinExpiresAt(LocalDateTime.now());
+        return toChatMessageResponse(chatMessageRepository.save(message));
     }
 
     @Override
@@ -128,8 +168,13 @@ public class LivestreamServiceImpl implements LivestreamService {
             chatMessageRepository.deleteByLivestreamId(id);
         }
         if (status == LivestreamStatus.ENDED) {
-            livestream.setEndedAt(LocalDateTime.now());
+            LocalDateTime endedAt = LocalDateTime.now();
+            livestream.setEndedAt(endedAt);
             livestream.setViewerCount(0L);
+
+            // Khi host tắt live thì toàn bộ deal còn đang chạy phải kết thúc ngay,
+            // không chờ hết countdown để tránh user vẫn thấy/áp dụng giá giảm sau khi live đã đóng.
+            expireAllActiveDeals(livestream.getId(), "ENDED_BY_LIVE");
         }
         return toResponse(livestreamRepository.save(livestream));
     }
@@ -233,13 +278,29 @@ public class LivestreamServiceImpl implements LivestreamService {
             throw new IllegalArgumentException("Giá sau khi giảm phải nhỏ hơn giá hiện tại của sản phẩm");
         }
 
-        // Một sản phẩm chỉ có một deal đang chạy trong cùng live để FE không bị lấy nhầm deal cũ.
-        List<LivestreamDeal> runningDeals = livestreamDealRepository.findRunningProductDeals(livestreamId, request.getProductId());
-        runningDeals.forEach(item -> { item.setActive(false); item.setStatus("EXPIRED"); });
-        livestreamDealRepository.saveAll(runningDeals);
+        LocalDateTime now = LocalDateTime.now();
+        expireFinishedDeals(livestreamId, now);
+
+        // Trong một phiên live chỉ cho phép 1 deal đang chạy.
+        // Điều này giúp admin dễ kiểm soát countdown/số lượng còn lại và tránh FE lấy nhầm deal khi nhiều deal trùng thời gian.
+        findCurrentActiveDeal(livestreamId, now).ifPresent(activeDeal -> {
+            String productName = activeDeal.getProduct() != null
+                    ? activeDeal.getProduct().getName()
+                    : "không xác định";
+            throw new IllegalArgumentException("Đang có deal #" + activeDeal.getId()
+                    + " của sản phẩm \"" + productName
+                    + "\" còn chạy. Vui lòng chờ deal hiện tại kết thúc rồi tạo deal mới.");
+        });
 
         int duration = request.getDurationMinutes() == null ? 3 : Math.max(1, Math.min(5, request.getDurationMinutes()));
-        int quantity = request.getQuantityLimit() == null ? 10 : Math.max(1, request.getQuantityLimit());
+        int availableStock = totalProductStock(product);
+        if (availableStock <= 0) {
+            throw new IllegalArgumentException("Sản phẩm đã hết hàng, không thể tạo deal livestream");
+        }
+        int quantity = request.getQuantityLimit() == null ? Math.min(10, availableStock) : Math.max(1, request.getQuantityLimit());
+        if (quantity > availableStock) {
+            throw new IllegalArgumentException("Số lượng deal không được vượt quá tổng tồn kho của tất cả biến thể sản phẩm hiện tại: " + availableStock);
+        }
         LivestreamDeal deal = LivestreamDeal.builder()
                 .livestream(livestream)
                 .product(product)
@@ -248,8 +309,8 @@ public class LivestreamServiceImpl implements LivestreamService {
                 .discountPercent(Math.round((originalPrice - dealPrice) * 10000D / originalPrice) / 100D)
                 .quantityLimit(quantity)
                 .quantitySold(0)
-                .startsAt(LocalDateTime.now())
-                .endsAt(LocalDateTime.now().plusMinutes(duration))
+                .startsAt(now)
+                .endsAt(now.plusMinutes(duration))
                 .active(true)
                 .status("ACTIVE")
                 .build();
@@ -264,6 +325,30 @@ public class LivestreamServiceImpl implements LivestreamService {
         return toResponse(livestreamRepository.save(livestream));
     }
 
+    private LiveChatMessageResponse toChatMessageResponse(LivestreamChatMessage message) {
+        return LiveChatMessageResponse.builder()
+                .id(message.getId())
+                .livestreamId(message.getLivestreamId())
+                .senderName(message.getSenderName())
+                .senderRole(message.getSenderRole())
+                .message(message.getMessage())
+                .pinned(Boolean.TRUE.equals(message.getPinned()))
+                .pinnedAt(message.getPinnedAt())
+                .pinExpiresAt(message.getPinExpiresAt())
+                .createdAt(message.getCreatedAt())
+                .build();
+    }
+
+    private void expireExpiredPinnedComments(Long livestreamId, LocalDateTime now) {
+        List<LivestreamChatMessage> expiredPinnedMessages = chatMessageRepository
+                .findByLivestreamIdAndPinnedTrueAndPinExpiresAtBefore(livestreamId, now);
+        if (expiredPinnedMessages.isEmpty()) {
+            return;
+        }
+        expiredPinnedMessages.forEach(message -> message.setPinned(false));
+        chatMessageRepository.saveAll(expiredPinnedMessages);
+    }
+
     private Livestream findLivestream(Long id) {
         return livestreamRepository.findWithProductsById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy livestream"));
@@ -276,6 +361,7 @@ public class LivestreamServiceImpl implements LivestreamService {
 
     private LivestreamResponse toResponse(Livestream livestream) {
         LocalDateTime now = LocalDateTime.now();
+        expireFinishedDeals(livestream.getId(), now);
         List<LiveProductResponse> products = livestream.getProducts().stream()
                 .map(this::toProductResponse)
                 .sorted(Comparator.comparing(LiveProductResponse::getPinned).reversed())
@@ -303,7 +389,20 @@ public class LivestreamServiceImpl implements LivestreamService {
 
     private LiveProductResponse toProductResponse(LivestreamProduct item) {
         Product product = item.getProduct();
-        ProductVariant variant = firstVariant(product);
+        List<VariantResponse> variants = product.getVariants() == null
+                ? Collections.emptyList()
+                : product.getVariants().stream()
+                .map(this::toVariantResponse)
+                .sorted(Comparator.comparing(VariantResponse::getId))
+                .toList();
+
+        ProductVariant variant = firstAvailableVariant(product);
+        if (variant == null) {
+            variant = firstVariant(product);
+        }
+
+        int totalStock = totalProductStock(product);
+
         return LiveProductResponse.builder()
                 .id(product.getId())
                 .variantId(variant == null ? null : variant.getId())
@@ -314,8 +413,22 @@ public class LivestreamServiceImpl implements LivestreamService {
                 .categoryName(product.getCategory() == null ? null : product.getCategory().getName())
                 .price(variant == null ? 0D : variant.getPrice())
                 .compareAtPrice(variant == null ? 0D : variant.getCompareAtPrice())
-                .stock(variant == null ? 0 : variant.getStock())
+                .stock(totalStock)
                 .pinned(Boolean.TRUE.equals(item.getPinned()))
+                .variants(variants)
+                .build();
+    }
+
+    private VariantResponse toVariantResponse(ProductVariant variant) {
+        return VariantResponse.builder()
+                .id(variant.getId())
+                .sku(variant.getSku())
+                .price(variant.getPrice())
+                .compareAtPrice(variant.getCompareAtPrice())
+                .stock(variant.getStock())
+                .attributes(variant.getAttributes())
+                .image(variant.getImage())
+                .hasOrders(false)
                 .build();
     }
 
@@ -335,13 +448,112 @@ public class LivestreamServiceImpl implements LivestreamService {
                 .build();
     }
 
-    private ProductVariant firstVariant(Product product) {
-        return product.getVariants() == null ? null : product.getVariants().stream().findFirst().orElse(null);
+
+    private java.util.Optional<LivestreamDeal> findCurrentActiveDeal(Long livestreamId, LocalDateTime now) {
+        return livestreamDealRepository.findByLivestreamIdOrderByCreatedAtDesc(livestreamId).stream()
+                .filter(deal -> Boolean.TRUE.equals(deal.getActive()))
+                .filter(deal -> !deal.getStartsAt().isAfter(now))
+                .filter(deal -> deal.getEndsAt().isAfter(now))
+                .filter(deal -> {
+                    int quantitySold = deal.getQuantitySold() == null ? 0 : deal.getQuantitySold();
+                    int quantityLimit = deal.getQuantityLimit() == null ? Integer.MAX_VALUE : deal.getQuantityLimit();
+                    return quantitySold < quantityLimit;
+                })
+                .findFirst();
     }
 
+
+    private void expireAllActiveDeals(Long livestreamId, String status) {
+        List<LivestreamDeal> activeDeals = livestreamDealRepository.findByLivestreamIdOrderByCreatedAtDesc(livestreamId).stream()
+                .filter(deal -> Boolean.TRUE.equals(deal.getActive()))
+                .toList();
+
+        if (activeDeals.isEmpty()) {
+            return;
+        }
+
+        activeDeals.forEach(deal -> {
+            deal.setActive(false);
+            deal.setStatus(status == null || status.isBlank() ? "EXPIRED" : status);
+            // Cắt thời gian kết thúc về hiện tại để các màn hình realtime/countdown biết deal đã dừng ngay.
+            deal.setEndsAt(LocalDateTime.now());
+        });
+        livestreamDealRepository.saveAll(activeDeals);
+    }
+
+    private void expireFinishedDeals(Long livestreamId, LocalDateTime now) {
+        List<LivestreamDeal> expiredDeals = livestreamDealRepository.findByLivestreamIdOrderByCreatedAtDesc(livestreamId).stream()
+                .filter(deal -> Boolean.TRUE.equals(deal.getActive()))
+                .filter(deal -> {
+                    int quantitySold = deal.getQuantitySold() == null ? 0 : deal.getQuantitySold();
+                    int quantityLimit = deal.getQuantityLimit() == null ? Integer.MAX_VALUE : deal.getQuantityLimit();
+                    return !deal.getEndsAt().isAfter(now) || quantitySold >= quantityLimit;
+                })
+                .toList();
+
+        if (expiredDeals.isEmpty()) {
+            return;
+        }
+
+        expiredDeals.forEach(deal -> {
+            deal.setActive(false);
+            deal.setStatus("EXPIRED");
+        });
+        livestreamDealRepository.saveAll(expiredDeals);
+    }
+
+    private ProductVariant firstVariant(Product product) {
+        return product.getVariants() == null ? null : product.getVariants().stream()
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(ProductVariant::getId, Comparator.nullsLast(Long::compareTo)))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private ProductVariant firstAvailableVariant(Product product) {
+        return product.getVariants() == null ? null : product.getVariants().stream()
+                .filter(Objects::nonNull)
+                .filter(variant -> variant.getStock() != null && variant.getStock() > 0)
+                .sorted(Comparator.comparing(ProductVariant::getId, Comparator.nullsLast(Long::compareTo)))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private int totalProductStock(Product product) {
+        if (product == null || product.getVariants() == null) {
+            return 0;
+        }
+        return product.getVariants().stream()
+                .filter(Objects::nonNull)
+                .map(ProductVariant::getStock)
+                .filter(Objects::nonNull)
+                .filter(stock -> stock > 0)
+                .mapToInt(Integer::intValue)
+                .sum();
+    }
+
+    /**
+     * Giá đại diện để admin tạo deal theo sản phẩm.
+     * Product.variants là Set nên không lấy variant ngẫu nhiên nữa; ưu tiên giá thấp nhất của biến thể còn hàng.
+     * Deal vẫn gắn theo productId, vì vậy khi user chọn bất kỳ biến thể nào của cùng sản phẩm,
+     * OrderServiceImpl sẽ kiểm tra variant.product.id == deal.product.id và áp deal cho toàn bộ biến thể của sản phẩm đó.
+     */
     private double productPrice(Product product) {
-        ProductVariant variant = firstVariant(product);
-        return variant == null || variant.getPrice() == null ? 0D : variant.getPrice();
+        if (product == null || product.getVariants() == null) {
+            return 0D;
+        }
+        return product.getVariants().stream()
+                .filter(Objects::nonNull)
+                .filter(variant -> variant.getPrice() != null && variant.getPrice() > 0D)
+                .filter(variant -> variant.getStock() != null && variant.getStock() > 0)
+                .map(ProductVariant::getPrice)
+                .min(Double::compareTo)
+                .orElseGet(() -> product.getVariants().stream()
+                        .filter(Objects::nonNull)
+                        .filter(variant -> variant.getPrice() != null && variant.getPrice() > 0D)
+                        .map(ProductVariant::getPrice)
+                        .min(Double::compareTo)
+                        .orElse(0D));
     }
 
     private double safePercent(Double value) {
