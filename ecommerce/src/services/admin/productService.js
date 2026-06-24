@@ -1,9 +1,46 @@
 import apiClient from "@/services/apiClient";
 
 const API_URL = "/products";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
+
+// Hàm phụ trợ tải file về máy
+async function downloadBlob(path, filename) {
+  console.log(`--- Bắt đầu tải file từ path: ${path} ---`);
+  const token = apiClient.getToken?.(); // Lấy token từ apiClient
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  console.log("Response từ fetch:", response);
+
+  if (!response.ok) {
+    let message = "Tải file thất bại";
+    try {
+      // Cố gắng đọc lỗi JSON từ server
+      const payload = await response.json();
+      message = payload?.message || message;
+    } catch {
+      // Bỏ qua nếu response không phải JSON
+    }
+    console.error("Lỗi tải file:", message);
+    throw new Error(message);
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
 
 const getVariantPrice = (product) => Number(product?.variants?.[0]?.price || 0);
-const getCompareAtPrice = (product) => Number(product?.variants?.[0]?.compareAtPrice || 0);
+const getCompareAtPrice = (product) =>
+  Number(product?.variants?.[0]?.compareAtPrice || 0);
 
 export const productService = {
   async getAllProducts() {
@@ -62,13 +99,10 @@ export const productService = {
     try {
       if (payload.id) {
         console.log(`Đang thực hiện cập nhật (PUT) cho ID: ${payload.id}`);
-        const response = await apiClient.request(
-          `${API_URL}/${payload.id}`,
-          {
-            method: "PUT",
-            body: JSON.stringify(payload),
-          },
-        );
+        const response = await apiClient.request(`${API_URL}/${payload.id}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        });
         console.log("Cập nhật thành công:", response);
         return response;
       } else {
@@ -105,6 +139,28 @@ export const productService = {
     }
   },
 
+  async exportProductsExcel() {
+    return downloadBlob(
+      `${API_URL}/export`,
+      `products_export_${Date.now()}.xlsx`,
+    );
+  },
+
+  async downloadImportTemplate() {
+    return downloadBlob(`${API_URL}/import/template`, "products_template.xlsx");
+  },
+
+  async importProductsExcel(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await apiClient.request(`${API_URL}/import`, {
+      method: "POST",
+      body: formData,
+      // apiClient tự xử lý header multipart/form-data khi body là FormData
+    });
+    return response;
+  },
+
   async getHomeCollections() {
     try {
       const res = await apiClient.request(API_URL);
@@ -124,7 +180,9 @@ export const productService = {
         .slice(0, 8);
 
       const deals = products
-        .filter((product) => getCompareAtPrice(product) > getVariantPrice(product))
+        .filter(
+          (product) => getCompareAtPrice(product) > getVariantPrice(product),
+        )
         .sort(
           (a, b) =>
             getCompareAtPrice(b) -

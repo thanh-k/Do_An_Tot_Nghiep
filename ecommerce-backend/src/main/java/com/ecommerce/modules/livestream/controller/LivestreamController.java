@@ -110,4 +110,16 @@ public class LivestreamController {
     public ApiResponse<LivestreamResponse> createDeal(@PathVariable Long id, @RequestBody LivestreamDealRequest request) {
         return ApiResponse.<LivestreamResponse>builder().result(livestreamService.createDeal(id, request)).build();
     }
+
+    @PreAuthorize("hasAuthority('LIVESTREAM_MANAGE')")
+    @PostMapping("/api/v1/admin/livestreams/{id}/chat-messages/{messageId}/pin")
+    public ApiResponse<LiveChatMessageResponse> pinChatMessage(@PathVariable Long id, @PathVariable String messageId) {
+        return ApiResponse.<LiveChatMessageResponse>builder().result(livestreamService.pinChatMessage(id, messageId)).build();
+    }
+
+    @PreAuthorize("hasAuthority('LIVESTREAM_MANAGE')")
+    @DeleteMapping("/api/v1/admin/livestreams/{id}/chat-messages/{messageId}/pin")
+    public ApiResponse<LiveChatMessageResponse> unpinChatMessage(@PathVariable Long id, @PathVariable String messageId) {
+        return ApiResponse.<LiveChatMessageResponse>builder().result(livestreamService.unpinChatMessage(id, messageId)).build();
+    }
 }

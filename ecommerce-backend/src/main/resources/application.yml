@@ -1,7 +1,7 @@
 server:
   port: 8080
   forward-headers-strategy: framework
-  
+
 spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://db:3306/ecommerce_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8}
@@ -97,5 +97,6 @@ vnpay:
 sepay:
   api-key: ${SEPAY_API_KEY}
   account-no: ${SEPAY_ACCOUNT_NO}
-  bank-bin: ${SEPAY_BANK_BIN:970436}
+  bank-bin: ${SEPAY_BANK_BIN:970416}
   account-name: ${SEPAY_ACCOUNT_NAME}
+

@@ -15,10 +15,17 @@ public class GlobalExceptionHandler {
         @ExceptionHandler(AppException.class)
         public ResponseEntity<ApiResponse<Object>> handleAppException(AppException ex) {
                 ErrorCode errorCode = ex.getErrorCode();
+                // Nếu ex.getMessage() chứa thông tin lỗi động cụ thể (khác với thông điệp mặc
+                // định của ErrorCode), ưu tiên sử dụng nó
+                String errorMessage = (ex.getMessage() != null && !ex.getMessage().trim().isEmpty()
+                                && !ex.getMessage().equals(errorCode.getMessage()))
+                                                ? ex.getMessage()
+                                                : errorCode.getMessage();
+
                 return ResponseEntity.status(errorCode.getStatusCode().value())
                                 .body(ApiResponse.builder()
                                                 .code(errorCode.getCode())
-                                                .message(errorCode.getMessage())
+                                                .message(errorMessage)
                                                 .build());
         }
 
@@ -41,13 +48,13 @@ public class GlobalExceptionHandler {
                                                 .message("Bạn không có quyền truy cập chức năng này").build());
         }
 
-
         @ExceptionHandler(IllegalArgumentException.class)
         public ResponseEntity<ApiResponse<Object>> handleIllegalArgument(IllegalArgumentException ex) {
                 return ResponseEntity.badRequest()
                                 .body(ApiResponse.builder()
                                                 .code(HttpStatus.BAD_REQUEST.value())
-                                                .message(ex.getMessage() == null ? "Dữ liệu không hợp lệ" : ex.getMessage())
+                                                .message(ex.getMessage() == null ? "Dữ liệu không hợp lệ"
+                                                                : ex.getMessage())
                                                 .build());
         }
 
@@ -58,7 +65,10 @@ public class GlobalExceptionHandler {
                 ex.printStackTrace();
 
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body(ApiResponse.builder().code(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode())
-                                                .message(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage()).build());
+                                .body(ApiResponse.builder()
+                                                .code(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode())
+                                                .message("Lỗi hệ thống: " + ex.getMessage()) // Trả về thông điệp lỗi
+                                                                                             // chi tiết
+                                                .build());
         }
 }

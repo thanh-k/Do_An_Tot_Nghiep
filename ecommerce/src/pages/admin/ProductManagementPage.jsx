@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { DownloadCloud, Pencil, Plus, Trash2, UploadCloud } from "lucide-react";
 import DataTable from "@/components/admin/DataTable";
 import ProductFormModal from "@/components/admin/ProductFormModal";
 import Button from "@/components/common/Button";
@@ -20,12 +20,16 @@ function ProductManagementPage() {
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
   const [keyword, setKeyword] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [filterBrand, setFilterBrand] = useState("");
+  const [filterStock, setFilterStock] = useState("");
   const debouncedKeyword = useDebounce(keyword, 300);
   const [modalState, setModalState] = useState({
     open: false,
     product: null,
   });
   const [lastEditedId, setLastEditedId] = useState(null); // State lưu ID sản phẩm vừa sửa
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
@@ -57,7 +61,7 @@ function ProductManagementPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedKeyword]);
+  }, [debouncedKeyword, filterCategory, filterBrand, filterStock]);
 
   const filteredProducts = useMemo(() => {
     const search = debouncedKeyword.trim().toLowerCase();
@@ -72,22 +76,48 @@ function ProductManagementPage() {
           .includes(search),
       );
     }
-
-    // 2. Sắp xếp mặc định: Sản phẩm mới nhất lên đầu (Dựa vào ID) -> Xử lý case Thêm mới
+    // 2. Lọc theo Danh mục
+    if (filterCategory) {
+      result = result.filter(
+        (p) => String(p.category?.id) === String(filterCategory),
+      );
+    }
+    // 3. Lọc theo Thương hiệu
+    if (filterBrand) {
+      result = result.filter(
+        (p) => String(p.brand?.id) === String(filterBrand),
+      );
+    }
+    // 4. Lọc theo Tồn kho
+    if (filterStock) {
+      result = result.filter((p) => {
+        const stock = getProductStock(p);
+        if (filterStock === "IN_STOCK") return stock > 10;
+        if (filterStock === "LOW_STOCK") return stock > 0 && stock <= 10;
+        if (filterStock === "OUT_OF_STOCK") return stock === 0;
+        return true;
+      });
+    }
+    // 5. Sắp xếp mặc định: Sản phẩm mới nhất lên đầu
     result.sort((a, b) => b.id - a.id);
-
-    // 3. Nếu vừa SỬA một sản phẩm, ép sản phẩm đó lên đầu tiên của mảng
+    // 6. Xử lý bump sản phẩm vừa sửa lên đầu
     if (lastEditedId && lastEditedId !== "NEW") {
       const editedIndex = result.findIndex((p) => p.id === lastEditedId);
       if (editedIndex > 0) {
-        // Nếu tìm thấy và nó đang không ở vị trí đầu
         const [editedItem] = result.splice(editedIndex, 1);
         result.unshift(editedItem);
       }
     }
 
     return result;
-  }, [debouncedKeyword, products, lastEditedId]);
+  }, [
+    debouncedKeyword,
+    filterCategory,
+    filterBrand,
+    filterStock,
+    products,
+    lastEditedId,
+  ]);
 
   const paginatedProducts = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -96,7 +126,135 @@ function ProductManagementPage() {
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
 
+  const visibleIds = paginatedProducts.map((p) => p.id);
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+  const toggleSelectAll = () => {
+    if (allVisibleSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+      return;
+    }
+    setSelectedIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+  };
+  const toggleOne = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+  const selectedProducts = products.filter((p) => selectedIds.includes(p.id));
+
+  const runBulkDelete = async () => {
+    if (!selectedProducts.length) return;
+    const confirmed = window.confirm(
+      `Xóa ${selectedProducts.length} sản phẩm đã chọn?`,
+    );
+    if (!confirmed) return;
+    let successCount = 0;
+    for (const product of selectedProducts) {
+      try {
+        await productService.deleteProduct(product.id);
+        successCount++;
+      } catch (error) {
+        // Lấy câu thông báo lỗi chi tiết từ phía Backend, ưu tiên message từ server
+        const serverError =
+          error.response?.data?.message ||
+          `Xóa sản phẩm "${product.name}" thất bại: ${error.message}`;
+        toast.error(serverError);
+      }
+    }
+    if (successCount > 0) {
+      toast.success(`Đã xóa thành công ${successCount} sản phẩm`);
+    }
+
+    setSelectedIds([]);
+    loadData();
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      toast.loading("Đang tạo file mẫu...", { id: "template" });
+      await productService.downloadImportTemplate();
+      toast.success("Đã tải file mẫu!", { id: "template" });
+    } catch (error) {
+      toast.error("Lỗi khi tải file mẫu", { id: "template" });
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      toast.loading("Đang xuất dữ liệu...", { id: "export" });
+      await productService.exportProductsExcel();
+      toast.success("Xuất dữ liệu thành công!", { id: "export" });
+    } catch (error) {
+      toast.error("Lỗi khi xuất file Excel", { id: "export" });
+    }
+  };
+
+  const handleImportExcel = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // LOGGING: Hiển thị thông tin file đang được upload
+    console.log("[Frontend] Chuẩn bị import file:", {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+    });
+
+    try {
+      toast.loading("Đang xử lý dữ liệu...", { id: "import" });
+      await productService.importProductsExcel(file);
+      toast.success("Nhập dữ liệu thành công!", { id: "import" });
+      loadData();
+    } catch (error) {
+      // LOGGING: In ra toàn bộ đối tượng lỗi để debug
+      console.error("Lỗi khi import Excel:", error.response || error);
+
+      // Trích xuất lỗi chi tiết (Ưu tiên lỗi từ server trả về, sau đó đến error.message thô)
+      const detailedMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Có lỗi xảy ra khi nhập file Excel. Vui lòng kiểm tra lại định dạng file hoặc liên hệ quản trị viên.";
+
+      toast.error(
+        (t) => (
+          <div className="max-w-md text-sm">
+            <p className="font-bold mb-2">Nhập dữ liệu thất bại!</p>
+            {/* Thêm style để hiển thị danh sách lỗi rõ ràng có thanh cuộn nếu quá nhiều lỗi */}
+            <div className="max-h-60 overflow-y-auto rounded bg-rose-50 p-2 border border-rose-200">
+              <pre className="whitespace-pre-wrap font-sans text-rose-800 leading-relaxed text-xs">
+                {detailedMessage}
+              </pre>
+            </div>
+          </div>
+        ),
+        {
+          id: "import",
+          duration: 15000, // Hiển thị trong 15 giây để admin đọc và sửa file Excel
+        },
+      );
+    } finally {
+      event.target.value = null;
+    }
+  };
   const columns = [
+    {
+      key: "select",
+      title: (
+        <input
+          type="checkbox"
+          checked={allVisibleSelected}
+          onChange={toggleSelectAll}
+        />
+      ),
+      render: (row) => (
+        <input
+          type="checkbox"
+          checked={selectedIds.includes(row.id)}
+          onChange={() => toggleOne(row.id)}
+        />
+      ),
+    },
     {
       key: "name",
       title: "Sản phẩm",
@@ -172,9 +330,11 @@ function ProductManagementPage() {
                 toast.success("Đã xoá sản phẩm");
                 loadData();
               } catch (e) {
-                toast.error(
-                  e.response?.data?.message || "Lỗi khi xoá sản phẩm",
-                );
+                // Lấy câu thông báo lỗi chi tiết từ phía Backend
+                const serverError =
+                  e.response?.data?.message ||
+                  `Lỗi khi xoá sản phẩm: ${e.message}`;
+                toast.error(serverError);
               }
             }}
           >
@@ -234,17 +394,101 @@ function ProductManagementPage() {
         title="Quản lý sản phẩm"
         description="Quản lý danh sách sản phẩm, biến thể, giá bán, tồn kho và trạng thái hiển thị."
         actions={
-          <Button onClick={() => setModalState({ open: true, product: null })}>
-            <Plus size={16} /> Thêm sản phẩm
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {/* FIX: Đổi màu nút Xuất dữ liệu */}
+            <Button
+              className="bg-emerald-50 text-emerald-900 hover:bg-emerald-100 border border-emerald-200"
+              onClick={handleExportExcel}
+            >
+              <DownloadCloud size={16} /> Xuất dữ liệu
+            </Button>
+
+            {/* FIX: Đổi màu nút Tải file mẫu */}
+            <Button
+              className="bg-sky-50 text-sky-900 hover:bg-sky-100 border border-sky-200"
+              onClick={handleDownloadTemplate}
+              title="Tải file Excel rỗng với các cột chuẩn"
+            >
+              Tải File Mẫu
+            </Button>
+            {/* FIX: Đổi màu nút Nhập từ Excel */}
+            <Button
+              className="bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200"
+              onClick={() => document.getElementById("import-excel").click()}
+            >
+              <UploadCloud size={16} /> Nhập từ Excel
+            </Button>
+            <input
+              type="file"
+              id="import-excel"
+              accept=".xlsx, .xls"
+              className="hidden"
+              onChange={handleImportExcel}
+            />
+            <Button
+              onClick={() => setModalState({ open: true, product: null })}
+            >
+              <Plus size={16} /> Thêm sản phẩm
+            </Button>
+          </div>
         }
       />
-      <div className="card p-4">
+      {/* FIX: Thêm màu nền và bo tròn cho khu vực lọc */}
+      <div className="card grid gap-4 p-4 lg:grid-cols-[1fr_200px_200px_200px] bg-slate-50/50 border border-slate-100 rounded-2xl">
+        {/* Ô Tìm kiếm */}
         <Input
           placeholder="Tìm theo tên, slug hoặc thương hiệu..."
           value={keyword}
           onChange={(event) => setKeyword(event.target.value)}
+          className="bg-white" // Đảm bảo ô input có nền trắng
         />
+        {/* Lọc theo Danh mục */}
+        <select
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
+        >
+          <option value="">Tất cả danh mục</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+        {/* Lọc theo Thương hiệu */}
+        <select
+          value={filterBrand}
+          onChange={(e) => setFilterBrand(e.target.value)}
+          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
+        >
+          <option value="">Tất cả thương hiệu</option>
+          {brands.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name}
+            </option>
+          ))}
+        </select>
+        {/* Lọc theo Tồn kho */}
+        <select
+          value={filterStock}
+          onChange={(e) => setFilterStock(e.target.value)}
+          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
+        >
+          <option value="">Tất cả tồn kho</option>
+          <option value="IN_STOCK">Còn hàng (&gt; 10)</option>
+          <option value="LOW_STOCK">Sắp hết (1 - 10)</option>
+          <option value="OUT_OF_STOCK">Hết hàng (0)</option>
+        </select>
+        {selectedIds.length > 0 && (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium text-slate-600">
+              Đã chọn {selectedIds.length} sản phẩm
+            </span>
+            <Button size="sm" variant="danger" onClick={runBulkDelete}>
+              <Trash2 size={14} /> Xóa đã chọn
+            </Button>
+          </div>
+        )}
       </div>
       {loading ? (
         <div className="card p-8 text-center text-sm text-slate-500">

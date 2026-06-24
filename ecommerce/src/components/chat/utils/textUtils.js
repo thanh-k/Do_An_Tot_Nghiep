@@ -33,7 +33,10 @@ export function getLineIcon(line = "") {
     lower.includes("chi tiet san pham") ||
     lower.includes("chi tiết sản phẩm") ||
     lower.includes("cac bien the hien co") ||
-    lower.includes("các biến thể hiện có")
+    lower.includes("các biến thể hiện có") ||
+    lower.includes("cac lua chon hien co") ||
+    lower.includes("các lựa chọn hiện có") ||
+    lower.includes("available options")
   ) {
     return "📌";
   }

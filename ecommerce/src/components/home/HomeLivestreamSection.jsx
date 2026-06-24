@@ -88,6 +88,7 @@ function HomeLivestreamSection() {
 
   const pinned = mainLive.products?.find((item) => item.pinned) || mainLive.products?.[0];
   const liveDeal = pinned ? getDealForProduct(mainLive, pinned.id) : mainLive.activeDeals?.[0];
+  const liveThumbnail = mainLive.thumbnailUrl || mainLive.thumbnail || mainLive.image || mainLive.coverImage || pinned?.thumbnail || "";
 
   return (
     <section className="mx-auto w-full max-w-[1260px] px-4 pb-3 sm:px-6 lg:px-8">
@@ -96,7 +97,11 @@ function HomeLivestreamSection() {
         className="group block overflow-hidden rounded-[24px] border border-rose-100 bg-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5 hover:shadow-xl"
       >
         <div className="grid lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="relative min-h-[180px] overflow-hidden bg-gradient-to-br from-rose-600 via-pink-600 to-slate-950 p-5 text-white sm:p-6">
+          <div
+            className={`relative min-h-[220px] overflow-hidden p-5 text-white sm:p-6 ${liveThumbnail ? "bg-slate-950" : "bg-gradient-to-br from-rose-600 via-pink-600 to-slate-950"}`}
+            style={liveThumbnail ? { backgroundImage: `url(${liveThumbnail})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-950/80 via-rose-950/55 to-slate-950/80" />
             <div className="absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
             <div className="relative z-10 flex h-full flex-col justify-between gap-5">
               <div>
