@@ -35,7 +35,7 @@ public class SePayWebhookController {
      * 4. Cập nhật trạng thái đơn hàng thành PAID
      */
     @PostMapping("/sepay/webhook")
-    public ResponseEntity<Map<String, String>> handleWebhook(
+    public ResponseEntity<Map<String, Object>> handleWebhook(
             @RequestHeader(value = "Authorization", required = false) String auth,
             @RequestBody Map<String, Object> payload) {
 
@@ -44,7 +44,7 @@ public class SePayWebhookController {
         if (!expectedAuth.equals(auth)) {
             log.warn("SePay webhook: sai API key, auth={}", auth);
             return ResponseEntity.status(401)
-                    .body(Map.of("status", "error", "message", "Unauthorized"));
+                    .body(Map.of("success", false, "message", "Unauthorized"));
         }
 
         // 2. Lấy thông tin từ payload webhook
@@ -64,7 +64,7 @@ public class SePayWebhookController {
 
         if (!matcher.find()) {
             log.info("Không tìm thấy mã đơn hàng trong nội dung: {}", content);
-            return ResponseEntity.ok(Map.of("status", "ok", "message", "No order found"));
+            return ResponseEntity.ok(Map.of("success", true, "message", "No order found"));
         }
 
         Long orderId = Long.parseLong(matcher.group(1));
@@ -74,7 +74,7 @@ public class SePayWebhookController {
             OrderResponse order = orderService.getOrderById(orderId);
             if (order == null) {
                 log.warn("Không tìm thấy đơn hàng #{}", orderId);
-                return ResponseEntity.ok(Map.of("status", "ok"));
+                return ResponseEntity.ok(Map.of("success", true));
             }
 
             double expectedAmount = order.getTotalAmount() != null
@@ -84,7 +84,7 @@ public class SePayWebhookController {
             if (Math.abs(transferAmount - expectedAmount) > 1000) {
                 log.warn("Số tiền không khớp: nhận {}đ, cần {}đ cho đơn #{}",
                         transferAmount, expectedAmount, orderId);
-                return ResponseEntity.ok(Map.of("status", "ok", "message", "Amount mismatch"));
+                return ResponseEntity.ok(Map.of("success", true, "message", "Amount mismatch"));
             }
 
             // 5. Cập nhật trạng thái PAID (chỉ khi chưa PAID)
@@ -98,6 +98,6 @@ public class SePayWebhookController {
         }
 
         // Luôn trả 200 OK cho SePay để tránh retry
-        return ResponseEntity.ok(Map.of("status", "ok"));
+        return ResponseEntity.ok(Map.of("success", true));
     }
 }

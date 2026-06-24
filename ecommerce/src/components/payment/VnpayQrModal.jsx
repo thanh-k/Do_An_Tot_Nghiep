@@ -345,12 +345,12 @@ function VnpayQrModal({
                   <RefreshCw size={16} />
                   Tạo lại mã QR
                 </button>
-              ) : (
-                <Button type="button" onClick={onPaid} loading={loading} disabled={isPaid}>
+              ) : isPaid ? (
+                <Button type="button" disabled>
                   <CheckCircle2 className="mr-2 inline h-4 w-4" />
-                  {isPaid ? "Đã thanh toán" : "Tôi đã thanh toán"}
+                  Đã thanh toán
                 </Button>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
