@@ -15,6 +15,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -61,6 +62,12 @@ public class LivestreamServiceImpl implements LivestreamService {
 
     @Override
     public LivestreamResponse create(LivestreamRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Dữ liệu tạo livestream không hợp lệ");
+        }
+
+        validateScheduledAtNotInPast(request.getScheduledAt());
+
         Livestream livestream = Livestream.builder()
                 .title(nonBlank(request.getTitle(), "Phiên livestream mới"))
                 .description(request.getDescription())
@@ -68,22 +75,33 @@ public class LivestreamServiceImpl implements LivestreamService {
                 .scheduledAt(request.getScheduledAt())
                 .status(request.getScheduledAt() == null ? LivestreamStatus.DRAFT : LivestreamStatus.SCHEDULED)
                 .build();
+
         return toResponse(livestreamRepository.save(livestream));
     }
 
     @Override
     public LivestreamResponse update(Long id, LivestreamRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Dữ liệu cập nhật livestream không hợp lệ");
+        }
+
         Livestream livestream = findLivestream(id);
+        validateScheduledAtNotInPast(request.getScheduledAt());
+
         livestream.setTitle(nonBlank(request.getTitle(), livestream.getTitle()));
         livestream.setDescription(request.getDescription());
+
         if (request.getThumbnailUrl() != null && !Objects.equals(livestream.getThumbnailUrl(), request.getThumbnailUrl())) {
             localStorageService.deleteFile(livestream.getThumbnailUrl());
             livestream.setThumbnailUrl(request.getThumbnailUrl());
         }
+
         livestream.setScheduledAt(request.getScheduledAt());
+
         if (livestream.getStatus() == LivestreamStatus.DRAFT && request.getScheduledAt() != null) {
             livestream.setStatus(LivestreamStatus.SCHEDULED);
         }
+
         return toResponse(livestreamRepository.save(livestream));
     }
 
@@ -157,6 +175,7 @@ public class LivestreamServiceImpl implements LivestreamService {
         Livestream livestream = findLivestream(id);
         livestream.setStatus(status);
         if (status == LivestreamStatus.LIVE) {
+            validateCanStartLivestream(livestream);
             if (livestream.getStartedAt() == null) {
                 livestream.setStartedAt(LocalDateTime.now());
             }
@@ -176,6 +195,7 @@ public class LivestreamServiceImpl implements LivestreamService {
             // không chờ hết countdown để tránh user vẫn thấy/áp dụng giá giảm sau khi live đã đóng.
             expireAllActiveDeals(livestream.getId(), "ENDED_BY_LIVE");
         }
+        
         return toResponse(livestreamRepository.save(livestream));
     }
 
@@ -238,6 +258,9 @@ public class LivestreamServiceImpl implements LivestreamService {
             throw new IllegalArgumentException("Vui lòng chọn sản phẩm tạo deal");
         }
         Livestream livestream = findLivestream(livestreamId);
+        if (livestream.getStatus() != LivestreamStatus.LIVE) {
+            throw new IllegalArgumentException("Cần bắt đầu livestream trước khi tạo deal");
+        }
         Product product = findProduct(request.getProductId());
 
         boolean productInLive = livestreamProductRepository.findByLivestreamIdAndProductId(livestreamId, request.getProductId()).isPresent();
@@ -362,7 +385,9 @@ public class LivestreamServiceImpl implements LivestreamService {
     private LivestreamResponse toResponse(Livestream livestream) {
         LocalDateTime now = LocalDateTime.now();
         expireFinishedDeals(livestream.getId(), now);
-        List<LiveProductResponse> products = livestream.getProducts().stream()
+        List<LiveProductResponse> products = livestream.getProducts() == null
+                ? Collections.emptyList()
+                : livestream.getProducts().stream()
                 .map(this::toProductResponse)
                 .sorted(Comparator.comparing(LiveProductResponse::getPinned).reversed())
                 .toList();
@@ -554,6 +579,25 @@ public class LivestreamServiceImpl implements LivestreamService {
                         .map(ProductVariant::getPrice)
                         .min(Double::compareTo)
                         .orElse(0D));
+    }
+
+
+    private void validateCanStartLivestream(Livestream livestream) {
+        if (livestream == null) {
+            throw new IllegalArgumentException("Không tìm thấy livestream");
+        }
+
+        LocalDateTime scheduledAt = livestream.getScheduledAt();
+        if (scheduledAt != null && LocalDateTime.now().isBefore(scheduledAt)) {
+            throw new IllegalArgumentException("Chưa đến lịch phát dự kiến. Livestream sẽ bắt đầu lúc "
+                    + scheduledAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+        }
+    }
+
+    private void validateScheduledAtNotInPast(LocalDateTime scheduledAt) {
+        if (scheduledAt != null && scheduledAt.isBefore(LocalDateTime.now().minusSeconds(5))) {
+            throw new IllegalArgumentException("Lịch phát dự kiến không được nhỏ hơn thời gian hiện tại");
+        }
     }
 
     private double safePercent(Double value) {

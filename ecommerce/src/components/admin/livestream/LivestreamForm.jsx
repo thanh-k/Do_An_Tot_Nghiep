@@ -1,7 +1,7 @@
 import { Edit3, ImageIcon, Plus, Upload, Video, X } from "lucide-react";
 import SectionCard from "./SectionCard";
 
-export default function LivestreamForm({ form, setForm, onSubmit, editMode, onCancel, onThumbnailChange, thumbnailPreview }) {
+export default function LivestreamForm({ form, setForm, onSubmit, editMode, onCancel, onThumbnailChange, thumbnailPreview, minScheduledAt }) {
   return (
     <SectionCard
       title={editMode ? "Chỉnh sửa phiên live" : "Form tạo phiên live"}
@@ -21,7 +21,8 @@ export default function LivestreamForm({ form, setForm, onSubmit, editMode, onCa
           </label>
           <label className="space-y-2 text-sm font-bold text-slate-700">
             Lịch phát dự kiến
-            <input value={form.scheduledAt} onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })} type="datetime-local" className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-normal outline-none focus:border-blue-500" />
+            <input value={form.scheduledAt} onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })} type="datetime-local" min={minScheduledAt} className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-normal outline-none focus:border-blue-500" />
+            <span className="block text-xs font-semibold text-slate-500">Chỉ được chọn thời gian hiện tại hoặc tương lai.</span>
           </label>
         </div>
         <label className="block space-y-2 text-sm font-bold text-slate-700">

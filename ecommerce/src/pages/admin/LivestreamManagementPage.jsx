@@ -16,6 +16,22 @@ import {
 
 const initialForm = { title: "", description: "", thumbnailUrl: "", scheduledAt: "" };
 
+const toDateTimeLocalValue = (date = new Date()) => {
+  const offset = date.getTimezoneOffset();
+  const local = new Date(date.getTime() - offset * 60000);
+  return local.toISOString().slice(0, 16);
+};
+
+const isScheduledInPast = (value) => {
+  if (!value) return false;
+  const scheduled = new Date(value);
+  if (Number.isNaN(scheduled.getTime())) return false;
+  const now = new Date();
+  now.setSeconds(0, 0);
+  return scheduled.getTime() < now.getTime();
+};
+
+
 function LivestreamManagementPage() {
   const { currentUser } = useAuth();
   const canManage = hasPermission(currentUser, "LIVESTREAM_MANAGE");
@@ -49,6 +65,9 @@ function LivestreamManagementPage() {
   const submitLive = async (e) => {
     e.preventDefault();
     if (!canManage) return toast.error("Bạn không có quyền quản lý livestream");
+    if (isScheduledInPast(form.scheduledAt)) {
+      return toast.error("Lịch phát dự kiến phải là thời gian hiện tại hoặc tương lai");
+    }
     let thumbnailUrl = form.thumbnailUrl;
     if (thumbnailFile) thumbnailUrl = await livestreamService.uploadThumbnail(thumbnailFile);
     const payload = { ...form, thumbnailUrl, scheduledAt: form.scheduledAt || null };
@@ -109,6 +128,7 @@ function LivestreamManagementPage() {
         onCancel={resetForm}
         onThumbnailChange={handleThumbnailChange}
         thumbnailPreview={thumbnailPreview}
+        minScheduledAt={toDateTimeLocalValue()}
       />
     )}
 

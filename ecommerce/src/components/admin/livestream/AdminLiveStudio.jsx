@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Camera, WifiOff } from "lucide-react";
+import { Camera, Clock, WifiOff } from "lucide-react";
 import livestreamService from "@/services/livestreamService";
 import useLivestreamHost from "@/hooks/useLivestreamHost";
 import { formatVnd, isLiveDealUsable } from "@/utils/livestream";
@@ -11,6 +11,27 @@ import LiveProductsPanel from "./LiveProductsPanel";
 import LiveVideoPanel from "./LiveVideoPanel";
 import PinnedProductPanel from "./PinnedProductPanel";
 import { dealEndTime, formatCountdownMs, productStock, variantStockDetails } from "./livestreamAdminUtils";
+
+const formatScheduleTime = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const isBeforeSchedule = (value, now = Date.now()) => {
+  if (!value) return false;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  return date.getTime() > now;
+};
+
 
 export default function AdminLiveStudio({ live, onReload, onRemoveProduct, onOpenProductManager, canManage }) {
   const [dealProductId, setDealProductId] = useState("");
@@ -28,6 +49,9 @@ export default function AdminLiveStudio({ live, onReload, onRemoveProduct, onOpe
   const { videoRef, started, viewerCount, error, start, stop, broadcastLiveEvent } = useLivestreamHost(live?.id, handleLiveEvent);
 
   const liveProducts = live?.products || [];
+  const scheduledLocked = isBeforeSchedule(live?.scheduledAt, dealNow);
+  const scheduledLabel = formatScheduleTime(live?.scheduledAt);
+  const liveStarted = started && live?.status === "LIVE";
   const pinned = liveProducts.find((item) => item.pinned);
   const selectedDealProduct = liveProducts.find((item) => Number(item.id) === Number(dealProductId));
   const selectedOriginalPrice = Number(selectedDealProduct?.price || 0);
@@ -89,6 +113,9 @@ export default function AdminLiveStudio({ live, onReload, onRemoveProduct, onOpe
   };
 
   const startLive = async () => {
+    if (scheduledLocked) {
+      return toast.error(`Chưa đến lịch phát dự kiến: ${scheduledLabel}`);
+    }
     await livestreamService.updateStatus(live.id, "LIVE");
     await start();
     broadcastLiveEvent({ type: "live-started", liveId: live.id });
@@ -120,6 +147,7 @@ export default function AdminLiveStudio({ live, onReload, onRemoveProduct, onOpe
     broadcastLiveEvent({ type: "product-removed", liveId: live.id, productId });
   };
   const createDeal = async () => {
+    if (!liveStarted) return toast.error("Cần bắt đầu livestream trước khi tạo deal");
     if (currentDeal) return toast.error("Đang có deal còn chạy. Chờ hết thời gian hoặc hết số lượng rồi mới tạo deal mới.");
     if (!dealProductId) return toast.error("Chọn sản phẩm tạo deal");
     if (!dealPrice && !discountPercent) return toast.error(discountMode === "AMOUNT" ? "Nhập giá sau khi giảm hoặc số tiền muốn giảm" : "Nhập giá sau khi giảm hoặc % giảm");
@@ -160,11 +188,17 @@ export default function AdminLiveStudio({ live, onReload, onRemoveProduct, onOpe
     <SectionCard
       title="Live Studio"
       icon={Camera}
-      right={canManage && (!started ? (
-        <button onClick={startLive} className="rounded-2xl bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700"><Camera className="mr-2 inline h-4 w-4" /> Bắt đầu live</button>
-      ) : (
-        <button onClick={endLive} className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800"><WifiOff className="mr-2 inline h-4 w-4" /> Kết thúc live</button>
-      ))}
+      right={canManage && (
+        scheduledLocked && !started ? (
+          <button type="button" disabled className="cursor-not-allowed rounded-2xl bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700">
+            <Clock className="mr-2 inline h-4 w-4" /> Dự kiến: {scheduledLabel}
+          </button>
+        ) : !started ? (
+          <button onClick={startLive} className="rounded-2xl bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700"><Camera className="mr-2 inline h-4 w-4" /> Bắt đầu live</button>
+        ) : (
+          <button onClick={endLive} className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800"><WifiOff className="mr-2 inline h-4 w-4" /> Kết thúc live</button>
+        )
+      )}
     >
       <div className="mt-5 space-y-5">
         <div><p className="text-xs font-bold uppercase text-rose-500">Phiên đang quản lý</p><h3 className="text-xl font-black text-slate-950">{live.title}</h3></div>
@@ -201,6 +235,7 @@ export default function AdminLiveStudio({ live, onReload, onRemoveProduct, onOpe
           quantityLimit={quantityLimit}
           setQuantityLimit={setQuantityLimit}
           createDeal={createDeal}
+          liveStarted={liveStarted}
         />
 
         <LiveProductsPanel liveProducts={liveProducts} canManage={canManage} onOpenProductManager={onOpenProductManager} onPinProduct={pinProduct} onRemoveProduct={removeProductFromLive} />
