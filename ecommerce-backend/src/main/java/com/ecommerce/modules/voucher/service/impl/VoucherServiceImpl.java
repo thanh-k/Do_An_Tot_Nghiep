@@ -326,7 +326,7 @@ public class VoucherServiceImpl implements VoucherService {
 
         if (isAssignmentOnlyVoucher(voucher)) {
             if (userId != null) {
-                userVoucherRepository.findByUserIdAndVoucherId(userId, voucher.getId()).ifPresent(uv -> {
+                userVoucherRepository.findByUserIdAndVoucherId(Long.parseLong(userId), voucher.getId()).ifPresent(uv -> {
                     if (uv.getRemainingQuantity() != null) {
                         uv.setRemainingQuantity(uv.getRemainingQuantity() + 1);
                         userVoucherRepository.save(uv);
