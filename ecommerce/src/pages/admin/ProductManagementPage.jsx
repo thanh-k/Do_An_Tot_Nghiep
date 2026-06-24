@@ -195,7 +195,11 @@ function ProductManagementPage() {
     if (!file) return;
 
     // LOGGING: Hiển thị thông tin file đang được upload
-    console.log("[Frontend] Chuẩn bị import file:", { name: file.name, size: file.size, type: file.type });
+    console.log("[Frontend] Chuẩn bị import file:", {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+    });
 
     try {
       toast.loading("Đang xử lý dữ liệu...", { id: "import" });
@@ -205,9 +209,30 @@ function ProductManagementPage() {
     } catch (error) {
       // LOGGING: In ra toàn bộ đối tượng lỗi để debug
       console.error("Lỗi khi import Excel:", error.response || error);
-      const errorMsg =
-        error.response?.data?.message || "Lỗi khi nhập file Excel";
-      toast.error(errorMsg, { id: "import" });
+
+      // Trích xuất lỗi chi tiết (Ưu tiên lỗi từ server trả về, sau đó đến error.message thô)
+      const detailedMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Có lỗi xảy ra khi nhập file Excel. Vui lòng kiểm tra lại định dạng file hoặc liên hệ quản trị viên.";
+
+      toast.error(
+        (t) => (
+          <div className="max-w-md text-sm">
+            <p className="font-bold mb-2">Nhập dữ liệu thất bại!</p>
+            {/* Thêm style để hiển thị danh sách lỗi rõ ràng có thanh cuộn nếu quá nhiều lỗi */}
+            <div className="max-h-60 overflow-y-auto rounded bg-rose-50 p-2 border border-rose-200">
+              <pre className="whitespace-pre-wrap font-sans text-rose-800 leading-relaxed text-xs">
+                {detailedMessage}
+              </pre>
+            </div>
+          </div>
+        ),
+        {
+          id: "import",
+          duration: 15000, // Hiển thị trong 15 giây để admin đọc và sửa file Excel
+        },
+      );
     } finally {
       event.target.value = null;
     }
@@ -370,19 +395,25 @@ function ProductManagementPage() {
         description="Quản lý danh sách sản phẩm, biến thể, giá bán, tồn kho và trạng thái hiển thị."
         actions={
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={handleExportExcel}>
+            {/* FIX: Đổi màu nút Xuất dữ liệu */}
+            <Button
+              className="bg-emerald-50 text-emerald-900 hover:bg-emerald-100 border border-emerald-200"
+              onClick={handleExportExcel}
+            >
               <DownloadCloud size={16} /> Xuất dữ liệu
             </Button>
 
+            {/* FIX: Đổi màu nút Tải file mẫu */}
             <Button
-              variant="outline"
+              className="bg-sky-50 text-sky-900 hover:bg-sky-100 border border-sky-200"
               onClick={handleDownloadTemplate}
               title="Tải file Excel rỗng với các cột chuẩn"
             >
               Tải File Mẫu
             </Button>
+            {/* FIX: Đổi màu nút Nhập từ Excel */}
             <Button
-              variant="secondary"
+              className="bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200"
               onClick={() => document.getElementById("import-excel").click()}
             >
               <UploadCloud size={16} /> Nhập từ Excel
@@ -402,18 +433,20 @@ function ProductManagementPage() {
           </div>
         }
       />
-      <div className="card grid gap-4 p-4 lg:grid-cols-[1fr_200px_200px_200px]">
+      {/* FIX: Thêm màu nền và bo tròn cho khu vực lọc */}
+      <div className="card grid gap-4 p-4 lg:grid-cols-[1fr_200px_200px_200px] bg-slate-50/50 border border-slate-100 rounded-2xl">
         {/* Ô Tìm kiếm */}
         <Input
           placeholder="Tìm theo tên, slug hoặc thương hiệu..."
           value={keyword}
           onChange={(event) => setKeyword(event.target.value)}
+          className="bg-white" // Đảm bảo ô input có nền trắng
         />
         {/* Lọc theo Danh mục */}
         <select
           value={filterCategory}
           onChange={(e) => setFilterCategory(e.target.value)}
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
+          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
         >
           <option value="">Tất cả danh mục</option>
           {categories.map((c) => (
@@ -426,7 +459,7 @@ function ProductManagementPage() {
         <select
           value={filterBrand}
           onChange={(e) => setFilterBrand(e.target.value)}
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
+          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
         >
           <option value="">Tất cả thương hiệu</option>
           {brands.map((b) => (
@@ -439,7 +472,7 @@ function ProductManagementPage() {
         <select
           value={filterStock}
           onChange={(e) => setFilterStock(e.target.value)}
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
+          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
         >
           <option value="">Tất cả tồn kho</option>
           <option value="IN_STOCK">Còn hàng (&gt; 10)</option>

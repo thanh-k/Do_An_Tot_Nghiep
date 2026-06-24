@@ -55,7 +55,16 @@ async function request(path, options = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(normalizeError(payload?.message, "Yêu cầu không thành công"));
+    const errorMsg = normalizeError(payload?.message, "Yêu cầu không thành công");
+    const error = new Error(errorMsg);
+
+    // Giả lập cấu trúc lỗi của Axios để tương thích với code frontend hiện tại
+    error.response = {
+      status: response.status,
+      data: payload,
+    };
+
+    throw error;
   }
 
   return payload?.result ?? payload;

@@ -1,5 +1,6 @@
 package com.ecommerce.modules.product.controller;
 
+import com.ecommerce.common.exception.AppException;
 import com.ecommerce.common.response.ApiResponse;
 import com.ecommerce.modules.product.dto.request.ProductRequest;
 import com.ecommerce.modules.product.dto.response.ProductResponse;
@@ -143,7 +144,12 @@ public class ProductController {
                         return ApiResponse.<String>builder()
                                         .result("Nhập dữ liệu thành công!")
                                         .build();
+                } catch (AppException e) {
+                        // Ném thẳng AppException để GlobalExceptionHandler xử lý đúng HTTP Status (ví
+                        // dụ 400 Bad Request)
+                        throw e;
                 } catch (Exception e) {
+                        // Các lỗi hệ thống khác (ví dụ: IOException, NullPointerException) thì bọc lại
                         throw new RuntimeException("Lỗi nhập Excel: " + e.getMessage());
                 }
         }

@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.usermodel.ClientAnchor.AnchorType;
 import org.apache.poi.ss.util.CellRangeAddressList;
+import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.util.Units;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -120,8 +121,8 @@ public class ProductExcelService {
                     "Ảnh đại diện URL (*)", "Mô tả ngắn", "Mô tả chi tiết (*)",
                     "Thông số KT (JSON) (*)", "Nổi bật (Có/Không)", "Mới (Có/Không)",
                     // Của Variant (9 -> 14)
-                    "Ảnh biến thể URL", "Giá bán (*)", "Giá gốc", "Tồn kho (*)",
-                    "Thuộc tính biến thể (JSON) (*)", // SKU đã được xóa
+                    "Ảnh biến thể URL", "Giá bán(< Giá gốc) (*)", "Giá gốc(*)", "Tồn kho (*)",
+                    "Thuộc tính biến thể (JSON) (*)",
                     // Cột hướng dẫn (15)
                     "Ghi chú hướng dẫn (Vui lòng đọc kỹ)"
             };
@@ -172,50 +173,134 @@ public class ProductExcelService {
                     row = hiddenSheet.createRow(i);
                 row.createCell(3).setCellValue(brands.get(i).getName());
             }
-            // Ghi danh sách Brand vào Cột D (để làm validation cho thương hiệu)
-            for (int i = 0; i < brands.size(); i++) {
-                Row row = hiddenSheet.getRow(i);
-                if (row == null)
-                    row = hiddenSheet.createRow(i);
-                row.createCell(3).setCellValue(brands.get(i).getName());
-            }
             // Ghi Có/Không vào Cột E
             hiddenSheet.getRow(0).createCell(4).setCellValue("Có");
             hiddenSheet.getRow(1).createCell(4).setCellValue("Không");
             workbook.setSheetHidden(1, true);
             // --- 2. TẠO DATA VALIDATION THÔNG MINH ---
             DataValidationHelper validationHelper = sheet.getDataValidationHelper();
-            // 1. Validation Danh mục (Cột B - index 1)
+            CellRangeAddressList addressList = new CellRangeAddressList(1, 1000, 0, 13); // Áp dụng cho 1000 dòng
+
+            // a. Ràng buộc các cột Danh sách (Dropdown)
+            // Danh mục (Cột B, index 1)
             DataValidationConstraint catConstraint = validationHelper
                     .createFormulaListConstraint("HiddenData!$A$1:$A$" + categories.size());
-            sheet.addValidationData(
-                    validationHelper.createValidation(catConstraint, new CellRangeAddressList(1, 1000, 1, 1)));
-            // Validation Thương hiệu (Cột C - index 2) -> Lấy từ Cột D của HiddenData
+            DataValidation catValidation = validationHelper.createValidation(catConstraint,
+                    new CellRangeAddressList(1, 1000, 1, 1));
+            catValidation.setShowErrorBox(true);
+            catValidation.createErrorBox("Lỗi", "Dữ liệu không hợp lệ. Vui lòng chọn một giá trị có sẵn trong danh sách thả xuống!");
+            catValidation.createPromptBox("Hướng dẫn", "Click vào mũi tên để chọn từ danh sách.");
+            sheet.addValidationData(catValidation);
+
+            // Thương hiệu (Cột C, index 2)
             DataValidationConstraint brandConstraint = validationHelper
                     .createFormulaListConstraint("HiddenData!$D$1:$D$" + brands.size());
-            sheet.addValidationData(
-                    validationHelper.createValidation(brandConstraint, new CellRangeAddressList(1, 1000, 2, 2)));
-            // Validation Có/Không (Cột H, I - index 7, 8) -> Lấy từ Cột E
+            DataValidation brandValidation = validationHelper.createValidation(brandConstraint,
+                    new CellRangeAddressList(1, 1000, 2, 2));
+            brandValidation.setShowErrorBox(true);
+            brandValidation.createErrorBox("Lỗi", "Dữ liệu không hợp lệ. Vui lòng chọn một giá trị có sẵn trong danh sách thả xuống!");
+            brandValidation.createPromptBox("Hướng dẫn", "Click vào mũi tên để chọn từ danh sách.");
+            sheet.addValidationData(brandValidation);
+
+            // Nổi bật & Mới (Cột H, I - index 7, 8)
             DataValidationConstraint booleanConstraint = validationHelper
                     .createFormulaListConstraint("HiddenData!$E$1:$E$2");
-            sheet.addValidationData(
-                    validationHelper.createValidation(booleanConstraint, new CellRangeAddressList(1, 1000, 7, 8)));
-            // ================== TRỌNG TÂM ================== //
+            DataValidation booleanValidation = validationHelper.createValidation(booleanConstraint,
+                    new CellRangeAddressList(1, 1000, 7, 8));
+            booleanValidation.setShowErrorBox(true);
+            booleanValidation.createErrorBox("Lỗi", "Dữ liệu không hợp lệ. Vui lòng chọn 'Có' hoặc 'Không'.");
+            booleanValidation.createPromptBox("Hướng dẫn", "Click vào mũi tên để chọn từ danh sách.");
+            sheet.addValidationData(booleanValidation);
 
-            // Validation Thông số KT (Cột G - index 6) phụ thuộc vào Cột Danh mục (Cột B)
+            // b. Ràng buộc định dạng Số (Numeric)
+            // Giá bán (Cột K, index 10)
+            DataValidationConstraint priceConstraint = validationHelper.createNumericConstraint(
+                    DataValidationConstraint.ValidationType.INTEGER, DataValidationConstraint.OperatorType.GREATER_THAN, "0", null);
+            DataValidation priceValidation = validationHelper.createValidation(priceConstraint, new CellRangeAddressList(1, 1000, 10, 10));
+            priceValidation.setShowErrorBox(true);
+            priceValidation.createErrorBox("Lỗi định dạng", "Bạn phải nhập số nguyên lớn hơn 0 (VD: 3500000). Không nhập chữ hay dấu phẩy/chấm.");
+            priceValidation.createPromptBox("Hướng dẫn nhập liệu", "Vui lòng nhập số nguyên (VD: 3500000).");
+            sheet.addValidationData(priceValidation);
+
+            // Ràng buộc Giá bán < Giá gốc
+            DataValidationConstraint priceLogicConstraint = validationHelper.createCustomConstraint("IF(L2>0, K2<L2, TRUE)");
+            DataValidation priceLogicValidation = validationHelper.createValidation(priceLogicConstraint, new CellRangeAddressList(1, 1000, 10, 10));
+            priceLogicValidation.setShowErrorBox(true);
+            priceLogicValidation.createErrorBox("Lỗi logic giá", "Giá bán phải nhỏ hơn Giá gốc.");
+            priceLogicValidation.createPromptBox("Quy tắc giá", "Giá bán phải luôn nhỏ hơn giá gốc đã nhập.");
+            sheet.addValidationData(priceLogicValidation);
+
+            // Giá gốc (Cột L, index 11)
+            DataValidationConstraint comparePriceConstraint = validationHelper.createNumericConstraint(
+                    DataValidationConstraint.ValidationType.INTEGER, DataValidationConstraint.OperatorType.GREATER_THAN, "0", null);
+            DataValidation comparePriceValidation = validationHelper.createValidation(comparePriceConstraint, new CellRangeAddressList(1, 1000, 11, 11));
+            comparePriceValidation.setShowErrorBox(true);
+            comparePriceValidation.createErrorBox("Lỗi định dạng", "Bạn phải nhập số nguyên lớn hơn 0 (VD: 3500000). Không nhập chữ hay dấu phẩy/chấm.");
+            comparePriceValidation.createPromptBox("Hướng dẫn nhập liệu", "Vui lòng nhập số nguyên (VD: 3500000).");
+            sheet.addValidationData(comparePriceValidation);
+
+            // Tồn kho (Cột M, index 12)
+            DataValidationConstraint stockConstraint = validationHelper.createNumericConstraint(
+                    DataValidationConstraint.ValidationType.INTEGER, DataValidationConstraint.OperatorType.GREATER_OR_EQUAL, "0", null);
+            DataValidation stockValidation = validationHelper.createValidation(stockConstraint, new CellRangeAddressList(1, 1000, 12, 12));
+            stockValidation.setShowErrorBox(true);
+            stockValidation.createErrorBox("Lỗi định dạng", "Bạn phải nhập số nguyên lớn hơn hoặc bằng 0.");
+            stockValidation.createPromptBox("Hướng dẫn nhập liệu", "Vui lòng nhập số nguyên (VD: 100).");
+            sheet.addValidationData(stockValidation);
+
+            // c. Ràng buộc không để trống thông minh (sử dụng Custom Formula)
+            // Các cột chung của sản phẩm (chỉ bắt buộc khi là dòng sản phẩm mới)
+            int[] productRequiredCols = {1, 2, 3, 5}; // B, C, D, F (Đã loại bỏ cột G - index 6)
+            for (int colIndex : productRequiredCols) {
+                // IF($A2<>"", IF($A2=$A1, TRUE, LEN(TRIM(B2))>0), TRUE)
+                // Nếu có tên SP: Nếu tên SP giống dòng trên (là biến thể) -> OK. Nếu khác -> Bắt buộc nhập.
+                String formula = String.format("IF($A2<>\"\", IF($A2=$A1, TRUE, LEN(TRIM(%s2))>0), TRUE)", CellReference.convertNumToColString(colIndex));
+                DataValidationConstraint constraint = validationHelper.createCustomConstraint(formula);
+                DataValidation validation = validationHelper.createValidation(constraint, new CellRangeAddressList(1, 1000, colIndex, colIndex));
+                validation.setShowErrorBox(true);
+                validation.createErrorBox("Lỗi", "Trường bắt buộc! Bạn không được để trống cột này khi khai báo sản phẩm mới.");
+                validation.createPromptBox("Hướng dẫn nhập liệu", "Cột này bắt buộc phải nhập khi là dòng đầu tiên của sản phẩm.");
+                sheet.addValidationData(validation);
+            }
+
+            // Cột Tên sản phẩm (luôn bắt buộc nếu dòng đó có dữ liệu)
+            DataValidationConstraint nameConstraint = validationHelper.createCustomConstraint("LEN(TRIM($A2))>0");
+            DataValidation nameValidation = validationHelper.createValidation(nameConstraint, new CellRangeAddressList(1, 1000, 0, 0));
+            nameValidation.setShowErrorBox(true);
+            nameValidation.createErrorBox("Lỗi", "Trường bắt buộc! Bạn không được để trống Tên sản phẩm.");
+            nameValidation.createPromptBox("Hướng dẫn nhập liệu", "Cột này bắt buộc phải nhập dữ liệu.");
+            sheet.addValidationData(nameValidation);
+
+            // Các cột của biến thể (luôn bắt buộc nếu dòng đó có dữ liệu)
+            int[] variantRequiredCols = {10, 12}; // K, M (Đã loại bỏ cột N - index 13)
+            for (int colIndex : variantRequiredCols) {
+                 // IF($A2<>"", LEN(TRIM(K2))>0, TRUE)
+                String formula = String.format("IF($A2<>\"\", LEN(TRIM(%s2))>0, TRUE)", CellReference.convertNumToColString(colIndex));
+                DataValidationConstraint constraint = validationHelper.createCustomConstraint(formula);
+                DataValidation validation = validationHelper.createValidation(constraint, new CellRangeAddressList(1, 1000, colIndex, colIndex));
+                validation.setShowErrorBox(true);
+                validation.createErrorBox("Lỗi", "Trường bắt buộc! Bạn không được để trống cột này.");
+                validation.createPromptBox("Hướng dẫn nhập liệu", "Cột này bắt buộc phải nhập dữ liệu cho mỗi biến thể.");
+                sheet.addValidationData(validation);
+            }
+
+            // d. Cột JSON (Thông số KT & Biến thể)
+            // Thông số KT (Cột G, index 6)
             String specFormula = "OFFSET(HiddenData!$B$1, MATCH($B2, HiddenData!$A$1:$A$1000, 0)-1, 0, 1, 1)";
             DataValidationConstraint specConstraint = validationHelper.createFormulaListConstraint(specFormula);
             DataValidation specValidation = validationHelper.createValidation(specConstraint,
                     new CellRangeAddressList(1, 1000, 6, 6));
-            specValidation.setShowErrorBox(false); // CỰC KỲ QUAN TRỌNG: Tắt báo lỗi để user có thể điền text vào mẫu
+            specValidation.setShowErrorBox(false);
+            specValidation.createPromptBox("Hướng dẫn nhập JSON", "Chọn mẫu JSON từ Dropdown, sau đó sửa các giá trị nằm giữa dấu ngoặc kép.");
             sheet.addValidationData(specValidation);
-            // Validation Thuộc tính Biến thể (Cột N - index 13) phụ thuộc vào Cột Danh mục
-            // (Cột B)
+
+            // Thuộc tính Biến thể (Cột N, index 13)
             String varFormula = "OFFSET(HiddenData!$C$1, MATCH($B2, HiddenData!$A$1:$A$1000, 0)-1, 0, 1, 1)";
             DataValidationConstraint varConstraint = validationHelper.createFormulaListConstraint(varFormula);
             DataValidation varValidation = validationHelper.createValidation(varConstraint,
                     new CellRangeAddressList(1, 1000, 13, 13));
-            varValidation.setShowErrorBox(false); // Tắt báo lỗi
+            varValidation.setShowErrorBox(false);
+            varValidation.createPromptBox("Hướng dẫn nhập JSON", "Chọn mẫu JSON từ Dropdown, sau đó sửa các giá trị nằm giữa dấu ngoặc kép.");
             sheet.addValidationData(varValidation);
             // --- TẠO DÒNG MẪU (SAMPLE ROW) ---
             Row sampleRow = sheet.createRow(1);

@@ -15,10 +15,17 @@ public class GlobalExceptionHandler {
         @ExceptionHandler(AppException.class)
         public ResponseEntity<ApiResponse<Object>> handleAppException(AppException ex) {
                 ErrorCode errorCode = ex.getErrorCode();
+                // Nếu ex.getMessage() chứa thông tin lỗi động cụ thể (khác với thông điệp mặc
+                // định của ErrorCode), ưu tiên sử dụng nó
+                String errorMessage = (ex.getMessage() != null && !ex.getMessage().trim().isEmpty()
+                                && !ex.getMessage().equals(errorCode.getMessage()))
+                                                ? ex.getMessage()
+                                                : errorCode.getMessage();
+
                 return ResponseEntity.status(errorCode.getStatusCode().value())
                                 .body(ApiResponse.builder()
                                                 .code(errorCode.getCode())
-                                                .message(errorCode.getMessage())
+                                                .message(errorMessage)
                                                 .build());
         }
 
