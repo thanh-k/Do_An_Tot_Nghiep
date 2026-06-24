@@ -77,10 +77,6 @@ jobs:
             if [ "$CHANGED" -gt "0" ]; then
               echo "=== Backend changed → rebuilding ==="
               
-              # Tự động fix lỗi mạng IPv6 của VPS trước khi build Docker
-              sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
-              sudo sysctl -w net.ipv6.conf.default.disable_ipv6=1
-              sudo systemctl restart docker
               
               cd ecommerce-backend
               # Tối ưu Zero-Downtime: Build image trước khi tắt container cũ
