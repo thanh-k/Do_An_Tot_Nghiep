@@ -24,6 +24,12 @@ public class LivestreamChatMessage {
     private String senderRole;
     private String message;
 
+    @Builder.Default
+    private Boolean pinned = false;
+
+    private LocalDateTime pinnedAt;
+    private LocalDateTime pinExpiresAt;
+
     @Indexed
     private LocalDateTime createdAt;
 }

@@ -151,6 +151,8 @@ public class LivestreamSignalingHandler extends TextWebSocketHandler {
                 || "product-removed".equals(type)
                 || "deal-started".equals(type)
                 || "deal-ended".equals(type)
+                || "pin-chat-message".equals(type)
+                || "unpin-chat-message".equals(type)
                 || "host-offline".equals(type)
                 || "host-online".equals(type);
     }
@@ -228,6 +230,7 @@ public class LivestreamSignalingHandler extends TextWebSocketHandler {
                         .senderName(String.valueOf(payload.getOrDefault("senderName", "Khách")))
                         .senderRole(String.valueOf(payload.getOrDefault("senderRole", "USER")))
                         .message(message.length() > 500 ? message.substring(0, 500) : message)
+                        .pinned(false)
                         .createdAt(java.time.LocalDateTime.now())
                         .build());
             } catch (Exception exception) {

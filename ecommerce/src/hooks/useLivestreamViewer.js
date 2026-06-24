@@ -64,7 +64,7 @@ export function useLivestreamViewer(livestreamId, onLiveEvent) {
       if (data.type === "ice-candidate" && data.candidate) {
         await peerRef.current?.addIceCandidate(data.candidate);
       }
-      if (["pin-product", "deal-started", "deal-ended", "chat", "host-offline", "host-online", "viewer-count"].includes(data.type)) {
+      if (["pin-product", "deal-started", "deal-ended", "chat", "host-offline", "host-online", "viewer-count", "pin-chat-message", "unpin-chat-message"].includes(data.type)) {
         onLiveEvent?.(data);
       }
     };

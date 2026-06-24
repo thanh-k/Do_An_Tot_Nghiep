@@ -14,5 +14,8 @@ public class LiveChatMessageResponse {
     private String senderName;
     private String senderRole;
     private String message;
+    private Boolean pinned;
+    private LocalDateTime pinnedAt;
+    private LocalDateTime pinExpiresAt;
     private LocalDateTime createdAt;
 }

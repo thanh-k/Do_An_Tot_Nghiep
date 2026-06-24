@@ -18,9 +18,12 @@ function AssistantText({ text = "" }) {
           lower.includes("thông tin chi tiết") ||
           lower.includes("chi tiết sản phẩm") ||
           lower.includes("các biến thể hiện có") ||
+          lower.includes("các lựa chọn hiện có") ||
+          lower.includes("available options") ||
           lower.includes("thong tin chi tiet") ||
           lower.includes("chi tiet san pham") ||
-          lower.includes("cac bien the hien co");
+          lower.includes("cac bien the hien co") ||
+          lower.includes("cac lua chon hien co");
 
         return (
           <div

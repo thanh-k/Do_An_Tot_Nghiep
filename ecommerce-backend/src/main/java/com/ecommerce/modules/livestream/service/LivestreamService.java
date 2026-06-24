@@ -13,6 +13,8 @@ public interface LivestreamService {
     LivestreamResponse update(Long id, LivestreamRequest request);
     void delete(Long id);
     java.util.List<com.ecommerce.modules.livestream.dto.LiveChatMessageResponse> getChatMessages(Long livestreamId);
+    com.ecommerce.modules.livestream.dto.LiveChatMessageResponse pinChatMessage(Long livestreamId, String messageId);
+    com.ecommerce.modules.livestream.dto.LiveChatMessageResponse unpinChatMessage(Long livestreamId, String messageId);
     LivestreamResponse updateStatus(Long id, LivestreamStatus status);
     LivestreamResponse addProduct(Long livestreamId, Long productId);
     LivestreamResponse removeProduct(Long livestreamId, Long productId);

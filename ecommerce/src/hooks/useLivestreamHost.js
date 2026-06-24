@@ -65,7 +65,7 @@ export function useLivestreamHost(livestreamId, onLiveEvent) {
         if (data.type === "viewer-count") {
           setViewerCount(Number(data.viewerCount || 0));
         }
-        if (["chat", "pin-product", "deal-started", "deal-ended", "host-online", "host-offline"].includes(data.type)) {
+        if (["chat", "pin-product", "deal-started", "deal-ended", "host-online", "host-offline", "pin-chat-message", "unpin-chat-message"].includes(data.type)) {
           onLiveEvent?.(data);
         }
       };

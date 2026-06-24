@@ -59,6 +59,12 @@ export const livestreamService = {
   createDeal(livestreamId, payload) {
     return apiClient.request(`${ADMIN_URL}/${livestreamId}/deals`, { method: "POST", body: JSON.stringify(payload) });
   },
+  pinChatMessage(livestreamId, messageId) {
+    return apiClient.request(`${ADMIN_URL}/${livestreamId}/chat-messages/${messageId}/pin`, { method: "POST" });
+  },
+  unpinChatMessage(livestreamId, messageId) {
+    return apiClient.request(`${ADMIN_URL}/${livestreamId}/chat-messages/${messageId}/pin`, { method: "DELETE" });
+  },
 };
 
 export default livestreamService;

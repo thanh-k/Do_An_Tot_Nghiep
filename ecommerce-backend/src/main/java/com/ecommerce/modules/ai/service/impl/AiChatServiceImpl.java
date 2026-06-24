@@ -129,6 +129,18 @@ public class AiChatServiceImpl implements AiChatService {
                     .build();
         }
 
+        if ("ADD_TO_CART".equals(intent)) {
+            List<AiActionResponse> actions = buildActions(intent, candidateProducts, color, quantity);
+            AiActionResponse action = actions.isEmpty() ? null : actions.get(0);
+            return AiChatResponse.builder()
+                    .reply(buildFallbackReply(intent, candidateProducts, color, quantity, normalizedMessage, budget))
+                    .intent(intent)
+                    .suggestedProducts(suggestions)
+                    .action(action)
+                    .actions(actions)
+                    .build();
+        }
+
         String productContext = buildProductContext(candidateProducts, color, quantity, intent, budget, normalizedMessage);
 
         String reply = geminiService.generateCustomerSupportReply(SYSTEM_PROMPT, rawMessage, productContext);
@@ -247,6 +259,10 @@ public class AiChatServiceImpl implements AiChatService {
 
                 • Giỏ hàng:
                 - Thêm iPhone 15 Pro vào giỏ hàng
+                - Cho iPhone 15 Pro vô giỏ
+                - Đặt mua iPhone 15 Pro số lượng 2
+                - Chốt đơn iPhone 15 Pro
+                - Mình muốn mua iPhone 15 Pro
                 - Thêm Samsung Galaxy S24 Ultra và iPhone 15 Pro vào giỏ hàng
                 """;
     }
@@ -270,16 +286,19 @@ public class AiChatServiceImpl implements AiChatService {
     }
 
     private String detectIntent(String message, long budget) {
+        // Ưu tiên nhận diện thêm giỏ hàng trước các intent tư vấn.
+        // Câu thực tế thường là: "Thêm iPhone 15 Pro vào giỏ hàng số lượng 1 cái".
+        // Nếu chỉ check chuỗi "them vao gio" thì sẽ miss vì tên sản phẩm nằm giữa "them" và "vao gio".
+        if (isAddToCartRequest(message)) {
+            return "ADD_TO_CART";
+        }
+
         if (containsAny(message, "so sanh", "so san", "khac nhau", "nen chon giua", "chon giua", "giua", "dau hon", "hon kem")) {
             return "COMPARE_PRODUCTS";
         }
 
         if (budget > 0 || containsAny(message, "ngan sach", "tam tien", "so tien", "toi co", "dang co", "khoang", "duoi", "duoi tam", "toi da", "khong qua", "tren", "tu van theo tien")) {
             return "BUDGET_SUGGESTION";
-        }
-
-        if (containsAny(message, "them vao gio", "them gio hang", "mua ngay", "cho vao gio", "dat mua")) {
-            return "ADD_TO_CART";
         }
 
         if (containsAny(message,
@@ -301,6 +320,83 @@ public class AiChatServiceImpl implements AiChatService {
         }
 
         return "GENERAL";
+    }
+
+
+    private boolean isAddToCartRequest(String message) {
+        if (message == null || message.isBlank()) return false;
+
+        String text = (" " + message + " ").replaceAll("\\s+", " ");
+
+        // Bắt nhanh những câu rất phổ biến trước khi đi vào regex dài.
+        // Mục tiêu: không để câu "Thêm iPhone 15 Pro vào giỏ hàng số lượng 1 cái"
+        // bị rơi xuống intent tư vấn sản phẩm.
+        boolean hasCartWord = containsAny(text,
+                " gio ", " gio hang ", " vao gio ", " vao gio hang ",
+                " vo gio ", " vo gio hang ", " cart ", " to cart ");
+        boolean hasAddVerb = containsAny(text,
+                " them ", " add ", " cho ", " bo ", " dua ",
+                " them giup ", " cho minh ", " cho toi ", " bo giup ");
+
+        if (hasCartWord && hasAddVerb) {
+            return true;
+        }
+
+        // Tránh hiểu nhầm các câu tư vấn thành thao tác thêm giỏ hàng.
+        // Ví dụ: "nên mua iPhone nào", "mua điện thoại nào tốt" chỉ là hỏi tư vấn.
+        if (containsAny(text,
+                " nen mua ", " co nen mua ", " tu van mua ", " mua gi ", " mua gi tot ",
+                " mua may nao ", " mua loai nao ", " mua san pham nao ", " mua dien thoai nao ",
+                " mua laptop nao ", " dang phan van mua ", " nen chon mua ")) {
+            return false;
+        }
+
+        // Nhóm 1: câu có cụm giỏ hàng rõ ràng.
+        // Hỗ trợ nhiều cách nói cùng ý:
+        // - "Thêm iPhone 15 Pro vào giỏ hàng"
+        // - "Cho iPhone 15 Pro vô giỏ"
+        // - "Bỏ iPhone 15 Pro vào cart"
+        // - "Add iPhone 15 Pro to cart"
+        if (Pattern.compile(".*\\b(them|cho|bo|dua|add|them\\s+giup|cho\\s+minh|cho\\s+toi)\\b.{0,120}\\b(vao|vo|toi|to)?\\s*(gio|gio\\s+hang|cart)\\b.*")
+                .matcher(text)
+                .matches()) {
+            return true;
+        }
+
+        if (Pattern.compile(".*\\b(gio|gio\\s+hang|cart)\\b.{0,120}\\b(them|cho|bo|dua|add)\\b.*")
+                .matcher(text)
+                .matches()) {
+            return true;
+        }
+
+        // Nhóm 2: câu mua/đặt hàng có tính hành động, không phải hỏi tư vấn.
+        // - "Mua ngay iPhone 15 Pro"
+        // - "Đặt mua iPhone 15 Pro"
+        // - "Đặt hàng iPhone 15 Pro số lượng 2"
+        // - "Chốt đơn iPhone 15 Pro"
+        // - "Lấy cho mình iPhone 15 Pro"
+        if (Pattern.compile(".*\\b(mua\\s+ngay|dat\\s+mua|dat\\s+hang|chot\\s+don|len\\s+don|lay\\s+cho|lay\\s+giup|mua\\s+giup)\\b.{0,140}.*")
+                .matcher(text)
+                .matches()) {
+            return true;
+        }
+
+        // Nhóm 3: câu thể hiện ý định mua trực tiếp kèm sản phẩm.
+        // Không bắt các câu hỏi chung vì phía trên đã loại trừ các cụm "nên mua/mua nào".
+        // - "Mình muốn mua iPhone 15 Pro"
+        // - "Tôi lấy iPhone 15 Pro 1 cái"
+        // - "Cho mình đặt iPhone 15 Pro"
+        if (Pattern.compile(".*\\b(muon\\s+mua|can\\s+mua|toi\\s+mua|minh\\s+mua|toi\\s+lay|minh\\s+lay|cho\\s+minh\\s+dat|cho\\s+toi\\s+dat)\\b.{1,140}.*")
+                .matcher(text)
+                .matches()) {
+            return true;
+        }
+
+        return containsAny(text,
+                " them vao gio ", " them vao gio hang ", " them gio hang ", " them vao cart ",
+                " cho vao gio ", " cho vao gio hang ", " cho vo gio ", " bo vao gio ", " bo vao gio hang ",
+                " dua vao gio ", " dua vao gio hang ", " add to cart ", " add vao gio ",
+                " mua ngay ", " dat mua ", " dat hang ", " chot don ", " len don ");
     }
 
     private List<ProductResponse> findCandidateProducts(String message, String intent, String color, long budget, int compareLimit, List<ProductResponse> products) {
@@ -1426,12 +1522,13 @@ public class AiChatServiceImpl implements AiChatService {
                     .collect(Collectors.joining(", "));
 
             StringBuilder sb = new StringBuilder();
-            sb.append("Tôi đã xác định được sản phẩm phù hợp để thêm vào giỏ hàng: ")
-                    .append(names);
+            sb.append("Tôi đã tìm thấy sản phẩm bạn muốn thêm vào giỏ hàng: ")
+                    .append(names)
+                    .append(". Số lượng: ").append(quantity).append(".");
             if (color != null) {
-                sb.append(" (màu ").append(color).append(")");
+                sb.append(" Màu bạn nhắc tới: ").append(color).append(".");
             }
-            sb.append(", số lượng mỗi sản phẩm ").append(quantity).append(".");
+            sb.append(" Tôi sẽ kiểm tra biến thể còn hàng trước khi thêm để tránh chọn sai màu/dung lượng/RAM.");
             return sb.toString();
         }
 

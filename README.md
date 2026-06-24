@@ -969,3 +969,95 @@ Nội dung thực hiện:
     + Hiển thị video trong gallery sản phẩm
 
 ✍️ Người thực hiện: Thanh
+
+📅 Ngày: 23/06/2026
+🧩 Nội dung công việc:
+
+1. FE:
+- Hoàn thiện và tối ưu chức năng mua sản phẩm trong Livestream
+- Bổ sung popup chọn biến thể khi người dùng bấm "Mua ngay" trong phiên livestream
+- Hiển thị danh sách biến thể còn hàng để người dùng lựa chọn chính xác trước khi thanh toán
+- Loại bỏ các biến thể đã hết hàng khỏi danh sách lựa chọn
+- Tối ưu giao diện popup chọn biến thể:
+    + Responsive trên Desktop
+    + Responsive trên Tablet
+    + Responsive trên Mobile
+- Hiển thị tồn kho theo tổng số lượng của toàn bộ biến thể sản phẩm
+- Hiển thị chi tiết số lượng còn lại của từng biến thể trong trang quản lý livestream
+- Tối ưu giao diện quản lý deal livestream:
+    + Hiển thị tổng tồn kho sản phẩm
+    + Hiển thị chi tiết tồn kho theo từng biến thể
+    + Hỗ trợ theo dõi trạng thái deal trực quan hơn
+- Hoàn thiện chức năng ghim bình luận livestream
+- Cho phép ghim tối đa 3 bình luận cùng lúc
+- Ẩn hiển thị thời gian đếm ngược của bình luận ghim để giao diện gọn gàng hơn
+- Hiển thị tên người dùng thật trong bình luận nếu đã đăng nhập
+- Tự động cập nhật trạng thái bình luận ghim theo thời gian thực
+- Khi livestream kết thúc:
+    + Tự động chuyển người xem khỏi phiên livestream
+    + Hiển thị thông báo livestream đã kết thúc
+    + Đồng bộ trạng thái giao diện cho toàn bộ người xem
+
+2. BE:
+- Sửa lỗi chức năng mua sản phẩm trong Livestream
+- Bổ sung xử lý bắt buộc chọn biến thể trước khi tạo đơn hàng từ livestream
+- Đồng bộ luồng thanh toán sản phẩm livestream với hệ thống biến thể sản phẩm
+- Xử lý deal livestream áp dụng theo sản phẩm thay vì theo từng biến thể riêng lẻ
+- Tính tổng tồn kho sản phẩm dựa trên toàn bộ biến thể
+- Kiểm tra giới hạn số lượng deal dựa trên tổng tồn kho thực tế
+- Bổ sung xử lý tự động hủy deal khi:
+    + Hết thời gian deal
+    + Livestream kết thúc
+- Hoàn thiện cơ chế ghim bình luận livestream
+- Cho phép ghim tối đa 3 bình luận đồng thời
+- Tự động gỡ ghim sau 1 phút
+- Hỗ trợ gỡ ghim thủ công từ phía quản trị viên
+- Đồng bộ dữ liệu ghim bình luận realtime thông qua MongoDB
+- Hoàn thiện xử lý đóng livestream:
+    + Ngắt toàn bộ deal đang hoạt động
+    + Đồng bộ trạng thái livestream tới người xem
+    + Ngăn người dùng tiếp tục mua sản phẩm từ livestream đã kết thúc
+
+3. AI Chat:
+- Sửa lỗi chức năng thêm sản phẩm vào giỏ hàng bằng AI Chat
+- Cải thiện nhận diện ý định thêm sản phẩm vào giỏ hàng với nhiều cách diễn đạt khác nhau
+- Hỗ trợ các câu lệnh:
+    + Thêm vào giỏ hàng
+    + Mua sản phẩm
+    + Cho vào giỏ
+    + Đặt mua
+    + Chốt đơn
+    + Add to cart
+    + Buy now
+- Bổ sung xử lý sản phẩm có nhiều biến thể
+- Không tự động chọn biến thể mặc định
+- AI tự động yêu cầu người dùng cung cấp thêm:
+    + Màu sắc
+    + Dung lượng
+    + RAM
+    + Phiên bản
+- Ghi nhớ ngữ cảnh hội thoại để tiếp tục xử lý ở các tin nhắn tiếp theo
+- Hỗ trợ phản hồi theo ngôn ngữ người dùng:
+    + Người dùng hỏi tiếng Việt → trả lời tiếng Việt
+    + Người dùng hỏi tiếng Anh → trả lời tiếng Anh
+- Tối ưu nội dung phản hồi để thân thiện và dễ hiểu hơn
+- Tránh hiển thị dữ liệu theo dạng kỹ thuật hoặc JSON
+
+4. Fix lỗi phát sinh:
+- Fix lỗi mua sản phẩm livestream không chọn đúng biến thể
+- Fix lỗi deal livestream chỉ áp dụng cho một biến thể thay vì toàn bộ sản phẩm
+- Fix lỗi hiển thị tồn kho không chính xác khi sản phẩm có nhiều biến thể
+- Fix lỗi biến thể hết hàng vẫn hiển thị trong popup mua ngay
+- Fix lỗi người xem vẫn ở lại phiên livestream sau khi livestream kết thúc
+- Fix lỗi deal vẫn còn hiệu lực sau khi livestream đã đóng
+- Fix lỗi AI Chat không nhận diện đúng yêu cầu thêm sản phẩm vào giỏ hàng
+- Fix lỗi AI tự động chọn sai biến thể sản phẩm
+- Fix lỗi phản hồi AI hiển thị theo dạng kỹ thuật khó hiểu
+- Kiểm tra và tối ưu lại toàn bộ luồng:
+    + Livestream
+    + Deal sản phẩm
+    + Bình luận ghim
+    + Chọn biến thể
+    + AI Chat thêm giỏ hàng
+
+✍️ Người thực hiện: Thanh
