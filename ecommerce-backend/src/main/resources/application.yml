@@ -99,4 +99,3 @@ sepay:
   account-no: ${SEPAY_ACCOUNT_NO}
   bank-bin: ${SEPAY_BANK_BIN:970416}
   account-name: ${SEPAY_ACCOUNT_NAME}
-
