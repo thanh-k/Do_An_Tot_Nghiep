@@ -369,6 +369,12 @@ function CheckoutPage() {
       // Đánh dấu đơn đã tạo → không gọi ABANDON_CHECKOUT khi rời trang
       orderCompletedRef.current = true;
 
+      // Lưu trạng thái giỏ hàng vào localStorage để VnpayQrModal xử lý xóa khi thanh toán thành công
+      localStorage.setItem("vnpay_pending_direct", directItems ? "true" : "false");
+      if (!directItems) {
+        localStorage.setItem("vnpay_pending_items", JSON.stringify(checkoutItems.map((item) => item.id)));
+      }
+
       setVnpaySession({
         orderId,
         amount: finalTotal,

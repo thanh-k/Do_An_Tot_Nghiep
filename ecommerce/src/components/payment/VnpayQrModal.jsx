@@ -9,7 +9,8 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import Modal from "@/components/common/Modal";
+import Modal from "@/components/ui/Modal";
+import { useCart } from "@/hooks/useCart";
 import Button from "@/components/common/Button";
 import { formatCurrency } from "@/utils/format";
 import { orderService } from "@/services/user/orderService";
@@ -52,6 +53,7 @@ function VnpayQrModal({
   onRefresh,
 }) {
   const navigate = useNavigate();
+  const { clearCart, removeMultipleFromCart } = useCart();
 
   const expiredAt = useMemo(() => {
     if (paymentSession?.expiredAt) {
@@ -92,6 +94,27 @@ function VnpayQrModal({
           clearInterval(interval);
           setIsPaid(true);
           toast.success("Thanh toán thành công! Đơn hàng đang được xử lý.");
+          
+          // Lấy thông tin giỏ hàng từ localStorage (nếu có) để xóa các sản phẩm vừa mua
+          const isDirect = localStorage.getItem("vnpay_pending_direct") === "true";
+          if (!isDirect) {
+            try {
+              const itemsStr = localStorage.getItem("vnpay_pending_items");
+              if (itemsStr) {
+                const itemIds = JSON.parse(itemsStr);
+                if (removeMultipleFromCart && itemIds.length > 0) {
+                  removeMultipleFromCart(itemIds);
+                } else {
+                  clearCart();
+                }
+              }
+            } catch (e) {
+              clearCart();
+            }
+          }
+          localStorage.removeItem("vnpay_pending_direct");
+          localStorage.removeItem("vnpay_pending_items");
+
           setTimeout(() => {
             onClose();
             navigate("/orders");
