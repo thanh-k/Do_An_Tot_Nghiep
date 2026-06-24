@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import Modal from "@/components/ui/Modal";
+import Modal from "@/components/common/Modal";
 import { useCart } from "@/hooks/useCart";
 import Button from "@/components/common/Button";
 import { formatCurrency } from "@/utils/format";
