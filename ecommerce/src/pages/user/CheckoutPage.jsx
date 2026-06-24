@@ -883,7 +883,17 @@ function CheckoutPage() {
 
       <VnpayQrModal
         isOpen={showVnpayQrModal}
-        onClose={() => setShowVnpayQrModal(false)}
+        onClose={async () => {
+          setShowVnpayQrModal(false);
+          if (vnpaySession?.orderId) {
+            try {
+              await orderService.updateOrderStatus(vnpaySession.orderId, "CANCELLED");
+              toast.info("Đã hủy đơn hàng (chưa thanh toán).");
+            } catch (err) {
+              console.error("Lỗi khi hủy đơn hàng:", err);
+            }
+          }
+        }}
         paymentSession={vnpaySession}
         loading={loading}
         onRefresh={createVnpaySession}

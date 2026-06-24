@@ -16,6 +16,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: 'npm'
+          cache-dependency-path: ecommerce/package-lock.json
 
       - name: Install Frontend Dependencies
         working-directory: ecommerce
@@ -75,14 +77,27 @@ jobs:
             if [ "$CHANGED" -gt "0" ]; then
               echo "=== Backend changed → rebuilding ==="
               
-              # Tự động fix lỗi mạng IPv6 của VPS trước khi build Docker
-              sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
-              sudo sysctl -w net.ipv6.conf.default.disable_ipv6=1
-              sudo systemctl restart docker
               
               cd ecommerce-backend
-              docker compose down && docker compose up -d --build
-              sleep 30
+              # Tối ưu Zero-Downtime: Build image trước khi tắt container cũ
+              docker compose build backend
+              docker compose up -d --no-deps backend
+              # Chờ backend khởi động (tối đa 60 giây) thay vì sleep mù quáng
+              echo "=== Waiting for backend to start... ==="
+              for i in $(seq 1 12); do
+                sleep 5
+                STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/v1/categories || echo "000")
+                echo "Attempt $i: HTTP $STATUS"
+                if [ "$STATUS" = "200" ]; then
+                  echo "=== Backend OK! ==="
+                  break
+                fi
+                if [ "$i" = "12" ]; then
+                  echo "=== Backend FAILED to start! Checking logs... ==="
+                  docker logs ecommerce_backend --tail=50
+                  exit 1
+                fi
+              done
             else
               echo "=== Backend unchanged ==="
             fi
