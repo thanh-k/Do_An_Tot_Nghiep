@@ -318,6 +318,30 @@ public class VoucherServiceImpl implements VoucherService {
         }
     }
 
+    @Override
+    @Transactional
+    public void incrementQuantity(String code, String userId) {
+        Voucher voucher = voucherRepository.findByCode(code).orElse(null);
+        if (voucher == null) return;
+
+        if (isAssignmentOnlyVoucher(voucher)) {
+            if (userId != null) {
+                userVoucherRepository.findByUserIdAndVoucherId(userId, voucher.getId()).ifPresent(uv -> {
+                    if (uv.getRemainingQuantity() != null) {
+                        uv.setRemainingQuantity(uv.getRemainingQuantity() + 1);
+                        userVoucherRepository.save(uv);
+                    }
+                });
+            }
+            return;
+        }
+
+        if (voucher.getQuantity() != null) {
+            voucher.setQuantity(voucher.getQuantity() + 1);
+            voucherRepository.save(voucher);
+        }
+    }
+
     private VoucherResponse toUserVoucherResponse(UserVoucher userVoucher) {
         Voucher voucher = userVoucher.getVoucher();
         return VoucherResponse.builder()

@@ -93,3 +93,9 @@ vnpay:
   hash-secret: ${VNPAY_HASH_SECRET}
   url: ${VNPAY_URL:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
   return-url: ${VNPAY_RETURN_URL}
+
+sepay:
+  api-key: ${SEPAY_API_KEY}
+  account-no: ${SEPAY_ACCOUNT_NO}
+  bank-bin: ${SEPAY_BANK_BIN:970436}
+  account-name: ${SEPAY_ACCOUNT_NAME}

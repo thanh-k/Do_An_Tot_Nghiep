@@ -22,8 +22,13 @@ export const PAYMENT_METHOD_OPTIONS = [
   },
   {
     value: "banking",
-    label: "Thanh toán ngân hàng",
-    description: "Quét mã VNPay QR, mã thanh toán có hiệu lực trong 15 phút.",
+    label: "Chuyển khoản ngân hàng",
+    description: "Quét mã QR bằng app ngân hàng bất kỳ, hệ thống tự xác nhận trong vài giây.",
+  },
+  {
+    value: "vnpay",
+    label: "VNPay",
+    description: "Thanh toán qua cổng VNPay — hỗ trợ thẻ ATM, Visa, MasterCard, QR Pay.",
   },
 ];
 

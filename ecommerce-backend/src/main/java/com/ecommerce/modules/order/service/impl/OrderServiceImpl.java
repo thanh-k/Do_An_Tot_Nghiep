@@ -20,6 +20,8 @@ import com.ecommerce.entity.Voucher;
 import com.ecommerce.modules.voucher.repository.VoucherRepository;
 import com.ecommerce.modules.voucher.service.VoucherService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
@@ -230,5 +233,40 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
         order.setStatus(paymentStatus);
         return orderMapper.toResponse(orderRepository.save(order));
+    }
+
+    /**
+     * Cron job tự động hủy các đơn hàng thanh toán online (VNPAY) 
+     * nếu quá 20 phút mà vẫn ở trạng thái PENDING.
+     * Chạy mỗi 1 phút (60000 ms).
+     */
+    @Scheduled(fixedRate = 60000)
+    @Transactional
+    public void cancelExpiredOnlineOrders() {
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(20);
+        List<Order> expiredOrders = orderRepository.findExpiredPendingOrders(cutoff);
+
+        for (Order order : expiredOrders) {
+            order.setStatus("CANCELLED");
+
+            // Hoàn lại kho
+            if (order.getOrderDetails() != null) {
+                for (OrderDetail detail : order.getOrderDetails()) {
+                    ProductVariant variant = detail.getProductVariant();
+                    if (variant != null && variant.getStock() != null) {
+                        variant.setStock(variant.getStock() + detail.getQuantity());
+                        variantRepository.save(variant);
+                    }
+                }
+            }
+
+            // Hoàn lại voucher
+            if (order.getVoucherCode() != null && !order.getVoucherCode().trim().isEmpty()) {
+                voucherService.incrementQuantity(order.getVoucherCode().trim(), order.getUserId());
+            }
+
+            orderRepository.save(order);
+            log.info("Đã tự động hủy đơn hàng online hết hạn và hoàn kho: DH{}", order.getId());
+        }
     }
 }

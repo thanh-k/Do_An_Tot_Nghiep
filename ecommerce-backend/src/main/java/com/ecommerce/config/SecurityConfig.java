@@ -52,6 +52,9 @@ public class SecurityConfig {
                                 "/oauth2/**",
                                 "/login/oauth2/**",
                                 "/api/v1/public/**",
+                                "/api/v1/payments/sepay/webhook",
+                                "/api/v1/payments/vnpay/return",
+                                "/api/v1/payments/vnpay/ipn",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
