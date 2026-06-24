@@ -326,12 +326,14 @@ public class VoucherServiceImpl implements VoucherService {
 
         if (isAssignmentOnlyVoucher(voucher)) {
             if (userId != null) {
-                userVoucherRepository.findByUserIdAndVoucherId(userId, voucher.getId()).ifPresent(uv -> {
-                    if (uv.getRemainingQuantity() != null) {
-                        uv.setRemainingQuantity(uv.getRemainingQuantity() + 1);
-                        userVoucherRepository.save(uv);
-                    }
-                });
+                try {
+                    userVoucherRepository.findByUserIdAndVoucherId(Long.valueOf(userId), voucher.getId()).ifPresent(uv -> {
+                        if (uv.getRemainingQuantity() != null) {
+                            uv.setRemainingQuantity(uv.getRemainingQuantity() + 1);
+                            userVoucherRepository.save(uv);
+                        }
+                    });
+                } catch (NumberFormatException ignored) {}
             }
             return;
         }
