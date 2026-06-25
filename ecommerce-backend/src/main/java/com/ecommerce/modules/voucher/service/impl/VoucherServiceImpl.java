@@ -207,13 +207,7 @@ public class VoucherServiceImpl implements VoucherService {
         Voucher saved = voucherRepository.save(voucher);
 
         if (isVipVoucher(saved)) {
-            userVoucherRepository.findAll().stream()
-                    .filter(uv -> uv.getVoucher().getId().equals(saved.getId()))
-                    .forEach(uv -> {
-                        uv.setActive(saved.getActive());
-                        uv.setRemainingQuantity(resolveVipMonthlyQuota(saved));
-                        userVoucherRepository.save(uv);
-                    });
+            userVoucherRepository.updateByVoucherId(saved.getId(), saved.getActive(), resolveVipMonthlyQuota(saved));
         }
 
         return voucherMapper.toResponse(saved);
@@ -226,9 +220,7 @@ public class VoucherServiceImpl implements VoucherService {
                 .orElseThrow(() -> new AppException(ErrorCode.VOUCHER_NOT_FOUND));
 
         if (isAssignmentOnlyVoucher(voucher)) {
-            userVoucherRepository.findAll().stream()
-                    .filter(uv -> uv.getVoucher().getId().equals(id))
-                    .forEach(userVoucherRepository::delete);
+            userVoucherRepository.deleteByVoucherId(id);
         }
 
         String imageUrl = voucher.getImage();
@@ -302,19 +294,16 @@ public class VoucherServiceImpl implements VoucherService {
                 syncVipVouchersForUser(user);
             }
 
-            UserVoucher userVoucher = userVoucherRepository.findByUserIdAndVoucherId(user.getId(), voucher.getId())
-                    .orElseThrow(() -> new AppException(ErrorCode.VOUCHER_INVALID));
-
-            if (userVoucher.getRemainingQuantity() != null && userVoucher.getRemainingQuantity() > 0) {
-                userVoucher.setRemainingQuantity(userVoucher.getRemainingQuantity() - 1);
-                userVoucherRepository.save(userVoucher);
+            int updated = userVoucherRepository.decrementQuantityIfAvailable(user.getId(), voucher.getId());
+            if (updated == 0) {
+                throw new AppException(ErrorCode.VOUCHER_INVALID);
             }
             return;
         }
 
-        if (voucher.getQuantity() != null && voucher.getQuantity() > 0) {
-            voucher.setQuantity(voucher.getQuantity() - 1);
-            voucherRepository.save(voucher);
+        int updated = voucherRepository.decrementQuantityIfAvailable(code);
+        if (updated == 0) {
+            throw new AppException(ErrorCode.VOUCHER_INVALID);
         }
     }
 
@@ -326,8 +315,7 @@ public class VoucherServiceImpl implements VoucherService {
 
         if (isAssignmentOnlyVoucher(voucher)) {
             if (userId != null) {
-                Long parsedUserId = Long.valueOf(userId);
-                userVoucherRepository.findByUserIdAndVoucherId(parsedUserId, voucher.getId()).ifPresent(uv -> {
+                userVoucherRepository.findByUserIdAndVoucherId(Long.parseLong(userId), voucher.getId()).ifPresent(uv -> {
                     if (uv.getRemainingQuantity() != null) {
                         uv.setRemainingQuantity(uv.getRemainingQuantity() + 1);
                         userVoucherRepository.save(uv);
@@ -337,10 +325,7 @@ public class VoucherServiceImpl implements VoucherService {
             return;
         }
 
-        if (voucher.getQuantity() != null) {
-            voucher.setQuantity(voucher.getQuantity() + 1);
-            voucherRepository.save(voucher);
-        }
+        voucherRepository.incrementQuantity(code);
     }
 
     private VoucherResponse toUserVoucherResponse(UserVoucher userVoucher) {

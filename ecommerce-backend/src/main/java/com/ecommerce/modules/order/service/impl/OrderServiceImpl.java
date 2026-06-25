@@ -64,17 +64,13 @@ public class OrderServiceImpl implements OrderService {
             ProductVariant variant = variantRepository.findById(item.getVariantId())
                     .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
-            // Kiểm tra xem kho còn đủ hàng không
-            if (variant.getStock() < item.getQuantity()) {
-                throw new RuntimeException("Sản phẩm '" + variant.getSku() + "' không đủ số lượng trong kho!");
-                // (Sau này bạn có thể tạo thêm ErrorCode.OUT_OF_STOCK để throw AppException
-                // chuẩn hơn)
+            // Trừ số lượng tồn kho an toàn bằng Atomic Update
+            int updated = variantRepository.decrementStockIfAvailable(variant.getId(), item.getQuantity());
+            if (updated == 0) {
+                throw new RuntimeException("Sản phẩm '" + variant.getSku() + "' không đủ số lượng trong kho hoặc đã có người khác mua!");
             }
 
             double priceAtPurchase = resolvePriceAtPurchase(item, variant, reservedLiveDealPrices);
-
-            // Trừ số lượng tồn kho
-            variant.setStock(variant.getStock() - item.getQuantity());
 
             OrderDetail detail = OrderDetail.builder()
                     .order(order)
@@ -262,8 +258,24 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(status);
         Order saved = orderRepository.save(order);
 
+        // Ní nhớ gọi coinTaskService.rewardOrderCompleted khi đơn hàng hoàn thành nhé!
         if (!isCompletedStatus(oldStatus) && isCompletedStatus(status) && hasCashbackVoucher(saved)) {
             coinTaskService.rewardOrderCompleted(saved.getUserId(), saved.getId());
+        }
+
+        // Refund stock and voucher if cancelled via API
+        if (!"CANCELLED".equalsIgnoreCase(oldStatus) && "CANCELLED".equalsIgnoreCase(status)) {
+            if (saved.getOrderDetails() != null) {
+                for (OrderDetail detail : saved.getOrderDetails()) {
+                    ProductVariant variant = detail.getProductVariant();
+                    if (variant != null && variant.getId() != null) {
+                        variantRepository.incrementStock(variant.getId(), detail.getQuantity());
+                    }
+                }
+            }
+            if (saved.getVoucherCode() != null && !saved.getVoucherCode().trim().isEmpty()) {
+                voucherService.incrementQuantity(saved.getVoucherCode().trim(), saved.getUserId());
+            }
         }
 
         return orderMapper.toResponse(saved);
@@ -330,9 +342,8 @@ public class OrderServiceImpl implements OrderService {
             if (order.getOrderDetails() != null) {
                 for (OrderDetail detail : order.getOrderDetails()) {
                     ProductVariant variant = detail.getProductVariant();
-                    if (variant != null && variant.getStock() != null) {
-                        variant.setStock(variant.getStock() + detail.getQuantity());
-                        variantRepository.save(variant);
+                    if (variant != null && variant.getId() != null) {
+                        variantRepository.incrementStock(variant.getId(), detail.getQuantity());
                     }
                 }
             }
