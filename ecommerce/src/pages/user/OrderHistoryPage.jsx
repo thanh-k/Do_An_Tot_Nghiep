@@ -237,8 +237,8 @@ function OrderHistoryPage() {
 
                   <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm">
                     <p className="text-slate-500">Thanh toán</p>
-                    <p className="font-semibold text-emerald-700">
-                      {formatPaymentStatus(order.paymentStatus || "PENDING")}
+                    <p className={`font-semibold ${order.status === 'PAID' ? 'text-emerald-700' : 'text-amber-600'}`}>
+                      {order.status === 'PAID' ? 'ĐÃ THANH TOÁN' : 'CHƯA THANH TOÁN'}
                     </p>
                   </div>
                 </div>

@@ -325,8 +325,8 @@ public class VoucherServiceImpl implements VoucherService {
         if (voucher == null) return;
 
         if (isAssignmentOnlyVoucher(voucher)) {
-            if (userId != null && !userId.isBlank()) {
-                Long parsedUserId = Long.parseLong(userId);
+            if (userId != null) {
+                Long parsedUserId = Long.valueOf(userId);
                 userVoucherRepository.findByUserIdAndVoucherId(parsedUserId, voucher.getId()).ifPresent(uv -> {
                     if (uv.getRemainingQuantity() != null) {
                         uv.setRemainingQuantity(uv.getRemainingQuantity() + 1);
