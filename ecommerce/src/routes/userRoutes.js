@@ -22,7 +22,7 @@ import FAQPage from "@/pages/user/FAQPage";
 import OrderDetailPage from "@/pages/user/OrderDetailPage";
 import CoinRewardsPage from "@/pages/user/CoinRewardsPage";
 import LivestreamPage from "@/pages/user/LivestreamPage";
-
+import VnpayReturnPage from "@/pages/user/VnpayReturnPage";
 export const userRoutes = [
   { index: true, component: HomePage },
   { path: "dashboard", component: UserDashboard },
@@ -48,4 +48,5 @@ export const userRoutes = [
   { path: "coins", component: CoinRewardsPage, roles: ["user", "admin"] },
   { path: "livestreams", component: LivestreamPage },
   { path: "livestreams/:id", component: LivestreamPage },
+  { path: "payment/vnpay-return", component: VnpayReturnPage },
 ];

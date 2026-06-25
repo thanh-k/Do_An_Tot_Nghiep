@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import {
   CheckCircle2,
   Clock,
@@ -7,11 +7,20 @@ import {
   ShieldCheck,
   XCircle,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import Modal from "@/components/common/Modal";
+import { useCart } from "@/hooks/useCart";
 import Button from "@/components/common/Button";
 import { formatCurrency } from "@/utils/format";
+import { orderService } from "@/services/user/orderService";
 
 const QR_LIFETIME_MS = 15 * 60 * 1000;
+
+// Config ngân hàng nhận tiền — đọc từ biến môi trường
+const BANK_BIN = import.meta.env.VITE_BANK_BIN || "970436";
+const ACCOUNT_NO = import.meta.env.VITE_ACCOUNT_NO || "so_tai_khoan";
+const ACCOUNT_NAME = import.meta.env.VITE_ACCOUNT_NAME || "TEN_CHU_TK";
 
 function formatTime(milliseconds) {
   const safeValue = Math.max(0, milliseconds);
@@ -22,10 +31,17 @@ function formatTime(milliseconds) {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
-function buildQrImageUrl(paymentUrl, paymentCode, amount) {
-  const qrData = paymentUrl || `VNPAY|${paymentCode}|${amount}`;
-
-  return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData)}`;
+/**
+ * Tạo URL ảnh QR thật từ VietQR API.
+ * Khi user quét QR bằng app ngân hàng bất kỳ, app sẽ tự điền:
+ * - Số tài khoản nhận tiền
+ * - Số tiền cần chuyển
+ * - Nội dung chuyển khoản "DH{orderId}"
+ */
+function buildVietQrUrl(bankBin, accountNo, accountName, amount, orderId) {
+  const addInfo = encodeURIComponent(`DH${orderId}`);
+  const name = encodeURIComponent(accountName);
+  return `https://img.vietqr.io/image/${bankBin}-${accountNo}-compact2.png?amount=${amount}&addInfo=${addInfo}&accountName=${name}`;
 }
 
 function VnpayQrModal({
@@ -36,6 +52,9 @@ function VnpayQrModal({
   paymentSession,
   onRefresh,
 }) {
+  const navigate = useNavigate();
+  const { clearCart, removeMultipleFromCart } = useCart();
+
   const expiredAt = useMemo(() => {
     if (paymentSession?.expiredAt) {
       return new Date(paymentSession.expiredAt).getTime();
@@ -47,11 +66,14 @@ function VnpayQrModal({
   const [remainMs, setRemainMs] = useState(
     Math.max(0, expiredAt - Date.now())
   );
+  const [isPaid, setIsPaid] = useState(false);
 
+  // Countdown timer
   useEffect(() => {
     if (!isOpen) return undefined;
 
     setRemainMs(Math.max(0, expiredAt - Date.now()));
+    setIsPaid(false);
 
     const timer = setInterval(() => {
       setRemainMs(Math.max(0, expiredAt - Date.now()));
@@ -60,20 +82,71 @@ function VnpayQrModal({
     return () => clearInterval(timer);
   }, [isOpen, expiredAt]);
 
-  const expired = remainMs <= 0;
-  const paymentCode = paymentSession?.paymentCode || "VNPAY-DEMO";
-  const amount = Number(paymentSession?.amount || 0);
-  const qrImageUrl =
-    paymentSession?.qrUrl ||
-    buildQrImageUrl(paymentSession?.paymentUrl, paymentCode, amount);
+  // Polling kiểm tra trạng thái đơn hàng mỗi 3 giây
+  useEffect(() => {
+    if (!isOpen || !paymentSession?.orderId || isPaid) return;
 
-  const copyPaymentCode = async () => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await orderService.getOrderById(paymentSession.orderId);
+        const status = res?.result?.status || res?.status;
+        if (status === "PAID") {
+          clearInterval(interval);
+          setIsPaid(true);
+          toast.success("Thanh toán thành công! Đơn hàng đang được xử lý.");
+          
+          // Lấy thông tin giỏ hàng từ localStorage (nếu có) để xóa các sản phẩm vừa mua
+          const isDirect = localStorage.getItem("vnpay_pending_direct") === "true";
+          if (!isDirect) {
+            try {
+              const itemsStr = localStorage.getItem("vnpay_pending_items");
+              if (itemsStr) {
+                const itemIds = JSON.parse(itemsStr);
+                if (removeMultipleFromCart && itemIds.length > 0) {
+                  removeMultipleFromCart(itemIds);
+                } else {
+                  clearCart();
+                }
+              }
+            } catch (e) {
+              clearCart();
+            }
+          }
+          localStorage.removeItem("vnpay_pending_direct");
+          localStorage.removeItem("vnpay_pending_items");
+
+          setTimeout(() => {
+            onClose();
+            navigate("/orders");
+          }, 1500);
+        }
+      } catch (_) {
+        // Bỏ qua lỗi poll — sẽ retry lần sau
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [isOpen, paymentSession?.orderId, isPaid, onClose, navigate]);
+
+  const expired = remainMs <= 0;
+  const orderId = paymentSession?.orderId;
+  const amount = Number(paymentSession?.amount || 0);
+  const paymentCode = orderId ? `DH${orderId}` : "---";
+
+  // Tạo QR URL thật qua VietQR API
+  const qrImageUrl = useMemo(() => {
+    if (!orderId) return "";
+    return buildVietQrUrl(BANK_BIN, ACCOUNT_NO, ACCOUNT_NAME, amount, orderId);
+  }, [orderId, amount]);
+
+  const copyPaymentCode = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(paymentCode);
+      toast.success("Đã sao chép nội dung chuyển khoản");
     } catch (_) {
       // Trình duyệt không hỗ trợ clipboard thì bỏ qua.
     }
-  };
+  }, [paymentCode]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="" size="lg">
@@ -82,7 +155,7 @@ function VnpayQrModal({
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.25em] text-white/80">
-                VNPay QR
+                Chuyển khoản ngân hàng
               </p>
               <h2 className="mt-1 text-2xl font-black">
                 Thanh toán qua mã QR
@@ -110,13 +183,23 @@ function VnpayQrModal({
                 <span className="h-3 w-3 rounded-full bg-[#005baa]" />
                 <span className="h-3 w-3 rounded-full bg-[#ed1c24]" />
                 <span className="text-sm font-black text-slate-700">
-                  VNPay Secure QR
+                  VietQR
                 </span>
               </div>
 
               <div className="rounded-3xl border-4 border-[#005baa]/10 bg-white p-4">
                 <div className="flex aspect-square items-center justify-center rounded-2xl bg-white">
-                  {expired ? (
+                  {isPaid ? (
+                    <div className="text-center">
+                      <CheckCircle2 className="mx-auto mb-3 h-14 w-14 text-emerald-500" />
+                      <p className="text-sm font-black text-emerald-600">
+                        Thanh toán thành công!
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Đang chuyển hướng...
+                      </p>
+                    </div>
+                  ) : expired ? (
                     <div className="text-center">
                       <XCircle className="mx-auto mb-3 h-14 w-14 text-rose-500" />
                       <p className="text-sm font-black text-rose-600">
@@ -129,7 +212,7 @@ function VnpayQrModal({
                   ) : (
                     <img
                       src={qrImageUrl}
-                      alt="VNPay QR"
+                      alt="VietQR Payment"
                       className="h-full w-full object-contain"
                     />
                   )}
@@ -138,20 +221,28 @@ function VnpayQrModal({
 
               <div
                 className={`mt-4 rounded-2xl p-4 text-center ${
-                  expired ? "bg-rose-50" : "bg-blue-50"
+                  isPaid
+                    ? "bg-emerald-50"
+                    : expired
+                      ? "bg-rose-50"
+                      : "bg-blue-50"
                 }`}
               >
                 <p className="flex items-center justify-center gap-2 text-xs font-black uppercase text-slate-500">
                   <Clock size={15} />
-                  Thời gian còn lại
+                  {isPaid ? "Đã thanh toán" : "Thời gian còn lại"}
                 </p>
 
                 <p
                   className={`mt-1 font-mono text-4xl font-black ${
-                    expired ? "text-rose-600" : "text-[#005baa]"
+                    isPaid
+                      ? "text-emerald-600"
+                      : expired
+                        ? "text-rose-600"
+                        : "text-[#005baa]"
                   }`}
                 >
-                  {formatTime(remainMs)}
+                  {isPaid ? "✓" : formatTime(remainMs)}
                 </p>
               </div>
             </div>
@@ -170,7 +261,7 @@ function VnpayQrModal({
 
               <div className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-sm">
                 <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                  Mã thanh toán
+                  Nội dung chuyển khoản
                 </p>
 
                 <div className="mt-2 flex items-center gap-3">
@@ -182,7 +273,7 @@ function VnpayQrModal({
                     type="button"
                     onClick={copyPaymentCode}
                     className="rounded-2xl border border-slate-200 bg-white p-3 text-slate-600 hover:border-[#005baa] hover:text-[#005baa]"
-                    title="Sao chép mã"
+                    title="Sao chép nội dung"
                   >
                     <Copy size={18} />
                   </button>
@@ -199,14 +290,18 @@ function VnpayQrModal({
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#005baa] text-xs font-black text-white">
                       1
                     </span>
-                    <p>Mở ứng dụng ngân hàng hoặc ví có hỗ trợ VNPay QR.</p>
+                    <p>Mở ứng dụng ngân hàng bất kỳ và quét mã QR.</p>
                   </div>
 
                   <div className="flex gap-3">
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#005baa] text-xs font-black text-white">
                       2
                     </span>
-                    <p>Quét mã QR và kiểm tra đúng số tiền thanh toán.</p>
+                    <p>
+                      Kiểm tra số tiền và nội dung chuyển khoản{" "}
+                      <strong className="text-[#005baa]">{paymentCode}</strong>
+                      {" "}đã được điền sẵn.
+                    </p>
                   </div>
 
                   <div className="flex gap-3">
@@ -214,7 +309,7 @@ function VnpayQrModal({
                       3
                     </span>
                     <p>
-                      Sau khi thanh toán thành công, bấm “Tôi đã thanh toán”.
+                      Xác nhận chuyển khoản. Hệ thống sẽ <strong>tự động xác nhận</strong> thanh toán trong vài giây.
                     </p>
                   </div>
                 </div>
@@ -227,7 +322,7 @@ function VnpayQrModal({
                 </p>
                 <p className="mt-1">
                   Không đóng trang trong lúc thanh toán. Mã QR chỉ có hiệu lực
-                  trong 15 phút.
+                  trong 15 phút. Sau khi chuyển khoản, trang sẽ tự chuyển hướng.
                 </p>
               </div>
             </div>
@@ -250,12 +345,12 @@ function VnpayQrModal({
                   <RefreshCw size={16} />
                   Tạo lại mã QR
                 </button>
-              ) : (
-                <Button type="button" onClick={onPaid} loading={loading}>
+              ) : isPaid ? (
+                <Button type="button" disabled>
                   <CheckCircle2 className="mr-2 inline h-4 w-4" />
-                  Tôi đã thanh toán
+                  Đã thanh toán
                 </Button>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

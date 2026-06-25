@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useLocation, Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Landmark, MapPin, Plus, Ticket, Truck, X } from "lucide-react";
+import { CreditCard, Landmark, MapPin, Plus, Ticket, Truck, X } from "lucide-react";
 import AddressSelector from "@/components/user/Mapp";
 import Button from "@/components/common/Button";
 import Input from "@/components/common/Input";
@@ -12,6 +12,7 @@ import useAuth from "@/hooks/useAuth";
 import useCart from "@/hooks/useCart";
 import useVoucherWallet from "@/hooks/useVoucherWallet";
 import { orderService } from "@/services/user/orderService";
+import { paymentService } from "@/services/user/paymentService";
 import behaviorService from "@/services/user/behaviorService";
 import userVoucherService from "@/services/user/voucherService";
 import profileService from "@/services/user/profileService";
@@ -342,7 +343,7 @@ function CheckoutPage() {
     userId: currentUser.id,
     phoneNumber: selectedAddress.phone || shipping.phone,
     shippingAddress: `${selectedAddress.addressLine}${shipping.note ? ` (Ghi chú: ${shipping.note})` : ""}`,
-    paymentMethod: paymentMethod === "banking" ? "VNPAY" : "COD",
+    paymentMethod: paymentMethod === "banking" ? "VNPAY" : paymentMethod === "vnpay" ? "VNPAY" : "COD",
     items: checkoutItems.map((item) => ({
       variantId: item.variantId,
       quantity: item.quantity,
@@ -352,18 +353,41 @@ function CheckoutPage() {
     voucherCode: appliedVoucher ? appliedVoucher.code : null,
   });
 
-  const createVnpaySession = () => {
-    const paymentCode = `VNPAY${Date.now()}`;
-    const expiredAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+  const createVnpaySession = async () => {
+    try {
+      setLoading(true);
 
-    setVnpaySession({
-      paymentCode,
-      amount: finalTotal,
-      expiredAt,
-      // Backend VNPay sau này có thể trả paymentUrl/qrUrl thật, component sẽ ưu tiên dùng giá trị đó.
-      paymentUrl: `vnpay://pay?code=${paymentCode}&amount=${finalTotal}`,
-    });
-    setShowVnpayQrModal(true);
+      // Tạo đơn hàng thật (status = PENDING) TRƯỚC KHI hiện QR
+      const orderResponse = await orderService.createOrder(buildOrderPayload());
+      const orderId = orderResponse?.result?.id || orderResponse?.id;
+
+      if (!orderId) {
+        toast.error("Không thể tạo đơn hàng. Vui lòng thử lại.");
+        return;
+      }
+
+      // Đánh dấu đơn đã tạo → không gọi ABANDON_CHECKOUT khi rời trang
+      orderCompletedRef.current = true;
+
+      // Lưu trạng thái giỏ hàng vào localStorage để VnpayQrModal xử lý xóa khi thanh toán thành công
+      localStorage.setItem("vnpay_pending_direct", directItems ? "true" : "false");
+      if (!directItems) {
+        localStorage.setItem("vnpay_pending_items", JSON.stringify(checkoutItems.map((item) => item.id)));
+      }
+
+      setVnpaySession({
+        orderId,
+        amount: finalTotal,
+        expiredAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      });
+      setShowVnpayQrModal(true);
+    } catch (err) {
+      const errorMsg =
+        err.response?.data?.message || err.message || "Không thể tạo đơn hàng.";
+      toast.error(errorMsg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const submitOrder = async () => {
@@ -398,6 +422,48 @@ function CheckoutPage() {
     }
   };
 
+  // === VNPAY REDIRECT FLOW ===
+  const handleVnpayRedirect = async () => {
+    try {
+      setLoading(true);
+
+      // Tạo đơn hàng PENDING trước
+      const orderResponse = await orderService.createOrder(buildOrderPayload());
+      const orderId = orderResponse?.result?.id || orderResponse?.id;
+
+      if (!orderId) {
+        toast.error("Không thể tạo đơn hàng. Vui lòng thử lại.");
+        return;
+      }
+
+      orderCompletedRef.current = true;
+
+      // Gọi backend tạo URL thanh toán VNPay
+      const paymentResponse = await paymentService.createVnpayPayment(orderId);
+      const paymentUrl = paymentResponse?.result?.paymentUrl || paymentResponse?.paymentUrl;
+
+      if (!paymentUrl) {
+        toast.error("Không thể tạo liên kết thanh toán VNPay.");
+        return;
+      }
+
+      // Lưu trạng thái giỏ hàng vào localStorage để xử lý ở VnpayReturnPage nếu thanh toán thành công
+      localStorage.setItem("vnpay_pending_direct", directItems ? "true" : "false");
+      if (!directItems) {
+        localStorage.setItem("vnpay_pending_items", JSON.stringify(checkoutItems.map((item) => item.id)));
+      }
+
+      // Redirect sang VNPay
+      window.location.href = paymentUrl;
+    } catch (err) {
+      const errorMsg =
+        err.response?.data?.message || err.message || "Lỗi kết nối VNPay.";
+      toast.error(errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePlaceOrder = async (event) => {
     event.preventDefault();
     if (!canSubmit) {
@@ -406,7 +472,12 @@ function CheckoutPage() {
     }
 
     if (paymentMethod === "banking") {
-      createVnpaySession();
+      await createVnpaySession();
+      return;
+    }
+
+    if (paymentMethod === "vnpay") {
+      await handleVnpayRedirect();
       return;
     }
 
@@ -417,7 +488,7 @@ function CheckoutPage() {
     <div className="container-padded py-8">
       <PageHeader
         title="Thanh toán"
-        description="Mock checkout flow với thông tin giao hàng, phương thức thanh toán và tạo đơn hàng giả lập."
+        description="Điền thông tin giao hàng, chọn phương thức thanh toán và xác nhận đơn hàng."
       />
 
       <form
@@ -498,7 +569,7 @@ function CheckoutPage() {
             <div className="grid gap-3">
               {PAYMENT_METHOD_OPTIONS.map((method) => {
                 const checked = paymentMethod === method.value;
-                const Icon = method.value === "banking" ? Landmark : Truck;
+                const Icon = method.value === "vnpay" ? CreditCard : method.value === "banking" ? Landmark : Truck;
 
                 return (
                   <label
@@ -525,7 +596,12 @@ function CheckoutPage() {
                       </p>
                       {method.value === "banking" && checked ? (
                         <div className="mt-3 rounded-2xl border border-dashed border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
-                          Sau khi bấm xác nhận, hệ thống sẽ mở mã VNPay QR. Mã thanh toán chỉ có hiệu lực trong 15 phút.
+                          Sau khi bấm xác nhận, hệ thống sẽ tạo đơn hàng và hiện mã QR chuyển khoản. Mã có hiệu lực trong 15 phút.
+                        </div>
+                      ) : null}
+                      {method.value === "vnpay" && checked ? (
+                        <div className="mt-3 rounded-2xl border border-dashed border-indigo-200 bg-indigo-50 p-3 text-sm text-indigo-700">
+                          Bạn sẽ được chuyển sang trang VNPay để hoàn tất thanh toán bằng thẻ ATM, Visa/MasterCard hoặc QR Pay.
                         </div>
                       ) : null}
                     </div>
@@ -660,7 +736,7 @@ function CheckoutPage() {
           </div>
 
           <Button type="submit" fullWidth className="mt-6" loading={loading}>
-            {paymentMethod === "banking" ? "Tạo mã QR thanh toán" : "Xác nhận đặt hàng"}
+            {paymentMethod === "banking" ? "Tạo mã QR thanh toán" : paymentMethod === "vnpay" ? "Thanh toán qua VNPay" : "Xác nhận đặt hàng"}
           </Button>
         </aside>
       </form>
@@ -807,13 +883,25 @@ function CheckoutPage() {
 
       <VnpayQrModal
         isOpen={showVnpayQrModal}
-        onClose={() => setShowVnpayQrModal(false)}
+        onClose={async () => {
+          setShowVnpayQrModal(false);
+          if (vnpaySession?.orderId) {
+            try {
+              await orderService.updateOrderStatus(vnpaySession.orderId, "CANCELLED");
+              toast.info("Đã hủy đơn hàng (chưa thanh toán).");
+            } catch (err) {
+              console.error("Lỗi khi hủy đơn hàng:", err);
+            }
+          }
+        }}
         paymentSession={vnpaySession}
         loading={loading}
         onRefresh={createVnpaySession}
-        onPaid={async () => {
+        onPaid={() => {
+          // Đơn hàng đã tạo trước khi hiện QR, polling sẽ tự chuyển trang khi PAID.
+          // Nút này cho trường hợp user muốn tự xác nhận — chỉ cần đóng modal.
           setShowVnpayQrModal(false);
-          await submitOrder();
+          navigate("/orders");
         }}
       />
 

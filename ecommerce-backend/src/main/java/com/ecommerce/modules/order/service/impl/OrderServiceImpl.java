@@ -20,6 +20,8 @@ import com.ecommerce.entity.Voucher;
 import com.ecommerce.modules.voucher.repository.VoucherRepository;
 import com.ecommerce.modules.voucher.service.VoucherService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
@@ -61,17 +64,13 @@ public class OrderServiceImpl implements OrderService {
             ProductVariant variant = variantRepository.findById(item.getVariantId())
                     .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
-            // Kiểm tra xem kho còn đủ hàng không
-            if (variant.getStock() < item.getQuantity()) {
-                throw new RuntimeException("Sản phẩm '" + variant.getSku() + "' không đủ số lượng trong kho!");
-                // (Sau này bạn có thể tạo thêm ErrorCode.OUT_OF_STOCK để throw AppException
-                // chuẩn hơn)
+            // Trừ số lượng tồn kho an toàn bằng Atomic Update
+            int updated = variantRepository.decrementStockIfAvailable(variant.getId(), item.getQuantity());
+            if (updated == 0) {
+                throw new RuntimeException("Sản phẩm '" + variant.getSku() + "' không đủ số lượng trong kho hoặc đã có người khác mua!");
             }
 
             double priceAtPurchase = resolvePriceAtPurchase(item, variant, reservedLiveDealPrices);
-
-            // Trừ số lượng tồn kho
-            variant.setStock(variant.getStock() - item.getQuantity());
 
             OrderDetail detail = OrderDetail.builder()
                     .order(order)
@@ -259,8 +258,24 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(status);
         Order saved = orderRepository.save(order);
 
+        // Ní nhớ gọi coinTaskService.rewardOrderCompleted khi đơn hàng hoàn thành nhé!
         if (!isCompletedStatus(oldStatus) && isCompletedStatus(status) && hasCashbackVoucher(saved)) {
             coinTaskService.rewardOrderCompleted(saved.getUserId(), saved.getId());
+        }
+
+        // Refund stock and voucher if cancelled via API
+        if (!"CANCELLED".equalsIgnoreCase(oldStatus) && "CANCELLED".equalsIgnoreCase(status)) {
+            if (saved.getOrderDetails() != null) {
+                for (OrderDetail detail : saved.getOrderDetails()) {
+                    ProductVariant variant = detail.getProductVariant();
+                    if (variant != null && variant.getId() != null) {
+                        variantRepository.incrementStock(variant.getId(), detail.getQuantity());
+                    }
+                }
+            }
+            if (saved.getVoucherCode() != null && !saved.getVoucherCode().trim().isEmpty()) {
+                voucherService.incrementQuantity(saved.getVoucherCode().trim(), saved.getUserId());
+            }
         }
 
         return orderMapper.toResponse(saved);
@@ -307,5 +322,39 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
         order.setStatus(paymentStatus);
         return orderMapper.toResponse(orderRepository.save(order));
+    }
+
+    /**
+     * Cron job tự động hủy các đơn hàng thanh toán online (VNPAY) 
+     * nếu quá 20 phút mà vẫn ở trạng thái PENDING.
+     * Chạy mỗi 1 phút (60000 ms).
+     */
+    @Scheduled(fixedRate = 60000)
+    @Transactional
+    public void cancelExpiredOnlineOrders() {
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(20);
+        List<Order> expiredOrders = orderRepository.findExpiredPendingOrders(cutoff);
+
+        for (Order order : expiredOrders) {
+            order.setStatus("CANCELLED");
+
+            // Hoàn lại kho
+            if (order.getOrderDetails() != null) {
+                for (OrderDetail detail : order.getOrderDetails()) {
+                    ProductVariant variant = detail.getProductVariant();
+                    if (variant != null && variant.getId() != null) {
+                        variantRepository.incrementStock(variant.getId(), detail.getQuantity());
+                    }
+                }
+            }
+
+            // Hoàn lại voucher
+            if (order.getVoucherCode() != null && !order.getVoucherCode().trim().isEmpty()) {
+                voucherService.incrementQuantity(order.getVoucherCode().trim(), order.getUserId());
+            }
+
+            orderRepository.save(order);
+            log.info("Đã tự động hủy đơn hàng online hết hạn và hoàn kho: DH{}", order.getId());
+        }
     }
 }

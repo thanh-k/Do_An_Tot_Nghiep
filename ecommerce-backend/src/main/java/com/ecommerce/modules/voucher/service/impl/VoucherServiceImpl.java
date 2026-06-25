@@ -220,13 +220,7 @@ public class VoucherServiceImpl implements VoucherService {
         Voucher saved = voucherRepository.save(voucher);
 
         if (isVipVoucher(saved)) {
-            userVoucherRepository.findAll().stream()
-                    .filter(uv -> uv.getVoucher().getId().equals(saved.getId()))
-                    .forEach(uv -> {
-                        uv.setActive(saved.getActive());
-                        uv.setRemainingQuantity(resolveVipMonthlyQuota(saved));
-                        userVoucherRepository.save(uv);
-                    });
+            userVoucherRepository.updateByVoucherId(saved.getId(), saved.getActive(), resolveVipMonthlyQuota(saved));
         }
 
         return voucherMapper.toResponse(saved);
@@ -383,20 +377,34 @@ public class VoucherServiceImpl implements VoucherService {
                 syncVipVouchersForUser(user);
             }
 
-            UserVoucher userVoucher = userVoucherRepository.findByUserIdAndVoucherId(user.getId(), voucher.getId())
-                    .orElseThrow(() -> new AppException(ErrorCode.VOUCHER_INVALID));
-
-            if (userVoucher.getRemainingQuantity() != null && userVoucher.getRemainingQuantity() > 0) {
-                userVoucher.setRemainingQuantity(userVoucher.getRemainingQuantity() - 1);
-                userVoucherRepository.save(userVoucher);
+            int updated = userVoucherRepository.decrementQuantityIfAvailable(user.getId(), voucher.getId());
+            if (updated == 0) {
+                throw new AppException(ErrorCode.VOUCHER_INVALID);
             }
             return;
         }
 
-        if (voucher.getQuantity() != null && voucher.getQuantity() > 0) {
-            voucher.setQuantity(voucher.getQuantity() - 1);
-            voucherRepository.save(voucher);
+        int updated = voucherRepository.decrementQuantityIfAvailable(code);
+        if (updated == 0) {
+            throw new AppException(ErrorCode.VOUCHER_INVALID);
         }
+    }
+
+    @Override
+    @Transactional
+    public void incrementQuantity(String code, String userId) {
+        Voucher voucher = voucherRepository.findByCode(code).orElse(null);
+        if (voucher == null)
+            return;
+
+        if (isAssignmentOnlyVoucher(voucher)) {
+            if (userId != null) {
+                userVoucherRepository.incrementQuantity(Long.parseLong(userId), voucher.getId());
+            }
+            return;
+        }
+
+        voucherRepository.incrementQuantity(code);
     }
 
     private VoucherResponse toUserVoucherResponse(UserVoucher userVoucher) {
