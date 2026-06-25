@@ -7,7 +7,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import java.util.List;
 import java.util.Optional;
 
-
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface UserVoucherRepository extends JpaRepository<UserVoucher, Long> {
     Optional<UserVoucher> findByUserIdAndVoucherId(Long userId, Long voucherId);
