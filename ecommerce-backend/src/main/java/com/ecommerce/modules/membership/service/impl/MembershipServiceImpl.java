@@ -68,19 +68,16 @@ public class MembershipServiceImpl implements MembershipService {
         }
 
         expireOldSubscriptions(user.getId());
-        membershipSubscriptionRepository.findByUserIdAndStatus(user.getId(), MembershipSubscriptionStatus.ACTIVE)
-                .forEach(subscription -> {
-                    subscription.setStatus(MembershipSubscriptionStatus.EXPIRED);
-                    subscription.setEndedAt(LocalDateTime.now());
-                });
 
+        // Không kích hoạt VIP ngay tại thời điểm bấm mua gói.
+        // Tạo một đăng ký PENDING và chờ SePay webhook xác nhận thanh toán thành công.
         LocalDateTime now = LocalDateTime.now();
         MembershipSubscription subscription = MembershipSubscription.builder()
                 .user(user)
                 .plan(plan)
-                .status(MembershipSubscriptionStatus.ACTIVE)
-                .paymentMethod(MembershipPaymentMethod.OFFLINE)
-                .paymentStatus(MembershipPaymentStatus.CONFIRMED_OFFLINE)
+                .status(MembershipSubscriptionStatus.PENDING)
+                .paymentMethod(MembershipPaymentMethod.SEPAY)
+                .paymentStatus(MembershipPaymentStatus.PENDING)
                 .startedAt(now)
                 .endedAt(now.plusMonths(plan.getDurationMonths()))
                 .note(request.getNote())
@@ -89,9 +86,97 @@ public class MembershipServiceImpl implements MembershipService {
         MembershipSubscription saved = membershipSubscriptionRepository.save(subscription);
 
         return MembershipPurchaseResponse.builder()
-                .message("Đăng ký thành viên thành công. Hệ thống đã ghi nhận thanh toán offline cho gói hội viên.")
+                .message("Vui lòng quét mã QR và chuyển khoản đúng nội dung để kích hoạt gói thành viên.")
                 .subscription(toCurrentResponse(saved))
+                .subscriptionId(saved.getId())
+                .amount(plan.getPrice())
+                .paymentMethod(MembershipPaymentMethod.SEPAY.name())
+                .paymentStatus(MembershipPaymentStatus.PENDING.name())
+                .paymentCode(buildSePayCode(saved.getId()))
+                .expiredAt(now.plusMinutes(15))
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public boolean confirmSePayPayment(Long subscriptionId, double transferAmount) {
+        if (subscriptionId == null) {
+            return false;
+        }
+
+        MembershipSubscription subscription = membershipSubscriptionRepository.findById(subscriptionId)
+                .orElse(null);
+
+        if (subscription == null || subscription.getPlan() == null) {
+            return false;
+        }
+
+        if (subscription.getStatus() == MembershipSubscriptionStatus.ACTIVE
+                && subscription.getPaymentStatus() == MembershipPaymentStatus.PAID) {
+            return true;
+        }
+
+        // Chỉ kích hoạt các đăng ký còn đang chờ thanh toán.
+        // Nếu user đã hủy hoặc đăng ký đã hết hạn thì webhook đến muộn cũng không được kích hoạt VIP.
+        if (subscription.getStatus() != MembershipSubscriptionStatus.PENDING
+                || subscription.getPaymentStatus() != MembershipPaymentStatus.PENDING) {
+            return false;
+        }
+
+        long expectedAmount = subscription.getPlan().getPrice() == null ? 0L : subscription.getPlan().getPrice();
+        if (expectedAmount <= 0L || Math.abs(transferAmount - expectedAmount) > 1000D) {
+            return false;
+        }
+
+        User user = subscription.getUser();
+        if (user == null) {
+            return false;
+        }
+
+        expireOldSubscriptions(user.getId());
+        membershipSubscriptionRepository.findByUserIdAndStatus(user.getId(), MembershipSubscriptionStatus.ACTIVE)
+                .forEach(activeSubscription -> {
+                    if (!activeSubscription.getId().equals(subscription.getId())) {
+                        activeSubscription.setStatus(MembershipSubscriptionStatus.EXPIRED);
+                        activeSubscription.setEndedAt(LocalDateTime.now());
+                    }
+                });
+
+        LocalDateTime now = LocalDateTime.now();
+        subscription.setStatus(MembershipSubscriptionStatus.ACTIVE);
+        subscription.setPaymentMethod(MembershipPaymentMethod.SEPAY);
+        subscription.setPaymentStatus(MembershipPaymentStatus.PAID);
+        subscription.setStartedAt(now);
+        subscription.setEndedAt(now.plusMonths(subscription.getPlan().getDurationMonths()));
+
+        membershipSubscriptionRepository.save(subscription);
+        return true;
+    }
+
+    @Override
+    @Transactional
+    public void cancelPendingPayment(Long subscriptionId) {
+        if (subscriptionId == null) {
+            throw new AppException(ErrorCode.MEMBERSHIP_PURCHASE_INVALID);
+        }
+
+        User user = getCurrentAuthenticatedUser();
+        MembershipSubscription subscription = membershipSubscriptionRepository.findById(subscriptionId)
+                .orElseThrow(() -> new AppException(ErrorCode.MEMBERSHIP_PURCHASE_INVALID));
+
+        if (subscription.getUser() == null || !subscription.getUser().getId().equals(user.getId())) {
+            throw new AppException(ErrorCode.MEMBERSHIP_PURCHASE_INVALID);
+        }
+
+        if (subscription.getStatus() == MembershipSubscriptionStatus.ACTIVE
+                || subscription.getPaymentStatus() == MembershipPaymentStatus.PAID) {
+            throw new AppException(ErrorCode.MEMBERSHIP_PURCHASE_INVALID);
+        }
+
+        subscription.setStatus(MembershipSubscriptionStatus.CANCELLED);
+        subscription.setPaymentStatus(MembershipPaymentStatus.PENDING);
+        subscription.setNote(appendNote(subscription.getNote(), "Người dùng hủy thanh toán SePay"));
+        membershipSubscriptionRepository.save(subscription);
     }
 
     @Override
@@ -171,6 +256,16 @@ public class MembershipServiceImpl implements MembershipService {
                 .forEach(subscription -> subscription.setStatus(MembershipSubscriptionStatus.EXPIRED));
     }
 
+    private String appendNote(String currentNote, String nextNote) {
+        if (nextNote == null || nextNote.isBlank()) {
+            return currentNote;
+        }
+        if (currentNote == null || currentNote.isBlank()) {
+            return nextNote;
+        }
+        return currentNote + " | " + nextNote;
+    }
+
     private User getCurrentAuthenticatedUser() {
         String principal = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByEmailIgnoreCase(principal)
@@ -205,6 +300,10 @@ public class MembershipServiceImpl implements MembershipService {
                 .paymentStatus(subscription.getPaymentStatus().name())
                 .status(subscription.getStatus().name())
                 .build();
+    }
+
+    private String buildSePayCode(Long subscriptionId) {
+        return "VIP" + subscriptionId;
     }
 
     private MembershipCurrentResponse buildRegularMembership() {

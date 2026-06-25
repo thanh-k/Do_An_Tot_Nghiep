@@ -2,6 +2,7 @@ package com.ecommerce.modules.payment.controller;
 
 import com.ecommerce.modules.order.dto.response.OrderResponse;
 import com.ecommerce.modules.order.service.OrderService;
+import com.ecommerce.modules.membership.service.MembershipService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,6 +20,7 @@ import java.util.regex.Pattern;
 public class SePayWebhookController {
 
     private final OrderService orderService;
+    private final MembershipService membershipService;
 
     @Value("${sepay.api-key}")
     private String sePayApiKey;
@@ -57,19 +59,34 @@ public class SePayWebhookController {
 
         log.info("SePay webhook nhận: content={}, amount={}", content, transferAmount);
 
-        // 3. Tìm orderId trong nội dung chuyển khoản
+        // 3. Ưu tiên xử lý thanh toán gói thành viên nếu nội dung có dạng "VIP123" hoặc "VIP 123".
+        Pattern membershipPattern = Pattern.compile("VIP\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
+        Matcher membershipMatcher = membershipPattern.matcher(content);
+        if (membershipMatcher.find()) {
+            Long subscriptionId = Long.parseLong(membershipMatcher.group(1));
+            boolean confirmed = membershipService.confirmSePayPayment(subscriptionId, transferAmount);
+            if (confirmed) {
+                log.info("✅ Gói thành viên #{} đã thanh toán qua SePay: {}đ", subscriptionId, transferAmount);
+                return ResponseEntity.ok(Map.of("success", true, "message", "Membership paid"));
+            }
+
+            log.warn("Không xác nhận được thanh toán membership #{}, amount={}", subscriptionId, transferAmount);
+            return ResponseEntity.ok(Map.of("success", true, "message", "Membership amount mismatch or not found"));
+        }
+
+        // 4. Tìm orderId trong nội dung chuyển khoản
         //    Hỗ trợ cả "DH123" và "DH 123" (có khoảng trắng)
         Pattern pattern = Pattern.compile("DH\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
         Matcher matcher = pattern.matcher(content);
 
         if (!matcher.find()) {
-            log.info("Không tìm thấy mã đơn hàng trong nội dung: {}", content);
-            return ResponseEntity.ok(Map.of("success", true, "message", "No order found"));
+            log.info("Không tìm thấy mã đơn hàng/gói thành viên trong nội dung: {}", content);
+            return ResponseEntity.ok(Map.of("success", true, "message", "No payment target found"));
         }
 
         Long orderId = Long.parseLong(matcher.group(1));
 
-        // 4. Lấy đơn hàng và so khớp số tiền
+        // 5. Lấy đơn hàng và so khớp số tiền
         try {
             OrderResponse order = orderService.getOrderById(orderId);
             if (order == null) {
@@ -87,8 +104,8 @@ public class SePayWebhookController {
                 return ResponseEntity.ok(Map.of("success", true, "message", "Amount mismatch"));
             }
 
-            // 5. Cập nhật trạng thái PAID (chỉ khi chưa PAID)
-            if (!"PAID".equals(order.getStatus())) {
+            // 5. Cập nhật trạng thái thanh toán PAID (chỉ khi chưa PAID)
+            if (!"PAID".equalsIgnoreCase(String.valueOf(order.getPaymentStatus()))) {
                 orderService.updatePaymentStatus(orderId, "PAID");
                 log.info("✅ Đơn hàng #{} đã thanh toán: {}đ", orderId, transferAmount);
             }

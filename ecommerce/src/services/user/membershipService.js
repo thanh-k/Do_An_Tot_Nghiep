@@ -16,6 +16,12 @@ const userMembershipService = {
       headers: { "Content-Type": "application/json" },
     });
   },
+
+  async cancelPendingPayment(subscriptionId) {
+    return apiClient.request(`/memberships/purchase/${subscriptionId}/cancel`, {
+      method: "POST",
+    });
+  },
 };
 
 export default userMembershipService;

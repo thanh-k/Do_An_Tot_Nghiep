@@ -15,18 +15,18 @@ function RewardTaskCard({
       : Number(task.coinReward || 0);
 
   const getIcon = () => {
-    if (task.taskCode === "DAILY_LOGIN") return <CheckCircle2 size={18} />;
-    if (task.taskCode === "ONLINE_5M" || task.category === "ONLINE_DURATION") return <Clock3 size={18} />;
-    if (task.taskCode === "REVIEW_NO_IMAGE" || task.category === "REVIEW_NO_IMAGE") return <MessageSquareMore size={18} />;
-    if (task.taskCode === "REVIEW_WITH_IMAGE" || task.category === "REVIEW_WITH_IMAGE") return <ImageIcon size={18} />;
-    return <Coins size={18} />;
+    if (task.taskCode === "DAILY_LOGIN") return <CheckCircle2 size={16} />;
+    if (task.taskCode === "ONLINE_5M" || task.category === "ONLINE_DURATION") return <Clock3 size={16} />;
+    if (task.taskCode === "REVIEW_NO_IMAGE" || task.category === "REVIEW_NO_IMAGE") return <MessageSquareMore size={16} />;
+    if (task.taskCode === "REVIEW_WITH_IMAGE" || task.category === "REVIEW_WITH_IMAGE") return <ImageIcon size={16} />;
+    return <Coins size={16} />;
   };
 
   const getCategoryLabel = (category) => {
-    if (category === "DAILY_LOGIN") return "Đăng nhập hằng ngày";
-    if (category === "ONLINE_DURATION") return `Hoạt động ${task.requiredActiveMinutes || 5} phút`;
-    if (category === "REVIEW_NO_IMAGE") return "Đánh giá không hình";
-    if (category === "REVIEW_WITH_IMAGE") return "Đánh giá có hình";
+    if (category === "DAILY_LOGIN") return "Đăng nhập";
+    if (category === "ONLINE_DURATION") return `${task.requiredActiveMinutes || 5} phút online`;
+    if (category === "REVIEW_NO_IMAGE") return "Review thường";
+    if (category === "REVIEW_WITH_IMAGE") return "Review có ảnh";
     if (category === "DAILY") return "Hằng ngày";
     if (category === "REVIEW") return "Đánh giá";
     return category || "Nhiệm vụ";
@@ -48,67 +48,76 @@ function RewardTaskCard({
   const buttonText = (() => {
     if (actionLoading) return "Đang xử lý...";
     if (isDaily && task.claimedToday) return "Đã nhận";
-    if (isOnlineDuration && !onlineReady) return `Còn ${remainMinutesText}:${remainSecondsText}`;
-    return task.ctaLabel || "Nhận ngay";
+    if (isOnlineDuration && !onlineReady) return `${remainMinutesText}:${remainSecondsText}`;
+    return task.ctaLabel || "Nhận";
   })();
 
   return (
-    <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4 sm:p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex gap-4">
-          <div className="mt-1 flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-amber-500 shadow-sm">
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2.5 sm:rounded-[24px] sm:p-5">
+      <div className="flex items-center justify-between gap-2 sm:items-start sm:gap-4">
+        <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:items-start sm:gap-4">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-amber-500 shadow-sm sm:mt-0.5 sm:h-11 sm:w-11 sm:rounded-2xl">
             {getIcon()}
           </div>
 
-          <div>
-            <h4 className="text-base font-black text-slate-900">{task.title}</h4>
-            <p className="mt-1 text-sm leading-6 text-slate-600">{task.description}</p>
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <h4 className="truncate text-[13px] font-extrabold text-slate-900 sm:text-base">{task.title}</h4>
+              {isDaily && task.claimedToday ? (
+                <span className="shrink-0 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-black text-emerald-700 sm:hidden">
+                  Xong
+                </span>
+              ) : null}
+            </div>
 
-            <div className="mt-3 flex flex-wrap gap-2">
-              <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 border border-slate-200">
+            <p className="mt-0.5 hidden text-xs leading-5 text-slate-600 sm:line-clamp-2 sm:block sm:text-sm sm:leading-6">
+              {task.description}
+            </p>
+
+            <div className="mt-1 flex flex-wrap items-center gap-1 sm:mt-3 sm:gap-2">
+              <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600 ring-1 ring-slate-200 sm:px-3 sm:py-1 sm:text-xs">
                 {getCategoryLabel(task.category)}
               </span>
 
               {task.limitText ? (
-                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 border border-slate-200">
+                <span className="hidden rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200 sm:inline-flex">
                   {task.limitText}
                 </span>
               ) : null}
 
               {["DAILY", "DAILY_LOGIN", "ONLINE_DURATION"].includes(task.category) && task.vipMultiplierEnabled && isVip ? (
-                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-700 border border-amber-200 flex items-center gap-1">
-                  <Crown size={12} />
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-700 ring-1 ring-amber-200 sm:px-3 sm:py-1 sm:text-xs">
+                  <Crown size={11} />
                   VIP x2
                 </span>
               ) : null}
 
               {isDaily && task.claimedToday ? (
-                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700 border border-emerald-200">
+                <span className="hidden rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-200 sm:inline-flex">
                   Đã nhận hôm nay
                 </span>
               ) : null}
 
               {isOnlineDuration && !task.claimedToday && !onlineReady ? (
-                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-700 border border-amber-200">
-                  Còn {remainMinutesText}:{remainSecondsText} để nhận
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-700 ring-1 ring-amber-200 sm:px-3 sm:py-1 sm:text-xs">
+                  Còn {remainMinutesText}:{remainSecondsText}
                 </span>
               ) : null}
             </div>
           </div>
         </div>
 
-        <div className="shrink-0 text-right">
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Nhận được</p>
-          <p className="mt-1 text-lg font-black text-amber-600">
-            +{finalCoin.toLocaleString("vi-VN")} xu
+        <div className="flex shrink-0 flex-col items-end">
+          <p className="text-sm font-black text-amber-600 sm:text-lg">
+            +{finalCoin.toLocaleString("vi-VN")} <span className="text-[10px] sm:text-xs">xu</span>
           </p>
           <button
             type="button"
             onClick={() => onAction?.(task)}
             disabled={disabled}
-            className={`mt-3 rounded-xl px-4 py-2 text-sm font-bold transition ${
+            className={`mt-1 rounded-xl px-2.5 py-1.5 text-[11px] font-bold transition sm:mt-3 sm:px-4 sm:py-2 sm:text-sm ${
               disabled
-                ? "bg-slate-200 text-slate-500 cursor-not-allowed"
+                ? "cursor-not-allowed bg-slate-200 text-slate-500"
                 : "bg-slate-900 text-white hover:bg-slate-800"
             }`}
           >

@@ -80,7 +80,7 @@ public class VNPayController {
             try {
                 Long orderId = Long.parseLong(vnpTxnRef);
                 OrderResponse order = orderService.getOrderById(orderId);
-                if (order != null && !"PAID".equals(order.getStatus())) {
+                if (order != null && !"PAID".equalsIgnoreCase(String.valueOf(order.getPaymentStatus()))) {
                     orderService.updatePaymentStatus(orderId, "PAID");
                     log.info("✅ VNPay: Đơn #{} thanh toán thành công", orderId);
                 }
@@ -136,7 +136,7 @@ public class VNPayController {
                     return ResponseEntity.ok(Map.of("RspCode", "01", "Message", "Order not found"));
                 }
 
-                if ("PAID".equals(order.getStatus())) {
+                if ("PAID".equalsIgnoreCase(String.valueOf(order.getPaymentStatus()))) {
                     // Đã xử lý rồi (có thể return URL đã xử lý trước)
                     return ResponseEntity.ok(Map.of("RspCode", "02", "Message", "Already confirmed"));
                 }

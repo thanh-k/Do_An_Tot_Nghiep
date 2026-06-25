@@ -43,7 +43,6 @@ function Header() {
         { label: "Đơn hàng", to: "/orders" },
         { label: "Kho Vouchers", to: "/vouchers" },
         { label: "Xu thưởng", to: "/coins" },
-        { label: "Hỗ trợ", to: "/faq" },
       ]
     : [
         { label: "Đăng nhập", to: "/login" },

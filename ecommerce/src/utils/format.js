@@ -25,37 +25,52 @@ export const calculateDiscountPercent = (price, compareAtPrice) => {
 };
 
 export const formatOrderStatus = (status) => {
+  const normalized = String(status || "").trim().toUpperCase();
   const map = {
-    pending: "Chờ xác nhận",
-    processing: "Đang xử lý",
-    shipping: "Đang giao",
-    completed: "Hoàn tất",
-    cancelled: "Đã huỷ",
+    PENDING: "Chờ xác nhận",
+    CONFIRMED: "Đã xác nhận",
+    PROCESSING: "Đang xử lý",
+    SHIPPING: "Đang giao",
+    SHIPPED: "Đang giao",
+    DELIVERED: "Đã giao",
+    COMPLETED: "Hoàn tất",
+    COMPLETE: "Hoàn tất",
+    PAID: "Đã thanh toán",
+    CANCELLED: "Đã huỷ",
   };
 
-  return map[status] || status;
+  return map[normalized] || status;
 };
 
+export const normalizePaymentStatus = (status) =>
+  String(status || "UNPAID").trim().toUpperCase();
+
 export const formatPaymentStatus = (status) => {
+  const normalized = normalizePaymentStatus(status);
   const map = {
-    paid: "Đã thanh toán",
-    pending: "Chưa thanh toán",
-    refunded: "Đã hoàn tiền",
+    PAID: "Đã thanh toán",
+    UNPAID: "Chưa thanh toán",
+    PENDING: "Chưa thanh toán",
+    REFUNDED: "Đã hoàn tiền",
   };
 
-  return map[status] || status;
+  return map[normalized] || status;
 };
 
 export const getPaymentStatusColor = (status) => {
+  const normalized = normalizePaymentStatus(status);
   const map = {
-    paid: "#22c55e",      // Màu xanh lá
-    pending: "#ef4444",   // Màu đỏ
-    refunded: "#eab308",  // Màu vàng
+    PAID: "#16a34a",
+    UNPAID: "#d97706",
+    PENDING: "#d97706",
+    REFUNDED: "#eab308",
   };
 
-  // Trả về màu mặc định (xám) nếu không khớp trạng thái nào
-  return map[status] || "#6b7280"; 
+  return map[normalized] || "#6b7280"; 
 };
+
+export const isOrderPaid = (order = {}) =>
+  normalizePaymentStatus(order.paymentStatus || (order.status === "PAID" ? "PAID" : "UNPAID")) === "PAID";
 
 export const formatOrderCode = (order) => {
   if (!order) return "";

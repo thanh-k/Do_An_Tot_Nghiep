@@ -12,7 +12,7 @@ import toast from "react-hot-toast";
 import Modal from "@/components/common/Modal";
 import { useCart } from "@/hooks/useCart";
 import Button from "@/components/common/Button";
-import { formatCurrency } from "@/utils/format";
+import { formatCurrency, isOrderPaid } from "@/utils/format";
 import { orderService } from "@/services/user/orderService";
 
 const QR_LIFETIME_MS = 15 * 60 * 1000;
@@ -89,8 +89,8 @@ function VnpayQrModal({
     const interval = setInterval(async () => {
       try {
         const res = await orderService.getOrderById(paymentSession.orderId);
-        const status = res?.result?.status || res?.status;
-        if (status === "PAID") {
+        const order = res?.result || res;
+        if (isOrderPaid(order)) {
           clearInterval(interval);
           setIsPaid(true);
           toast.success("Thanh toán thành công! Đơn hàng đang được xử lý.");

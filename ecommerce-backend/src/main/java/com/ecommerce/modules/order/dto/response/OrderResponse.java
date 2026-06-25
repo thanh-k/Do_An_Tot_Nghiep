@@ -17,6 +17,8 @@ public class OrderResponse {
     private Double discountAmount;
     private String voucherCode;
     private String status;
+    private String paymentStatus;
+    private String paymentMethod;
     private LocalDateTime createdAt;
     private List<OrderDetailResponse> details;
 }

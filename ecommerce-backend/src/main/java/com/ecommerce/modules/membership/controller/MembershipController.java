@@ -45,6 +45,16 @@ public class MembershipController {
                 .build();
     }
 
+
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/purchase/{subscriptionId}/cancel")
+    public ApiResponse<Void> cancelPendingPayment(@PathVariable Long subscriptionId) {
+        membershipService.cancelPendingPayment(subscriptionId);
+        return ApiResponse.<Void>builder()
+                .message("Đã hủy thanh toán gói thành viên")
+                .build();
+    }
+
     @PreAuthorize("hasAuthority('MEMBERSHIP_MANAGE') or hasAuthority('MEMBERSHIP_VIEW')")
     @GetMapping("/admin/plans")
     public ApiResponse<List<MembershipPlanResponse>> getAdminPlans() {

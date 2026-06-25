@@ -17,4 +17,6 @@ public class OrderDetailResponse {
     private String name;
     private String image;
     private String attributes;
+    private Boolean reviewed;
+    private Boolean reviewable;
 }

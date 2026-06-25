@@ -121,8 +121,7 @@ function MembershipPage() {
       .then((data) => {
         if (!mounted) return;
         setPlans(data || []);
-        const highlighted = (data || []).find((plan) => plan.highlight) || data?.[0] || null;
-        setSelectedPlanId(highlighted?.id || null);
+        setSelectedPlanId(null);
       })
       .catch((error) => toast.error(error.message || "Không tải được gói thành viên"))
       .finally(() => mounted && setLoadingPlans(false));
@@ -153,7 +152,7 @@ function MembershipPage() {
   }, [currentUser]);
 
   const selectedPlan = useMemo(
-    () => plans.find((plan) => Number(plan.id) === Number(selectedPlanId)) || plans[0] || null,
+    () => plans.find((plan) => Number(plan.id) === Number(selectedPlanId)) || null,
     [plans, selectedPlanId],
   );
 
@@ -163,65 +162,65 @@ function MembershipPage() {
     setSelectedPlanId(planId);
   };
 
-  const handleRegisterMembership = () => {
-    if (!selectedPlan) return;
+  const handleRegisterMembership = (plan = selectedPlan) => {
+    if (!plan) return;
     if (!currentUser) {
       toast.error("Vui lòng đăng nhập để đăng ký thành viên VIP");
       navigate("/login", { state: { from: { pathname: "/membership" } } });
       return;
     }
-    navigate(`/membership/checkout?planId=${selectedPlan.id}`);
+    navigate(`/membership/checkout?planId=${plan.id}`);
   };
 
   return (
     <div className="min-h-screen bg-[#f6f7fb]">
-      <section className="container-padded py-8">
+      <section className="container-padded py-4 sm:py-8">
         <motion.div
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="overflow-hidden rounded-[32px] bg-gradient-to-r from-slate-950 via-slate-900 to-rose-700 shadow-[0_20px_60px_rgba(15,23,42,0.25)]"
+          className="overflow-hidden rounded-[22px] sm:rounded-[32px] bg-gradient-to-r from-slate-950 via-slate-900 to-rose-700 shadow-[0_16px_45px_rgba(15,23,42,0.22)]"
         >
-          <div className="grid gap-8 px-6 py-10 md:px-10 lg:grid-cols-[1.2fr_0.8fr] lg:px-14 lg:py-14">
+          <div className="grid gap-4 px-4 py-5 sm:px-6 sm:py-8 md:px-10 lg:grid-cols-[1.2fr_0.8fr] lg:px-14 lg:py-14">
             <div className="text-white">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-rose-200">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-rose-200 sm:px-4 sm:py-2 sm:text-xs">
                 <Sparkles size={14} />
                 Chương trình hội viên NovaShop
               </div>
 
-              <h1 className="mt-5 text-4xl font-black uppercase leading-tight md:text-5xl">
+              <h1 className="mt-3 text-xl font-black uppercase leading-tight sm:mt-4 sm:text-4xl md:text-5xl">
                 Chọn gói VIP phù hợp với bạn
               </h1>
 
-              <p className="mt-5 max-w-2xl text-base leading-7 text-slate-200 md:text-lg">
+              <p className="mt-2 line-clamp-3 max-w-2xl text-xs leading-5 text-slate-200 sm:mt-3 sm:text-sm sm:leading-6 md:text-lg md:leading-7">
                 Sau khi đăng ký tài khoản, người dùng mặc định là <b>thành viên thường</b>. Bạn có thể nâng cấp lên <b>VIP</b> theo từng gói thời gian để nhận thêm voucher độc quyền, freeship ưu tiên, giảm giá riêng và nhiều đặc quyền khác.
               </p>
 
-              <div className="mt-8 flex flex-wrap gap-3">
-                <div className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 font-black text-slate-900">
+              <div className="mt-4 flex flex-wrap gap-2 sm:mt-8 sm:gap-3">
+                <div className="inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-black text-slate-900 sm:px-5 sm:py-3 sm:text-base">
                   <Crown size={18} className="text-amber-500" />
                   {loadingPlans || !selectedPlan
                     ? "Đang tải gói thành viên"
                     : `${selectedPlan.name} - ${formatCurrency(selectedPlan.price)}`}
                 </div>
 
-                <div className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-5 py-3 font-semibold text-white">
+                <div className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white sm:px-5 sm:py-3 sm:text-base">
                   <ShieldCheck size={18} />
                   Tài khoản mới = Thành viên thường
                 </div>
               </div>
             </div>
 
-            <div className="rounded-[28px] border border-white/10 bg-white/10 p-5 text-white backdrop-blur">
-              <p className="text-sm font-bold uppercase tracking-[0.18em] text-rose-200">
+            <div className="rounded-[20px] border border-white/10 bg-white/10 p-3 text-white backdrop-blur sm:rounded-[28px] sm:p-5">
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-rose-200 sm:text-sm sm:tracking-[0.18em]">
                 Trạng thái hiện tại
               </p>
 
-              <div className="mt-4 rounded-[24px] bg-white/10 p-5">
+              <div className="mt-2 rounded-[18px] bg-white/10 p-3 sm:mt-4 sm:rounded-[24px] sm:p-5">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-sm text-slate-200">Gói hiện tại</p>
-                    <h2 className="mt-1 text-2xl font-black uppercase">
+                    <p className="text-xs text-slate-200 sm:text-sm">Gói hiện tại</p>
+                    <h2 className="mt-1 text-lg font-black uppercase sm:text-2xl">
                       {loadingMembership
                         ? "Đang tải..."
                         : currentMembership?.vip
@@ -241,7 +240,7 @@ function MembershipPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 space-y-2 text-sm text-slate-200">
+                <div className="mt-3 space-y-1.5 text-xs text-slate-200 sm:mt-4 sm:space-y-2 sm:text-sm">
                   <div className="flex items-center gap-2">
                     <CalendarClock size={16} />
                     <span>Bắt đầu: {formatDateTime(currentMembership?.startedAt)}</span>
@@ -252,13 +251,13 @@ function MembershipPage() {
                   </div>
                 </div>
 
-                <p className="mt-4 text-sm leading-6 text-slate-200">
+                <p className="mt-3 hidden text-sm leading-6 text-slate-200 sm:block">
                   Khi bấm đăng ký, hệ thống sẽ chuyển sang <b>trang thanh toán riêng cho hội viên</b>. Luồng này chỉ áp dụng cho membership, không dùng chung với checkout sản phẩm.
                 </p>
 
                 <Link
                   to="/profile"
-                  className="mt-5 inline-flex items-center rounded-xl border border-white/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+                  className="mt-3 inline-flex items-center rounded-xl border border-white/15 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/10 sm:mt-5 sm:px-4 sm:text-sm"
                 >
                   Xem hồ sơ tài khoản
                 </Link>
@@ -269,87 +268,113 @@ function MembershipPage() {
       </section>
 
       <section className="container-padded py-4">
-        <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-4">
-          {plans.map((plan, index) => (
-            <motion.button
-              key={plan.id}
-              type="button"
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, delay: index * 0.08 }}
-              onClick={() => handleSelectPlan(plan.id)}
-              className={`text-left rounded-[28px] border bg-white p-6 shadow-sm transition-all ${
-                Number(selectedPlanId) === Number(plan.id)
-                  ? "border-rose-500 ring-2 ring-rose-200"
-                  : "border-slate-200 hover:-translate-y-1 hover:shadow-md"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
+        <div className="grid grid-cols-2 items-stretch gap-3 sm:gap-4 lg:grid-cols-2 xl:grid-cols-4">
+          {plans.map((plan, index) => {
+            const selected = Number(selectedPlanId) === Number(plan.id);
+            return (
+              <motion.div
+                key={plan.id}
+                role="button"
+                tabIndex={0}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.45, delay: index * 0.08 }}
+                onClick={() => handleSelectPlan(plan.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    handleSelectPlan(plan.id);
+                  }
+                }}
+                className={`group flex h-full flex-col text-left rounded-[20px] border bg-white p-3 shadow-sm transition-all sm:rounded-[28px] sm:p-6 ${
+                  selected
+                    ? "border-slate-200 sm:border-rose-500 sm:ring-2 sm:ring-rose-200"
+                    : "border-slate-200 sm:hover:-translate-y-1 sm:hover:border-rose-400 sm:hover:shadow-md"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2 sm:gap-4">
+                  <div className="min-w-0">
+                    <div
+                      className={`inline-flex rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-wider sm:px-3 sm:text-xs ${
+                        plan.highlight
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-slate-100 text-slate-700"
+                      }`}
+                    >
+                      {plan.badge}
+                    </div>
+
+                    <h3 className="mt-3 text-sm font-black uppercase leading-tight text-slate-900 sm:mt-4 sm:text-2xl">
+                      {plan.name}
+                    </h3>
+
+                    <p className="mt-2 hidden text-xs leading-5 text-slate-500 sm:block sm:text-sm sm:leading-6">
+                      {plan.description}
+                    </p>
+                  </div>
+
                   <div
-                    className={`inline-flex rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider ${
-                      plan.highlight
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-slate-100 text-slate-700"
+                    className={`hidden rounded-2xl p-3 sm:block ${
+                      plan.highlight ? "bg-amber-100 text-amber-600" : "bg-slate-100 text-slate-600"
                     }`}
                   >
-                    {plan.badge}
+                    {plan.highlight ? <Crown size={24} /> : <Star size={24} />}
                   </div>
-
-                  <h3 className="mt-4 text-2xl font-black uppercase text-slate-900">
-                    {plan.name}
-                  </h3>
-
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
-                    {plan.description}
-                  </p>
                 </div>
 
-                <div
-                  className={`rounded-2xl p-3 ${
-                    plan.highlight ? "bg-amber-100 text-amber-600" : "bg-slate-100 text-slate-600"
+                <div className="mt-3 sm:mt-6">
+                  {plan.originalPrice > plan.price && plan.price > 0 && (
+                    <p className="text-[11px] font-semibold text-slate-400 line-through sm:text-sm">
+                      {formatCurrency(plan.originalPrice)}
+                    </p>
+                  )}
+
+                  <div className="mt-1 flex flex-col gap-0.5 sm:flex-row sm:items-end sm:gap-2">
+                    <span className="text-lg font-black leading-none text-slate-900 sm:text-4xl sm:leading-normal">
+                      {plan.price === 0 ? "Miễn phí" : formatCurrency(plan.price)}
+                    </span>
+                    <span className="text-[11px] font-semibold text-slate-500 sm:pb-1 sm:text-sm">
+                      {plan.price === 0 ? "" : `${plan.durationMonths} tháng`}
+                    </span>
+                  </div>
+
+                  {String(plan.code).toUpperCase().includes("6M") && (
+                    <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-rose-600 sm:mt-3 sm:gap-2 sm:px-3 sm:text-xs">
+                      <Flame size={12} className="sm:h-3.5 sm:w-3.5" />
+                      Ưu đãi
+                    </div>
+                  )}
+
+                  {String(plan.code).toUpperCase().includes("1Y") && (
+                    <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-emerald-600 sm:mt-3 sm:gap-2 sm:px-3 sm:text-xs">
+                      <BadgePercent size={12} className="sm:h-3.5 sm:w-3.5" />
+                      Tốt nhất
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleSelectPlan(plan.id);
+                    handleRegisterMembership(plan);
+                  }}
+                  className={`mt-auto w-full rounded-2xl px-3 py-2 text-[11px] font-black uppercase tracking-wide transition sm:mt-auto sm:px-4 sm:py-3 sm:text-sm ${
+                    selected
+                      ? "bg-rose-600 text-white shadow-lg shadow-rose-200 hover:bg-rose-700"
+                      : "bg-rose-600 text-white hover:bg-rose-700 sm:bg-slate-950 sm:hover:bg-rose-600"
                   }`}
                 >
-                  {plan.highlight ? <Crown size={24} /> : <Star size={24} />}
-                </div>
-              </div>
-
-              <div className="mt-6">
-                {plan.originalPrice > plan.price && plan.price > 0 && (
-                  <p className="text-sm font-semibold text-slate-400 line-through">
-                    {formatCurrency(plan.originalPrice)}
-                  </p>
-                )}
-
-                <div className="mt-1 flex items-end gap-2">
-                  <span className="text-4xl font-black text-slate-900">
-                    {plan.price === 0 ? "Miễn phí" : formatCurrency(plan.price)}
-                  </span>
-                  <span className="pb-1 text-sm font-semibold text-slate-500">
-                    {plan.price === 0 ? "" : ` / ${plan.durationMonths} tháng`}
-                  </span>
-                </div>
-
-                {String(plan.code).toUpperCase().includes("6M") && (
-                  <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-rose-100 px-3 py-1 text-xs font-black uppercase tracking-wider text-rose-600">
-                    <Flame size={14} />
-                    Giảm giá lần đầu
-                  </div>
-                )}
-
-                {String(plan.code).toUpperCase().includes("1Y") && (
-                  <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-black uppercase tracking-wider text-emerald-600">
-                    <BadgePercent size={14} />
-                    Giá ưu đãi năm đầu
-                  </div>
-                )}
-              </div>
-            </motion.button>
-          ))}
+                  {plan.price > 0 ? "Đăng ký ngay" : "Chọn gói"}
+                </button>
+              </motion.div>
+            );
+          })}
         </div>
       </section>
 
-      <section className="container-padded py-8">
+      <section className="container-padded py-4 sm:py-8">
         <div className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -395,117 +420,38 @@ function MembershipPage() {
       </section>
 
       <section className="container-padded pb-12 pt-2">
-        <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-          <div className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-2xl font-black uppercase text-slate-900">
-              Quy trình nâng cấp thành viên VIP
-            </h2>
+        <div className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-[30px] sm:p-6">
+          <h2 className="text-xl font-black uppercase text-slate-900 sm:text-2xl">
+            Quy trình nâng cấp thành viên VIP
+          </h2>
 
-            <div className="mt-6 grid gap-4 md:grid-cols-3">
-              {[
-                {
-                  step: "Bước 1",
-                  title: "Đăng nhập tài khoản",
-                  desc: "Người dùng đăng ký thành công sẽ mặc định là thành viên thường.",
-                },
-                {
-                  step: "Bước 2",
-                  title: "Chọn gói phù hợp",
-                  desc: "Khách hàng chọn gói 1 tháng, 6 tháng hoặc 1 năm tùy nhu cầu sử dụng.",
-                },
-                {
-                  step: "Bước 3",
-                  title: "Thanh toán offline",
-                  desc: "Hệ thống chuyển sang trang thanh toán riêng cho membership và ghi nhận đăng ký hội viên.",
-                },
-              ].map((item) => (
-                <div
-                  key={item.step}
-                  className="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
-                >
-                  <p className="text-xs font-black uppercase tracking-widest text-rose-500">{item.step}</p>
-                  <h3 className="mt-3 text-lg font-black text-slate-900">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">{item.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-[30px] border border-rose-200 bg-gradient-to-b from-rose-50 to-white p-6 shadow-sm">
-            <div className="inline-flex rounded-full bg-rose-600 px-3 py-1 text-xs font-black uppercase tracking-wider text-white">
-              Gói đang chọn
-            </div>
-
-            <h2 className="mt-4 text-3xl font-black uppercase text-slate-900">
-              {selectedPlan?.name || "Chưa chọn gói"}
-            </h2>
-
-            <p className="mt-3 text-sm leading-6 text-slate-500">
-              {selectedPlan?.description || "Vui lòng chọn một gói thành viên để tiếp tục."}
-            </p>
-
-            <div className="mt-6 rounded-[24px] bg-white p-5 shadow-sm">
-              <p className="text-sm font-semibold text-slate-500">Thanh toán dự kiến</p>
-
-              {selectedPlan?.originalPrice > selectedPlan?.price && selectedPlan?.price > 0 && (
-                <p className="mt-2 text-lg font-bold text-slate-400 line-through">
-                  {formatCurrency(selectedPlan.originalPrice)}
-                </p>
-              )}
-
-              <p className="mt-1 text-4xl font-black text-slate-900">
-                {!selectedPlan
-                  ? "--"
-                  : selectedPlan.price === 0
-                    ? "Miễn phí"
-                    : formatCurrency(selectedPlan.price)}
-              </p>
-
-              <p className="mt-1 text-sm text-slate-500">
-                {!selectedPlan
-                  ? ""
-                  : selectedPlan.price === 0
-                    ? "Áp dụng mặc định sau khi đăng ký"
-                    : `${selectedPlan.durationMonths} tháng`}
-              </p>
-            </div>
-
-            <div className="mt-6 space-y-3">
-              <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm">
-                <Truck size={18} className="text-rose-500" />
-                <span className="text-sm font-semibold text-slate-700">Freeship và voucher ưu tiên</span>
-              </div>
-
-              <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm">
-                <BadgePercent size={18} className="text-rose-500" />
-                <span className="text-sm font-semibold text-slate-700">Giá tốt hơn cho chương trình hội viên</span>
-              </div>
-
-              <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm">
-                <Gift size={18} className="text-rose-500" />
-                <span className="text-sm font-semibold text-slate-700">Quyền lợi riêng cho thành viên VIP</span>
-              </div>
-            </div>
-
-            <div className="mt-6 space-y-3">
-              <Button
-                fullWidth
-                size="lg"
-                onClick={handleRegisterMembership}
-                disabled={!selectedPlan || loadingPlans}
+          <div className="mt-4 grid gap-3 md:grid-cols-3 sm:mt-6 sm:gap-4">
+            {[
+              {
+                step: "Bước 1",
+                title: "Đăng nhập",
+                desc: "Người dùng cần đăng nhập trước khi đăng ký VIP.",
+              },
+              {
+                step: "Bước 2",
+                title: "Chọn gói",
+                desc: "Chọn gói phù hợp, sau đó bấm thanh toán ngay phía trên.",
+              },
+              {
+                step: "Bước 3",
+                title: "Thanh toán SePay",
+                desc: "VIP chỉ được kích hoạt khi hệ thống nhận xác nhận thanh toán thành công.",
+              },
+            ].map((item) => (
+              <div
+                key={item.step}
+                className="rounded-[20px] border border-slate-200 bg-slate-50 p-4 sm:rounded-[24px] sm:p-5"
               >
-                Đăng ký gói thành viên
-              </Button>
-              {!currentUser ? (
-                <p className="text-center text-xs text-slate-500">
-                  Bạn cần đăng nhập trước khi đăng ký hội viên VIP.
-                </p>
-              ) : (
-                <p className="text-center text-xs text-slate-500">
-                  Hệ thống sẽ chuyển sang trang thanh toán riêng cho membership.
-                </p>
-              )}
-            </div>
+                <p className="text-[11px] font-black uppercase tracking-widest text-rose-500 sm:text-xs">{item.step}</p>
+                <h3 className="mt-2 text-base font-black text-slate-900 sm:mt-3 sm:text-lg">{item.title}</h3>
+                <p className="mt-1 text-xs leading-5 text-slate-500 sm:mt-2 sm:text-sm sm:leading-6">{item.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { CheckCircle2, XCircle, Loader2, ArrowLeft, ShoppingBag } from "lucide-react";
 import { orderService } from "@/services/user/orderService";
-import { formatCurrency } from "@/utils/format";
+import { formatCurrency, formatPaymentStatus, isOrderPaid } from "@/utils/format";
 import { useCart } from "@/hooks/useCart";
 
 /**
@@ -125,12 +125,12 @@ function VnpayReturnPage() {
                   <span className="text-slate-500">Trạng thái</span>
                   <span
                     className={`rounded-full px-3 py-1 text-xs font-black ${
-                      order.status === "PAID"
+                      isOrderPaid(order)
                         ? "bg-emerald-100 text-emerald-700"
                         : "bg-amber-100 text-amber-700"
                     }`}
                   >
-                    {order.status === "PAID" ? "Đã thanh toán" : order.status}
+                    {formatPaymentStatus(order.paymentStatus || (order.status === "PAID" ? "PAID" : "UNPAID"))}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">

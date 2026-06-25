@@ -13,7 +13,7 @@ import {
   Filter,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import useAuth from "@/hooks/useAuth";
 import reviewService from "@/services/user/reviewService";
 
@@ -30,7 +30,9 @@ function formatDisplayDate(rawDate, fallbackDate) {
 
 export default function ProductReviews({ productId }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const fileInputRef = useRef(null);
+  const autoOpenedRef = useRef(false);
   const { isAuthenticated } = useAuth();
   const [reviewData, setReviewData] = useState(null);
   const [activeFilter, setActiveFilter] = useState("Tất cả");
@@ -59,6 +61,46 @@ export default function ProductReviews({ productId }) {
   }, [productId]);
 
   const reviews = reviewData?.reviews || [];
+
+
+  useEffect(() => {
+    if (loading || !reviewData || autoOpenedRef.current) return;
+
+    const params = new URLSearchParams(location.search || "");
+    const shouldOpenReviewForm =
+      params.get("writeReview") === "1" ||
+      params.get("review") === "1" ||
+      location.hash === "#review-section";
+
+    if (!shouldOpenReviewForm) return;
+
+    autoOpenedRef.current = true;
+
+    requestAnimationFrame(() => {
+      document.getElementById("review-section")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+
+    if (!isAuthenticated) {
+      toast("Vui lòng đăng nhập để đánh giá sản phẩm");
+      navigate("/login", { state: { from: `${location.pathname}${location.search}${location.hash}` } });
+      return;
+    }
+
+    if (!reviewData?.hasPurchased) {
+      toast.error("Bạn chỉ có thể đánh giá sau khi đã mua và nhận sản phẩm");
+      return;
+    }
+
+    if (reviewData?.hasReviewed) {
+      toast("Bạn đã đánh giá sản phẩm này rồi");
+      return;
+    }
+
+    setIsWriteModalOpen(true);
+  }, [loading, reviewData, isAuthenticated, location.pathname, location.search, location.hash, navigate]);
 
   const filteredReviews = useMemo(() => {
     switch (activeFilter) {

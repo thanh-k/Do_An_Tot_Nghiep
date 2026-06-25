@@ -23,6 +23,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     long countUnfinishedOrdersByUserId(@Param("userId") String userId,
                                         @Param("finishedStatuses") Collection<String> finishedStatuses);
 
-    @Query("SELECT o FROM Order o WHERE o.status = 'PENDING' AND o.paymentMethod != 'COD' AND o.createdAt < :cutoff")
+    @Query("SELECT o FROM Order o WHERE UPPER(o.status) = 'PENDING' AND UPPER(o.paymentMethod) <> 'COD' AND (o.paymentStatus IS NULL OR UPPER(o.paymentStatus) <> 'PAID') AND o.createdAt < :cutoff")
     List<Order> findExpiredPendingOrders(@Param("cutoff") java.time.LocalDateTime cutoff);
 }

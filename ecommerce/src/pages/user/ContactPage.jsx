@@ -111,8 +111,8 @@ function ContactPage() {
   };
 
   return (
-    <div className="bg-[#fcfcfc] min-h-screen pb-20">
-      <section className="relative py-24 bg-slate-950 text-white overflow-hidden">
+    <div className="bg-[#fcfcfc] min-h-screen pb-12 md:pb-20">
+      <section className="relative py-14 sm:py-20 md:py-24 bg-slate-950 text-white overflow-hidden">
         <div className="absolute inset-0 z-0">
           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-rose-600/20 rounded-full blur-[120px] animate-pulse" />
           <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px]" />
@@ -122,7 +122,7 @@ function ContactPage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="mb-6 inline-flex items-center gap-2 rounded-full bg-rose-600/20 px-4 py-1.5 text-xs font-black uppercase tracking-[0.2em] text-rose-400 ring-1 ring-rose-500/30"
+            className="mb-4 md:mb-6 inline-flex items-center gap-2 rounded-full bg-rose-600/20 px-3 py-1.5 text-[10px] md:text-xs font-black uppercase tracking-[0.16em] md:tracking-[0.2em] text-rose-400 ring-1 ring-rose-500/30"
           >
             <MessageSquare size={14} />
             Kết nối với chúng tôi
@@ -131,7 +131,7 @@ function ContactPage() {
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-5xl md:text-7xl font-black italic tracking-tighter mb-6"
+            className="text-3xl sm:text-4xl md:text-7xl font-black italic tracking-tighter mb-4 md:mb-6"
           >
             CHÚNG TÔI LUÔN <br />
             <span className="text-rose-600 text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-orange-400">
@@ -139,16 +139,16 @@ function ContactPage() {
             </span>
           </motion.h1>
 
-          <p className="max-w-2xl mx-auto text-slate-400 text-lg">
+          <p className="max-w-2xl mx-auto text-slate-400 text-sm sm:text-base md:text-lg px-2">
             Mọi thắc mắc, góp ý của bạn là động lực để ND MALL hoàn thiện hơn mỗi ngày.
             Hãy để lại lời nhắn, chúng tôi sẽ phản hồi trong vòng 24h.
           </p>
         </div>
       </section>
 
-      <div className="container-padded -mt-20 relative z-20">
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-1 space-y-6">
+      <div className="container-padded -mt-10 md:-mt-20 relative z-20">
+        <div className="grid lg:grid-cols-3 gap-4 md:gap-8">
+          <div className="lg:col-span-1 grid grid-cols-3 lg:grid-cols-1 gap-2 md:gap-6">
             {[
               {
                 icon: Phone,
@@ -176,61 +176,61 @@ function ContactPage() {
                 key={i}
                 {...fadeInUp}
                 transition={{ delay: i * 0.1 }}
-                className="bg-white p-8 rounded-[2rem] shadow-xl border border-slate-100 group hover:border-rose-200 transition-all"
+                className="bg-white p-2.5 md:p-8 rounded-xl md:rounded-[2rem] shadow-md md:shadow-xl border border-slate-100 group hover:border-rose-200 transition-all text-center lg:text-left"
               >
                 <div
-                  className={`w-12 h-12 ${item.color} rounded-2xl flex items-center justify-center text-white mb-6 group-hover:scale-110 transition-transform shadow-lg`}
+                  className={`w-8 h-8 md:w-12 md:h-12 ${item.color} rounded-xl md:rounded-2xl flex items-center justify-center text-white mb-2 md:mb-6 mx-auto lg:mx-0 group-hover:scale-110 transition-transform shadow-lg`}
                 >
-                  <item.icon size={24} />
+                  <item.icon className="h-4 w-4 md:h-6 md:w-6" />
                 </div>
-                <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-2">
+                <h4 className="hidden lg:block text-sm font-black text-slate-400 uppercase tracking-wider md:tracking-widest mb-1 md:mb-2">
                   {item.title}
                 </h4>
-                <p className="text-xl font-black text-slate-900 mb-1">{item.content}</p>
-                <p className="text-sm text-slate-500 font-medium">{item.sub}</p>
+                <p className="text-[9.5px] sm:text-[10.5px] lg:text-xl font-semibold lg:font-black leading-tight text-slate-700 lg:text-slate-900 mb-0.5 md:mb-1 break-words">{item.content}</p>
+                <p className="hidden lg:block text-sm text-slate-500 font-medium">{item.sub}</p>
               </motion.div>
             ))}
 
             <motion.div
               {...fadeInUp}
-              className="bg-slate-900 p-8 rounded-[2rem] text-white overflow-hidden relative"
+              className="col-span-3 lg:col-span-1 bg-slate-900 px-4 py-3 md:p-8 rounded-2xl md:rounded-[2rem] text-white overflow-hidden relative"
             >
-              <div className="relative z-10">
-                <h4 className="text-lg font-black mb-6 italic uppercase">Theo dõi ND MALL</h4>
-                <div className="flex gap-4">
+              <div className="relative z-10 flex items-center justify-between gap-3 lg:block">
+                <h4 className="text-sm md:text-lg font-black mb-0 lg:mb-6 italic uppercase leading-tight">Theo dõi ND MALL</h4>
+                <div className="flex shrink-0 gap-2 md:gap-4">
                   <a
                     href="#"
-                    className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center hover:bg-rose-600 transition-all"
+                    className="w-8 h-8 md:w-12 md:h-12 bg-white/10 rounded-xl md:rounded-2xl flex items-center justify-center hover:bg-rose-600 transition-all"
                   >
                     <Facebook size={20} />
                   </a>
                   <a
                     href="#"
-                    className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center hover:bg-rose-600 transition-all"
+                    className="w-8 h-8 md:w-12 md:h-12 bg-white/10 rounded-xl md:rounded-2xl flex items-center justify-center hover:bg-rose-600 transition-all"
                   >
                     <Instagram size={20} />
                   </a>
                   <a
                     href="#"
-                    className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center hover:bg-rose-600 transition-all"
+                    className="w-8 h-8 md:w-12 md:h-12 bg-white/10 rounded-xl md:rounded-2xl flex items-center justify-center hover:bg-rose-600 transition-all"
                   >
                     <Youtube size={20} />
                   </a>
                 </div>
               </div>
-              <Globe size={150} className="absolute -right-10 -bottom-10 opacity-10 rotate-12" />
+              <Globe size={150} className="absolute -right-10 -bottom-10 opacity-10 rotate-12 w-28 h-28 md:w-[150px] md:h-[150px]" />
             </motion.div>
           </div>
 
           <motion.div
             {...fadeInUp}
-            className="lg:col-span-2 bg-white p-10 md:p-16 rounded-[3rem] shadow-2xl border border-slate-100"
+            className="lg:col-span-2 bg-white p-5 sm:p-7 md:p-16 rounded-3xl md:rounded-[3rem] shadow-xl md:shadow-2xl border border-slate-100"
           >
-            <h2 className="text-3xl font-black text-slate-900 mb-8 uppercase italic">
+            <h2 className="text-center text-2xl md:text-3xl font-black text-slate-900 mb-5 md:mb-8 uppercase italic">
               Gửi tin nhắn <span className="text-rose-600">cho chúng tôi</span>
             </h2>
 
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               <div className="space-y-2">
                 <label className="text-xs font-black uppercase text-slate-500 ml-1">
                   Họ và tên
@@ -241,7 +241,7 @@ function ContactPage() {
                   value={form.fullName}
                   onChange={(e) => updateField("fullName", e.target.value)}
                   placeholder="Nguyễn Văn A"
-                  className={`w-full bg-slate-50 border rounded-2xl px-6 py-4 outline-none transition-all font-medium ${
+                  className={`w-full bg-slate-50 border rounded-2xl px-4 md:px-6 py-3 md:py-4 outline-none transition-all font-medium ${
                     errors.fullName
                       ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/10"
                       : "border-slate-200 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10"
@@ -262,7 +262,7 @@ function ContactPage() {
                   value={form.phone}
                   onChange={(e) => updateField("phone", e.target.value)}
                   placeholder="09xx xxx xxx"
-                  className={`w-full bg-slate-50 border rounded-2xl px-6 py-4 outline-none transition-all font-medium ${
+                  className={`w-full bg-slate-50 border rounded-2xl px-4 md:px-6 py-3 md:py-4 outline-none transition-all font-medium ${
                     errors.phone
                       ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/10"
                       : "border-slate-200 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10"
@@ -283,7 +283,7 @@ function ContactPage() {
                   value={form.email}
                   onChange={(e) => updateField("email", e.target.value)}
                   placeholder="name@example.com"
-                  className={`w-full bg-slate-50 border rounded-2xl px-6 py-4 outline-none transition-all font-medium ${
+                  className={`w-full bg-slate-50 border rounded-2xl px-4 md:px-6 py-3 md:py-4 outline-none transition-all font-medium ${
                     errors.email
                       ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/10"
                       : "border-slate-200 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10"
@@ -304,7 +304,7 @@ function ContactPage() {
                   value={form.message}
                   onChange={(e) => updateField("message", e.target.value)}
                   placeholder="Bạn muốn chia sẻ điều gì với ND MALL?"
-                  className={`w-full bg-slate-50 border rounded-2xl px-6 py-4 outline-none transition-all font-medium resize-none ${
+                  className={`w-full bg-slate-50 border rounded-2xl px-4 md:px-6 py-3 md:py-4 outline-none transition-all font-medium resize-none ${
                     errors.message
                       ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/10"
                       : "border-slate-200 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10"
@@ -315,11 +315,11 @@ function ContactPage() {
                 )}
               </div>
 
-              <div className="md:col-span-2 pt-4">
+              <div className="md:col-span-2 pt-2 md:pt-4">
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full md:w-fit bg-rose-600 text-white px-12 py-5 rounded-full font-black uppercase tracking-widest hover:bg-rose-700 transition-all shadow-[0_20px_40px_rgba(225,29,72,0.3)] flex items-center justify-center gap-3 group disabled:opacity-60"
+                  className="w-full md:w-fit bg-rose-600 text-white px-8 md:px-12 py-4 md:py-5 rounded-full font-black uppercase tracking-wider md:tracking-widest hover:bg-rose-700 transition-all shadow-[0_14px_28px_rgba(225,29,72,0.24)] md:shadow-[0_20px_40px_rgba(225,29,72,0.3)] flex items-center justify-center gap-3 group disabled:opacity-60"
                 >
                   {submitting ? "Đang gửi..." : "Gửi yêu cầu ngay"}
                   <Send
@@ -333,10 +333,10 @@ function ContactPage() {
         </div>
       </div>
 
-      <section className="container-padded py-20">
+      <section className="container-padded py-10 md:py-20">
         <motion.div
           {...fadeInUp}
-          className="relative h-[500px] rounded-[3.5rem] overflow-hidden shadow-2xl border-8 border-white"
+          className="relative h-[300px] sm:h-[380px] md:h-[500px] rounded-3xl md:rounded-[3.5rem] overflow-hidden shadow-xl md:shadow-2xl border-4 md:border-8 border-white"
         >
           <iframe
             src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3723.863981044334!2d105.810627!3d21.036128!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3135ab1946ef51ab%3A0x67c006509f6b4d37!2zMjY2IMSQ4buZaSBD4bqlbiwgTGnhu4V1IEdpYWksIEJhIMSQw6xuaCwgSMOgIE7hu5lpLCBWaeG7h3QgTmFt!5e0!3m2!1svi!2s!4v1700000000000!5m2!1svi!2s"

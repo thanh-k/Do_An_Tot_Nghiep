@@ -23,9 +23,6 @@ import {
   Wallet,
   Truck,
   PackageOpen,
-  Headphones,
-  FileQuestion,
-  ShieldAlert,
   ArchiveX,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -37,9 +34,7 @@ import useVoucherWallet from "@/hooks/useVoucherWallet";
 import userVoucherService from "@/services/user/voucherService";
 import { orderService } from "@/services/user/orderService";
 import membershipService from "@/services/user/membershipService";
-import userProductService from "@/services/user/productService";
 import { formatCurrency, formatDate, formatOrderStatus, formatOrderCode } from "@/utils/format";
-import ProductGrid from "@/components/product/ProductGrid";
 import coinRewardService from "@/services/user/coinRewardService";
 
 const CATEGORY_MAP = {
@@ -111,7 +106,6 @@ export default function UserDashboard() {
     delivered: 0,
     cancelled: 0,
   });
-  const [suggestedProducts, setSuggestedProducts] = useState([]);
   const [membership, setMembership] = useState({
     vip: false,
     membershipName: "Thành viên thường",
@@ -187,12 +181,6 @@ export default function UserDashboard() {
     }
   }, [currentUser]);
 
-  useEffect(() => {
-    // Lấy sản phẩm mới nhất làm gợi ý mặc định nếu AI chưa có dữ liệu
-    userProductService.getProducts({ pageSize: 4, sort: "newest" })
-      .then(res => setSuggestedProducts(res.items || []))
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     coinRewardService.getOverview()
@@ -232,9 +220,9 @@ export default function UserDashboard() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] pb-20 overflow-x-hidden">
-      <section className="bg-slate-950 pt-16 pb-32 text-white relative">
-        <div className="container-padded relative z-10 flex flex-col lg:flex-row justify-between items-center gap-8">
-          <div className="flex items-center gap-6">
+      <section className="bg-slate-950 pt-8 pb-20 sm:pt-16 sm:pb-32 text-white relative">
+        <div className="container-padded relative z-10 flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 sm:gap-8">
+          <div className="flex items-center gap-3 sm:gap-6">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
@@ -244,20 +232,21 @@ export default function UserDashboard() {
                 src={
                   currentUser.avatar || "https://i.pravatar.cc/150?u=default"
                 }
-                className="w-28 h-28 rounded-[2.5rem] border-4 border-rose-600 shadow-2xl object-cover"
+                className="w-16 h-16 sm:w-28 sm:h-28 rounded-2xl sm:rounded-[2.5rem] border-2 sm:border-4 border-rose-600 shadow-xl sm:shadow-2xl object-cover"
                 alt="Avatar"
               />
               {membership?.vip ? (
-                <div className="absolute -bottom-2 -right-2 bg-yellow-400 p-2 rounded-xl shadow-lg">
-                  <Star size={16} className="text-slate-900 fill-current" />
+                <div className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 bg-yellow-400 p-1.5 sm:p-2 rounded-lg sm:rounded-xl shadow-lg">
+                  <Star size={12} className="sm:hidden text-slate-900 fill-current" />
+                  <Star size={16} className="hidden sm:block text-slate-900 fill-current" />
                 </div>
               ) : null}
             </motion.div>
-            <div className="text-center lg:text-left">
-              <h1 className="text-3xl md:text-4xl font-black italic uppercase tracking-tighter leading-none">
+            <div className="min-w-0 flex-1 text-left">
+              <h1 className="text-xl sm:text-3xl md:text-4xl font-black italic uppercase tracking-tighter leading-tight sm:leading-none line-clamp-2">
                 Chào bạn, {currentUser.name.split(" ").pop()}!
               </h1>
-              <p className="text-slate-400 mt-2 font-medium flex items-center justify-center lg:justify-start gap-2">
+              <p className="text-slate-400 mt-1 sm:mt-2 text-xs sm:text-base font-medium flex items-center gap-1.5 sm:gap-2">
                 <ShieldCheck
                   size={16}
                   className={
@@ -266,30 +255,30 @@ export default function UserDashboard() {
                 />{" "}
                 {membershipLabel}
               </p>
-              <div className="mt-4 max-w-sm mx-auto lg:mx-0">
+              <div className="mt-2 sm:mt-4 max-w-sm">
                 {membership?.vip ? (
                   <>
-                    <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">
+                    <div className="flex justify-between text-[9px] sm:text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-widest">
                       <span>Thời hạn gói VIP</span>
                       <span>Còn lại {timeRemainingPercent}%</span>
                     </div>
-                    <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-1 sm:h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-gradient-to-r from-rose-500 to-orange-400 rounded-full transition-all duration-1000" 
                         style={{ width: `${timeRemainingPercent}%` }}
                       ></div>
                     </div>
-                    <p className="text-[10px] text-slate-400 mt-2 italic">
+                    <p className="text-[9px] sm:text-[10px] text-slate-400 mt-1 sm:mt-2 italic">
                       Hết hạn vào: {membership?.endedAt ? new Date(membership.endedAt).toLocaleDateString("vi-VN") : "--"}
                     </p>
                   </>
                 ) : (
                   <>
-                    <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">
+                    <div className="flex justify-between text-[9px] sm:text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-widest">
                       <span>Chưa có gói VIP</span>
                       <span>0%</span>
                     </div>
-                    <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-1 sm:h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
                       <div className="h-full bg-slate-600 rounded-full" style={{ width: '0%' }}></div>
                     </div>
                     <Link to="/membership" className="text-[10px] text-rose-400 hover:text-rose-300 mt-2 italic flex items-center gap-1 justify-center lg:justify-start">
@@ -304,50 +293,54 @@ export default function UserDashboard() {
           <div className="flex gap-3">
             <Link
               to="/profile"
-              className="flex items-center gap-2 bg-white/5 border border-white/10 px-6 py-3 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-white/10 transition-all"
+              className="flex flex-1 sm:flex-none items-center justify-center gap-1.5 sm:gap-2 bg-white/5 border border-white/10 px-3 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl font-black uppercase text-[10px] sm:text-xs tracking-wide sm:tracking-widest hover:bg-white/10 transition-all"
             >
-              <Edit3 size={16} /> Chỉnh sửa hồ sơ
+              <Edit3 size={13} className="sm:hidden" />
+              <Edit3 size={16} className="hidden sm:block" />
+              <span>Chỉnh sửa hồ sơ</span>
             </Link>
             <button
               onClick={logout}
-              className="p-3 bg-rose-600/10 text-rose-500 border border-rose-600/20 rounded-2xl hover:bg-rose-600 hover:text-white transition-all"
+              className="p-2 sm:p-3 bg-rose-600/10 text-rose-500 border border-rose-600/20 rounded-xl sm:rounded-2xl hover:bg-rose-600 hover:text-white transition-all"
             >
-              <LogOut size={20} />
+              <LogOut size={16} className="sm:hidden" />
+              <LogOut size={20} className="hidden sm:block" />
             </button>
           </div>
         </div>
         <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_70%_20%,rgba(225,29,72,0.15)_0%,transparent_50%)] pointer-events-none"></div>
       </section>
 
-      <div className="container-padded -mt-16 relative z-20">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+      <div className="container-padded -mt-10 sm:-mt-16 relative z-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 items-start gap-4 sm:gap-6 mb-4 sm:mb-6">
           <motion.div
             whileHover={{ y: -5 }}
-            className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl border border-white/5 relative overflow-hidden"
+            className="bg-slate-900 rounded-[1.75rem] sm:rounded-[2.5rem] p-5 sm:p-8 text-white shadow-xl sm:shadow-2xl border border-white/5 relative overflow-hidden"
           >
             <Zap
               className="absolute -right-6 -bottom-6 text-white/5"
-              size={150}
+              size={110}
             />
             <div className="relative z-10 flex flex-col justify-between h-full">
-              <div className="p-3 bg-rose-600 rounded-2xl shadow-lg shadow-rose-600/30 w-fit">
-                <Gift size={24} />
+              <div className="p-2.5 sm:p-3 bg-rose-600 rounded-xl sm:rounded-2xl shadow-lg shadow-rose-600/30 w-fit">
+                <Gift size={18} className="sm:hidden" />
+                <Gift size={24} className="hidden sm:block" />
               </div>
-              <div className="mt-8">
+              <div className="mt-4 sm:mt-8">
                 <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em]">
                   Ví xu của tôi
                 </p>
-                <h2 className="text-6xl font-black italic tracking-tighter mt-1">
+                <h2 className="text-4xl sm:text-6xl font-black italic tracking-tighter mt-1">
                   {Number(coinBalance).toLocaleString("vi-VN")}
                 </h2>
               </div>
-              <Link to="/coin-rewards" className="mt-4 flex items-center gap-2 text-rose-400 font-bold text-xs uppercase italic hover:text-rose-300 transition-colors">
+              <Link to="/coin-rewards" className="mt-3 sm:mt-4 flex items-center gap-1.5 sm:gap-2 text-rose-400 font-bold text-[10px] sm:text-xs uppercase italic hover:text-rose-300 transition-colors">
                 <Rocket size={14} /> Đổi xu nhận ngay ưu đãi! <ArrowRight size={12} />
               </Link>
             </div>
           </motion.div>
 
-          <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-[2.5rem] p-8 shadow-xl shadow-blue-900/5 border border-blue-100 space-y-6 relative overflow-hidden">
+          <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-[1.75rem] sm:rounded-[2.5rem] p-5 sm:p-8 shadow-xl shadow-blue-900/5 border border-blue-100 space-y-4 sm:space-y-6 relative overflow-hidden">
             <div className="absolute -right-10 -top-10 text-blue-500/10 rotate-12">
               <MapPin size={120} />
             </div>
@@ -390,7 +383,7 @@ export default function UserDashboard() {
             </Link>
           </div>
 
-          <div className="bg-gradient-to-br from-purple-50 to-fuchsia-50 rounded-[2.5rem] p-8 shadow-xl shadow-purple-900/5 border border-purple-100 overflow-hidden relative">
+          <div className="bg-gradient-to-br from-purple-50 to-fuchsia-50 rounded-[1.75rem] sm:rounded-[2.5rem] p-5 sm:p-8 shadow-xl shadow-purple-900/5 border border-purple-100 overflow-hidden relative">
             <div className="absolute -right-6 -bottom-6 text-purple-500/10 -rotate-12 pointer-events-none">
               <Ticket size={140} />
             </div>
@@ -455,8 +448,8 @@ export default function UserDashboard() {
         </div>
 
         {/* KHU VỰC THỐNG KÊ ĐƠN HÀNG */}
-        <div className="bg-white rounded-[2.5rem] p-6 sm:p-8 shadow-xl border border-slate-100 mb-6 flex flex-col justify-center">
-          <div className="flex justify-between items-center mb-6">
+        <div className="bg-white rounded-[1.75rem] sm:rounded-[2.5rem] p-4 sm:p-8 shadow-xl border border-slate-100 mb-4 sm:mb-6 flex flex-col justify-center">
+          <div className="flex justify-between items-center mb-4 sm:mb-6">
             <h3 className="font-black uppercase italic text-sm border-l-4 border-rose-600 pl-3 text-slate-900">
               Đơn hàng của tôi
             </h3>
@@ -472,8 +465,9 @@ export default function UserDashboard() {
               className="flex flex-col items-center justify-center gap-2 group relative"
             >
               <div className="relative">
-                <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 group-hover:bg-amber-50 group-hover:text-amber-600 transition-colors">
-                  <Wallet size={24} />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 group-hover:bg-amber-50 group-hover:text-amber-600 transition-colors">
+                  <Wallet size={18} className="sm:hidden" />
+                  <Wallet size={24} className="hidden sm:block" />
                 </div>
                 {orderStats.pending > 0 && (
                   <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-[10px] font-bold text-white shadow-sm">
@@ -490,8 +484,9 @@ export default function UserDashboard() {
               className="flex flex-col items-center justify-center gap-2 group relative"
             >
               <div className="relative">
-                <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-                  <PackageOpen size={24} />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                  <PackageOpen size={18} className="sm:hidden" />
+                  <PackageOpen size={24} className="hidden sm:block" />
                 </div>
                 {orderStats.processing > 0 && (
                   <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-[10px] font-bold text-white shadow-sm">
@@ -508,8 +503,9 @@ export default function UserDashboard() {
               className="flex flex-col items-center justify-center gap-2 group relative"
             >
               <div className="relative">
-                <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 group-hover:bg-purple-50 group-hover:text-purple-600 transition-colors">
-                  <Truck size={24} />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 group-hover:bg-purple-50 group-hover:text-purple-600 transition-colors">
+                  <Truck size={18} className="sm:hidden" />
+                  <Truck size={24} className="hidden sm:block" />
                 </div>
                 {orderStats.shipped > 0 && (
                   <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-[10px] font-bold text-white shadow-sm">
@@ -526,8 +522,9 @@ export default function UserDashboard() {
               className="flex flex-col items-center justify-center gap-2 group relative"
             >
               <div className="relative">
-                <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
-                  <Star size={24} />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
+                  <Star size={18} className="sm:hidden" />
+                  <Star size={24} className="hidden sm:block" />
                 </div>
                 {orderStats.delivered > 0 && (
                   <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-[10px] font-bold text-white shadow-sm">
@@ -544,8 +541,9 @@ export default function UserDashboard() {
               className="flex flex-col items-center justify-center gap-2 group relative"
             >
               <div className="relative">
-                <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 group-hover:bg-rose-50 group-hover:text-rose-600 transition-colors">
-                  <ArchiveX size={24} />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 group-hover:bg-rose-50 group-hover:text-rose-600 transition-colors">
+                  <ArchiveX size={18} className="sm:hidden" />
+                  <ArchiveX size={24} className="hidden sm:block" />
                 </div>
                 {orderStats.cancelled > 0 && (
                   <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-[10px] font-bold text-white shadow-sm">{orderStats.cancelled}</span>
@@ -560,7 +558,7 @@ export default function UserDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
           {/* 1. KHU VỰC ĐƠN HÀNG GẦN ĐÂY */}
           <div className="bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-100 flex flex-col h-full">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-4 sm:mb-6">
               <h3 className="font-black uppercase italic text-sm border-l-4 border-indigo-600 pl-3 text-slate-900">
                 Đơn hàng gần đây
               </h3>
@@ -624,7 +622,7 @@ export default function UserDashboard() {
 
           {/* 2. KHU VỰC SẢN PHẨM YÊU THÍCH */}
           <div className="bg-white rounded-[2.5rem] p-8 shadow-xl border border-slate-100 flex flex-col h-full">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-4 sm:mb-6">
               <h3 className="font-black uppercase italic text-sm border-l-4 border-rose-600 pl-3 text-slate-900">
                 Sản phẩm yêu thích
               </h3>
@@ -684,45 +682,6 @@ export default function UserDashboard() {
               )}
             </div>
           </div>
-        </div>
-
-        {/* LIÊN KẾT HỖ TRỢ NHANH */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-          <Link to="/faq" className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all flex flex-col items-center justify-center text-center gap-2 group">
-            <FileQuestion size={24} className="text-slate-400 group-hover:text-brand-600 transition-colors" />
-            <span className="text-xs font-bold text-slate-700">Câu hỏi thường gặp</span>
-          </Link>
-          <Link to="/contact" className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all flex flex-col items-center justify-center text-center gap-2 group">
-            <Headphones size={24} className="text-slate-400 group-hover:text-brand-600 transition-colors" />
-            <span className="text-xs font-bold text-slate-700">Liên hệ CSKH</span>
-          </Link>
-          <Link to="/faq" className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all flex flex-col items-center justify-center text-center gap-2 group">
-            <ShieldAlert size={24} className="text-slate-400 group-hover:text-brand-600 transition-colors" />
-            <span className="text-xs font-bold text-slate-700">Bảo hành & Đổi trả</span>
-          </Link>
-          <Link to="/membership" className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all flex flex-col items-center justify-center text-center gap-2 group">
-            <Sparkles size={24} className="text-slate-400 group-hover:text-brand-600 transition-colors" />
-            <span className="text-xs font-bold text-slate-700">Đặc quyền VIP</span>
-          </Link>
-        </div>
-
-        {/* SẢN PHẨM ĐÃ XEM / GỢI Ý */}
-        <div className="pb-10 bg-white rounded-[2.5rem] p-6 sm:p-8 shadow-xl border border-slate-100">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="font-black uppercase italic text-sm border-l-4 border-rose-600 pl-3 text-slate-900">
-              Gợi ý cho bạn
-            </h3>
-            <Link to="/products" className="text-[10px] font-bold text-rose-600 hover:text-rose-800 underline">
-              Xem tất cả
-            </Link>
-          </div>
-          {suggestedProducts.length > 0 ? (
-            <ProductGrid products={suggestedProducts} />
-          ) : (
-            <div className="text-center text-slate-500 py-10 font-medium">
-              <p>Hãy xem thêm các sản phẩm để hệ thống gợi ý cho bạn nhé!</p>
-            </div>
-          )}
         </div>
 
       </div>

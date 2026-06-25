@@ -24,8 +24,9 @@ public class Order {
     private Double shippingFee;
     private Double discountAmount;
     private String voucherCode;
-    private String status; // "PENDING", "PAID", "DELIVERED"
-    private String paymentMethod; // "COD" hoặc "VNPAY"
+    private String status; // Trạng thái xử lý đơn: PENDING, PROCESSING, SHIPPING, DELIVERED, COMPLETED, CANCELLED
+    private String paymentStatus; // Trạng thái thanh toán: UNPAID, PAID, REFUNDED
+    private String paymentMethod; // COD, VNPAY hoặc BANKING
     private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Modal from "@/components/common/Modal";
 import Button from "@/components/common/Button";
-import { formatCurrency, formatOrderStatus, formatOrderCode } from "@/utils/format";
+import { formatCurrency, formatOrderStatus, formatPaymentStatus, getPaymentStatusColor, formatOrderCode } from "@/utils/format";
 
 // Helper function để lấy class màu sắc cho trạng thái đơn hàng
 const getStatusColorClass = (status) => {
@@ -84,6 +84,21 @@ function OrderFormModal({ isOpen, onClose, order, onUpdateStatus, onDelete }) {
               {/* Hiển thị trạng thái hiện tại với màu sắc */}
               Hiện tại: {formatOrderStatus(order.status)}
             </p>
+
+            <div className="mt-3 rounded-xl bg-white p-3 text-xs">
+              <p className="font-bold uppercase tracking-wide text-slate-400">
+                Trạng thái thanh toán
+              </p>
+              <p
+                className="mt-1 font-black uppercase"
+                style={{ color: getPaymentStatusColor(order.paymentStatus || (order.status === "PAID" ? "PAID" : "UNPAID")) }}
+              >
+                {formatPaymentStatus(order.paymentStatus || (order.status === "PAID" ? "PAID" : "UNPAID"))}
+              </p>
+              <p className="mt-1 text-slate-400">
+                Phương thức: {order.paymentMethod || "COD"}
+              </p>
+            </div>
           </div>
         </div>
 

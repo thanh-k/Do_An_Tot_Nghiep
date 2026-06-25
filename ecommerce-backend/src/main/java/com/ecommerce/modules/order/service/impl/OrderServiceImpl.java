@@ -51,7 +51,8 @@ public class OrderServiceImpl implements OrderService {
                 .userId(request.getUserId()) // Lưu user_id vào database
                 .shippingAddress(request.getShippingAddress())
                 .phoneNumber(request.getPhoneNumber())
-                .paymentMethod(request.getPaymentMethod())
+                .paymentMethod(normalizePaymentMethod(request.getPaymentMethod()))
+                .paymentStatus("UNPAID")
                 .status("PENDING")
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -254,17 +255,26 @@ public class OrderServiceImpl implements OrderService {
     public OrderResponse updateOrderStatus(Long id, String status) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
+
         String oldStatus = order.getStatus();
-        order.setStatus(status);
+        String normalizedStatus = normalizeOrderStatus(status);
+        order.setStatus(normalizedStatus);
+
+        // COD / nhận hàng rồi thanh toán:
+        // Khi đơn đã giao hoặc hoàn tất thì xem như shop đã thu tiền từ khách.
+        if (isCashOnDelivery(order.getPaymentMethod()) && isCompletedStatus(normalizedStatus)) {
+            order.setPaymentStatus("PAID");
+        }
+
         Order saved = orderRepository.save(order);
 
         // Ní nhớ gọi coinTaskService.rewardOrderCompleted khi đơn hàng hoàn thành nhé!
-        if (!isCompletedStatus(oldStatus) && isCompletedStatus(status) && hasCashbackVoucher(saved)) {
+        if (!isCompletedStatus(oldStatus) && isCompletedStatus(normalizedStatus) && hasCashbackVoucher(saved)) {
             coinTaskService.rewardOrderCompleted(saved.getUserId(), saved.getId());
         }
 
         // Refund stock and voucher if cancelled via API
-        if (!"CANCELLED".equalsIgnoreCase(oldStatus) && "CANCELLED".equalsIgnoreCase(status)) {
+        if (!"CANCELLED".equalsIgnoreCase(oldStatus) && "CANCELLED".equalsIgnoreCase(normalizedStatus)) {
             if (saved.getOrderDetails() != null) {
                 for (OrderDetail detail : saved.getOrderDetails()) {
                     ProductVariant variant = detail.getProductVariant();
@@ -279,6 +289,40 @@ public class OrderServiceImpl implements OrderService {
         }
 
         return orderMapper.toResponse(saved);
+    }
+
+
+    private String normalizeOrderStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return "PENDING";
+        }
+        return status.trim().toUpperCase();
+    }
+
+    private String normalizePaymentStatus(String paymentStatus) {
+        if (paymentStatus == null || paymentStatus.isBlank()) {
+            return "UNPAID";
+        }
+
+        String normalized = paymentStatus.trim().toUpperCase();
+        if ("PENDING".equals(normalized)) {
+            return "UNPAID";
+        }
+        if ("PAID".equals(normalized) || "UNPAID".equals(normalized) || "REFUNDED".equals(normalized)) {
+            return normalized;
+        }
+        return normalized;
+    }
+
+    private String normalizePaymentMethod(String paymentMethod) {
+        if (paymentMethod == null || paymentMethod.isBlank()) {
+            return "COD";
+        }
+        return paymentMethod.trim().toUpperCase();
+    }
+
+    private boolean isCashOnDelivery(String paymentMethod) {
+        return "COD".equalsIgnoreCase(String.valueOf(paymentMethod).trim());
     }
 
     private boolean isCompletedStatus(String status) {
@@ -320,7 +364,11 @@ public class OrderServiceImpl implements OrderService {
     public OrderResponse updatePaymentStatus(Long id, String paymentStatus) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
-        order.setStatus(paymentStatus);
+
+        // Thanh toán online chỉ cập nhật trạng thái thanh toán.
+        // Không đổi trạng thái xử lý đơn hàng để tránh nhầm "đã thanh toán" với "đã giao/hoàn tất".
+        order.setPaymentStatus(normalizePaymentStatus(paymentStatus));
+
         return orderMapper.toResponse(orderRepository.save(order));
     }
 

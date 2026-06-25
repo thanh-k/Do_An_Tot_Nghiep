@@ -10,6 +10,7 @@ import {
   formatDate,
   formatOrderStatus,
   formatPaymentStatus,
+  getPaymentStatusColor,
   formatOrderCode,
 } from "@/utils/format";
 import useAuth from "@/hooks/useAuth";
@@ -304,7 +305,7 @@ function OrderDetailPage() {
                                       return;
                                     }
                                     navigate(
-                                      `/products/${productSlug}#review-section`,
+                                      `/products/${productSlug}?writeReview=1#review-section`,
                                     );
                                   }}
                                   className="text-sm font-semibold text-amber-600 hover:underline"
@@ -382,8 +383,11 @@ function OrderDetailPage() {
                 <CreditCard className="text-slate-400" size={18} />
                 <div>
                   <p className="text-slate-500">Trạng thái thanh toán</p>
-                  <p className="font-semibold text-emerald-600">
-                    {formatPaymentStatus(order.paymentStatus || "PENDING")}
+                  <p
+                    className="font-semibold"
+                    style={{ color: getPaymentStatusColor(order.paymentStatus || (order.status === "PAID" ? "PAID" : "UNPAID")) }}
+                  >
+                    {formatPaymentStatus(order.paymentStatus || (order.status === "PAID" ? "PAID" : "UNPAID"))}
                   </p>
                 </div>
               </div>

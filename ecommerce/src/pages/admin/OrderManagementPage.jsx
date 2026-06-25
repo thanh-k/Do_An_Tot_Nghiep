@@ -197,6 +197,26 @@ function OrderManagementPage() {
       ),
     },
     {
+      key: "paymentStatus",
+      title: "Thanh toán",
+      render: (row) => (
+        <div className="min-w-[120px]">
+          <span
+            className="inline-block rounded-full px-3 py-1 text-xs font-black uppercase tracking-wide"
+            style={{
+              backgroundColor: `${getPaymentStatusColor(row.paymentStatus || (row.status === "PAID" ? "PAID" : "UNPAID"))}18`,
+              color: getPaymentStatusColor(row.paymentStatus || (row.status === "PAID" ? "PAID" : "UNPAID")),
+            }}
+          >
+            {formatPaymentStatus(row.paymentStatus || (row.status === "PAID" ? "PAID" : "UNPAID"))}
+          </span>
+          <p className="mt-1 text-[11px] font-semibold text-slate-400">
+            {row.paymentMethod || "COD"}
+          </p>
+        </div>
+      ),
+    },
+    {
       key: "total",
       title: "Tổng tiền",
       align: "right",
