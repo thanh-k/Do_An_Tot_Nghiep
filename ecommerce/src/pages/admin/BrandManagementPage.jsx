@@ -27,6 +27,7 @@ function BrandManagementPage() {
   const [modalState, setModalState] = useState({ open: false, brand: null });
   const [lastEditedId, setLastEditedId] = useState(null); // State lưu ID brand vừa sửa
   const debouncedKeyword = useDebounce(keyword, 300); // Thêm debounce cho ô tìm kiếm
+  const [selectedIds, setSelectedIds] = useState([]);
 
   // --- LOGIC PHÂN TRANG ---
   const [currentPage, setCurrentPage] = useState(1);
@@ -90,8 +91,44 @@ function BrandManagementPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedKeyword]);
+
+  const visibleIds = paginatedBrands.map((b) => b.id);
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+
+  const toggleSelectAll = () => {
+    if (allVisibleSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+    }
+  };
+
+  const toggleOne = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
   // Cấu hình cột hiển thị chuẩn như Category
   const columns = [
+    {
+      key: "select",
+      title: (
+        <input
+          type="checkbox"
+          checked={allVisibleSelected}
+          onChange={toggleSelectAll}
+        />
+      ),
+      render: (row) => (
+        <input
+          type="checkbox"
+          checked={selectedIds.includes(row.id)}
+          onChange={() => toggleOne(row.id)}
+        />
+      ),
+    },
     {
       key: "name",
       title: "Thương hiệu",
@@ -133,65 +170,71 @@ function BrandManagementPage() {
       key: "actions",
       title: "Thao tác",
       align: "right",
-      render: (row) => canManage ? (
-        <div className="flex justify-end gap-2">
-          {canUpdate && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setModalState({ open: true, brand: row })}
-            >
-              <Pencil size={14} />
-            </Button>
-          )}
-          {canDelete && (
-            <Button size="sm" variant="danger" onClick={() => handleDelete(row)}>
-              <Trash2 size={14} />
-            </Button>
-          )}
-        </div>
-      ) : null,
+      render: (row) =>
+        canManage ? (
+          <div className="flex justify-end gap-2">
+            {canUpdate && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setModalState({ open: true, brand: row })}
+              >
+                <Pencil size={14} />
+              </Button>
+            )}
+            {canDelete && (
+              <Button
+                size="sm"
+                variant="danger"
+                onClick={() => handleDelete(row)}
+              >
+                <Trash2 size={14} />
+              </Button>
+            )}
+          </div>
+        ) : null,
     },
   ];
 
-  const handleDelete = async (row) => {
-    if (!canDelete) return;
-    // 1. Kiểm tra xem có sản phẩm nào đang dùng Thương hiệu này không
-    const relatedProducts = products.filter(
-      (p) => p.brandId === row.id || p.brand?.id === row.id,
+  const runBulkDelete = async () => {
+    if (!selectedIds.length) return;
+    const confirmed = window.confirm(
+      `Xóa ${selectedIds.length} thương hiệu đã chọn?`,
     );
+    if (!confirmed) return;
 
-    if (relatedProducts.length > 0) {
-      // 2. Nếu có, hiện cảnh báo đặc biệt
-      const confirmCascade = window.confirm(
-        `CẢNH BÁO: Đang có ${relatedProducts.length} sản phẩm sử dụng thương hiệu "${row.name}".\n\nBạn không thể xóa thông thường. Bạn có chắc chắn muốn XÓA LUÔN thương hiệu này VÀ TẤT CẢ ${relatedProducts.length} sản phẩm liên quan không?`,
-      );
-      if (!confirmCascade) return;
+    let successCount = 0;
+    for (const brandId of selectedIds) {
+      try {
+        await brandService.deleteBrand(brandId);
+        successCount++;
+      } catch (error) {
+        const brandToDelete = brands.find((b) => b.id === brandId);
+        const serverError =
+          error.response?.data?.message ||
+          `Xóa thương hiệu "${brandToDelete?.name || "ID: " + brandId}" thất bại.`;
+        toast.error(serverError, { duration: 5000 });
+      }
+    }
 
-      try {
-        // Xóa tất cả sản phẩm liên quan trước (để tránh lỗi khoá ngoại từ Backend)
-        await Promise.all(
-          relatedProducts.map((p) => productService.deleteProduct(p.id)),
-        );
-        // Sau đó mới xoá thương hiệu
-        await brandService.deleteBrand(row.id);
-        toast.success(
-          `Đã xoá thương hiệu và ${relatedProducts.length} sản phẩm liên quan!`,
-        );
-        loadData();
-      } catch (e) {
-        toast.error("Lỗi khi xoá dữ liệu liên quan. Vui lòng thử lại.");
-      }
-    } else {
-      // 3. Nếu không có sản phẩm nào, xóa bình thường
-      if (!window.confirm(`Xoá thương hiệu "${row.name}"?`)) return;
-      try {
-        await brandService.deleteBrand(row.id);
-        toast.success("Đã xoá thành công");
-        loadData();
-      } catch (e) {
-        toast.error("Không thể xoá thương hiệu này");
-      }
+    if (successCount > 0) {
+      toast.success(`Đã xóa thành công ${successCount} thương hiệu.`);
+    }
+    setSelectedIds([]);
+    loadData();
+  };
+
+  const handleDelete = async (brand) => {
+    if (!canDelete) return;
+    if (!window.confirm(`Xoá thương hiệu "${brand.name}"?`)) return;
+    try {
+      await brandService.deleteBrand(brand.id);
+      toast.success("Đã xoá thành công");
+      loadData();
+    } catch (error) {
+      const serverError =
+        error.response?.data?.message || "Lỗi khi xóa thương hiệu.";
+      toast.error(serverError, { duration: 5000 });
     }
   };
 
@@ -240,6 +283,16 @@ function BrandManagementPage() {
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
         />
+        {selectedIds.length > 0 && (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium text-slate-600">
+              Đã chọn {selectedIds.length} thương hiệu
+            </span>
+            <Button size="sm" variant="danger" onClick={runBulkDelete}>
+              <Trash2 size={14} /> Xóa đã chọn
+            </Button>
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -259,12 +312,14 @@ function BrandManagementPage() {
           />
         </>
       )}
-      {canManage && <BrandFormModal
-        isOpen={modalState.open}
-        onClose={() => setModalState({ open: false, brand: null })}
-        initialBrand={modalState.brand}
-        onSubmit={handleSave}
-      />}
+      {canManage && (
+        <BrandFormModal
+          isOpen={modalState.open}
+          onClose={() => setModalState({ open: false, brand: null })}
+          initialBrand={modalState.brand}
+          onSubmit={handleSave}
+        />
+      )}
     </div>
   );
 }

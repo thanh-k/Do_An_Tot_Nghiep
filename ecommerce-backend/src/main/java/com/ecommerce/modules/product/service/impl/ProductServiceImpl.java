@@ -218,7 +218,8 @@ public class ProductServiceImpl implements ProductService {
                                         .anyMatch(variant -> orderDetailRepository.existsByProductVariant_Id(variant.getId()));
 
                         if (hasOrders) {
-                                throw new AppException(ErrorCode.PRODUCT_IN_ORDER);
+                                throw new AppException(ErrorCode.PRODUCT_IN_ORDER,
+                                                "Sản phẩm '" + product.getName() + "' không thể xóa vì đang có đơn hàng liên kết.");
                         }
                 }
 

@@ -19,4 +19,6 @@ public interface VoucherService {
     Double calculateDiscount(String code, Double orderTotal);
 
     void decrementQuantity(String code);
+
+    void deleteVouchers(List<Long> ids);
 }

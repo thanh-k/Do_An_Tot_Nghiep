@@ -52,4 +52,9 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
             """)
     List<Product> findTopActiveProducts(Pageable pageable);
 
+    // Thêm phương thức tìm sản phẩm theo brandId
+    List<Product> findByBrandId(Long brandId);
+
+    // Thêm phương thức tìm sản phẩm theo categoryId
+    List<Product> findByCategoryId(Long categoryId);
 }

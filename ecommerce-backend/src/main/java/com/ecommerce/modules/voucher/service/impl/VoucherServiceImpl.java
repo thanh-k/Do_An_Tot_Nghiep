@@ -44,9 +44,11 @@ public class VoucherServiceImpl implements VoucherService {
     private final LocalStorageService localStorageService;
 
     private String getPublicIdFromUrl(String url) {
-        if (url == null || url.isEmpty()) return null;
+        if (url == null || url.isEmpty())
+            return null;
         int uploadIndex = url.indexOf("/upload/");
-        if (uploadIndex == -1) return null;
+        if (uploadIndex == -1)
+            return null;
         try {
             String path = url.substring(uploadIndex + "/upload/".length());
             path = path.replaceFirst("^v\\d+/", "");
@@ -86,6 +88,11 @@ public class VoucherServiceImpl implements VoucherService {
     public VoucherResponse createVoucher(VoucherRequest request) {
         validateVoucherRequest(request);
 
+        // Kiểm tra xem mã voucher đã tồn tại chưa
+        voucherRepository.findByCode(request.getCode()).ifPresent(v -> {
+            throw new AppException(ErrorCode.VOUCHER_CODE_EXISTED);
+        });
+
         Voucher voucher = voucherMapper.toEntity(request);
 
         if (isVipVoucher(voucher)) {
@@ -94,8 +101,7 @@ public class VoucherServiceImpl implements VoucherService {
             voucher.setMonthlyQuantity(
                     request.getMonthlyQuantity() != null
                             ? request.getMonthlyQuantity()
-                            : request.getQuantity()
-            );
+                            : request.getQuantity());
         }
 
         Voucher saved = voucherRepository.save(voucher);
@@ -164,6 +170,13 @@ public class VoucherServiceImpl implements VoucherService {
         Voucher voucher = voucherRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.VOUCHER_NOT_FOUND));
 
+        // Khi cập nhật, kiểm tra xem mã mới có bị trùng với một voucher khác không
+        voucherRepository.findByCode(request.getCode()).ifPresent(existingVoucher -> {
+            if (!existingVoucher.getId().equals(id)) {
+                throw new AppException(ErrorCode.VOUCHER_CODE_EXISTED);
+            }
+        });
+
         String oldImageUrl = voucher.getImage();
         String newImageUrl = request.getImage();
 
@@ -190,12 +203,12 @@ public class VoucherServiceImpl implements VoucherService {
         voucher.setQuantity(request.getQuantity());
         voucher.setExpiryDate(request.getExpiryDate());
         voucher.setVipOnly(Boolean.TRUE.equals(request.getVipOnly()) || "VIP".equalsIgnoreCase(request.getCategory()));
-        voucher.setMonthlyReset(Boolean.TRUE.equals(request.getMonthlyReset()) || "VIP".equalsIgnoreCase(request.getCategory()));
+        voucher.setMonthlyReset(
+                Boolean.TRUE.equals(request.getMonthlyReset()) || "VIP".equalsIgnoreCase(request.getCategory()));
         voucher.setMonthlyQuantity(
                 request.getMonthlyQuantity() != null
                         ? request.getMonthlyQuantity()
-                        : request.getQuantity()
-        );
+                        : request.getQuantity());
 
         if (request.getActive() != null) {
             voucher.setActive(request.getActive());
@@ -225,12 +238,35 @@ public class VoucherServiceImpl implements VoucherService {
         Voucher voucher = voucherRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.VOUCHER_NOT_FOUND));
 
-        if (isAssignmentOnlyVoucher(voucher)) {
-            userVoucherRepository.findAll().stream()
-                    .filter(uv -> uv.getVoucher().getId().equals(id))
-                    .forEach(userVoucherRepository::delete);
+        // --- LOGIC CẢI TIẾN ---
+        // Điều kiện 1: Kiểm tra xem có user nào đang sở hữu voucher này mà còn hạn &
+        // còn lượt dùng không.
+        boolean isActivelyOwnedByUser = userVoucherRepository
+                .existsByVoucherIdAndValidUntilAfterAndRemainingQuantityGreaterThan(
+                        id, LocalDateTime.now(), 0);
+
+        // Điều kiện 2: Kiểm tra xem voucher gốc (public/template) có còn hiệu lực
+        // không.
+        // Áp dụng cho voucher thường, hoặc voucher VIP/COIN_REWARD chưa có ai sở hữu.
+        boolean isTemplateStillValid = voucher.getActive()
+                && voucher.getExpiryDate() != null
+                && voucher.getExpiryDate().isAfter(LocalDateTime.now())
+                && voucher.getQuantity() != null
+                && voucher.getQuantity() > 0;
+
+        // Nếu một trong hai điều kiện trên là đúng, voucher được coi là "đang sử dụng"
+        // và không thể xóa cứng.
+        if (isActivelyOwnedByUser || isTemplateStillValid) {
+            throw new AppException(ErrorCode.VOUCHER_IN_USE, "Voucher '" + voucher.getCode()
+                    + "' không thể xóa vì vẫn còn hiệu lực hoặc đang có khách hàng sở hữu. Hãy chuyển trạng thái sang 'Tắt hoạt động' thay vì xóa.");
         }
 
+        // Nếu voucher đã hết hiệu lực và không còn ai dùng, tiến hành xóa an toàn.
+        // 1. Dọn dẹp các bản ghi liên kết trong user_vouchers trước để tránh lỗi khóa
+        // ngoại.
+        userVoucherRepository.deleteAllByVoucherId(id);
+
+        // 2. Xóa voucher gốc và ảnh liên quan.
         String imageUrl = voucher.getImage();
         voucherRepository.delete(voucher);
 
@@ -242,6 +278,51 @@ public class VoucherServiceImpl implements VoucherService {
                 }
             } catch (Exception ignored) {
             }
+        }
+    }
+
+    @Override
+    @Transactional
+    public void deleteVouchers(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+
+        List<String> undeletableVoucherCodes = new ArrayList<>();
+
+        // Bước 1: Phân loại các voucher có thể xóa và không thể xóa.
+        for (Long id : ids) {
+            Voucher voucher = voucherRepository.findById(id).orElse(null);
+            if (voucher != null) {
+                boolean isActivelyOwnedByUser = userVoucherRepository
+                        .existsByVoucherIdAndValidUntilAfterAndRemainingQuantityGreaterThan(
+                                id, LocalDateTime.now(), 0);
+
+                boolean isTemplateStillValid = voucher.getActive()
+                        && voucher.getExpiryDate() != null
+                        && voucher.getExpiryDate().isAfter(LocalDateTime.now())
+                        && voucher.getQuantity() != null
+                        && voucher.getQuantity() > 0;
+
+                if (isActivelyOwnedByUser || isTemplateStillValid) {
+                    undeletableVoucherCodes.add(voucher.getCode());
+                } else {
+                    // Nếu voucher an toàn để xóa, thực hiện xóa ngay.
+                    // (Hoặc có thể gom vào một list rồi xóa sau, nhưng xóa ngay cũng không sao vì
+                    // đã có @Transactional)
+                    userVoucherRepository.deleteAllByVoucherId(id);
+                    voucherRepository.deleteById(id);
+                    // TODO: Có thể thu thập URL ảnh và xóa sau vòng lặp để tối ưu.
+                }
+            }
+        }
+
+        // Bước 2: Nếu có bất kỳ voucher nào không thể xóa, ném ra một Exception duy
+        // nhất.
+        if (!undeletableVoucherCodes.isEmpty()) {
+            throw new AppException(ErrorCode.VOUCHER_IN_USE, "Không thể xóa các voucher: "
+                    + String.join(", ", undeletableVoucherCodes)
+                    + " vì vẫn còn khách hàng sở hữu và còn hạn sử dụng. Vui lòng chuyển trạng thái sang 'Tắt hoạt động' thay vì xóa.");
         }
     }
 
@@ -374,7 +455,7 @@ public class VoucherServiceImpl implements VoucherService {
     private boolean isVipVoucher(Voucher voucher) {
         return voucher != null
                 && (Boolean.TRUE.equals(voucher.getVipOnly())
-                || "VIP".equalsIgnoreCase(voucher.getCategory()));
+                        || "VIP".equalsIgnoreCase(voucher.getCategory()));
     }
 
     private int resolveVipMonthlyQuota(Voucher voucher) {
@@ -438,9 +519,8 @@ public class VoucherServiceImpl implements VoucherService {
         }
 
         currentVipAssignments.stream()
-                .filter(assignment ->
-                        !activeTemplateIds.contains(assignment.getVoucher().getId())
-                                || !Boolean.TRUE.equals(assignment.getVoucher().getActive()))
+                .filter(assignment -> !activeTemplateIds.contains(assignment.getVoucher().getId())
+                        || !Boolean.TRUE.equals(assignment.getVoucher().getActive()))
                 .forEach(userVoucherRepository::delete);
     }
 

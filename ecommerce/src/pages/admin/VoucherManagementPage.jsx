@@ -49,6 +49,7 @@ function VoucherManagementPage() {
   const debouncedKeyword = useDebounce(keyword, 300);
   const [modalState, setModalState] = useState({ open: false, voucher: null });
   const [lastEditedId, setLastEditedId] = useState(null); // State lưu ID voucher vừa sửa
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
@@ -109,7 +110,42 @@ function VoucherManagementPage() {
     setCurrentPage(1);
   }, [debouncedKeyword, categoryFilter]);
 
+  const visibleIds = paginatedVouchers.map((v) => v.id);
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+
+  const toggleSelectAll = () => {
+    if (allVisibleSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+    }
+  };
+
+  const toggleOne = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
   const columns = [
+    {
+      key: "select",
+      title: (
+        <input
+          type="checkbox"
+          checked={allVisibleSelected}
+          onChange={toggleSelectAll}
+        />
+      ),
+      render: (row) => (
+        <input
+          type="checkbox"
+          checked={selectedIds.includes(row.id)}
+          onChange={() => toggleOne(row.id)}
+        />
+      ),
+    },
     {
       key: "code",
       title: "Voucher",
@@ -223,10 +259,43 @@ function VoucherManagementPage() {
     if (!window.confirm(`Xoá voucher "${row.code}"?`)) return;
     try {
       await voucherService.deleteVoucher(row.id);
-      toast.success("Đã xoá voucher thành công");
+      toast.success(`Đã xoá voucher "${row.code}" thành công.`);
       loadData();
     } catch (e) {
-      toast.error("Không thể xoá voucher này");
+      // Cập nhật để bắt lỗi chi tiết từ server
+      const serverError =
+        e.response?.data?.message || "Không thể xoá voucher này";
+      toast.error(serverError, { duration: 6000 }); // Tăng thời gian hiển thị lỗi
+    }
+  };
+
+  const runBulkDelete = async () => {
+    if (!selectedIds.length) return;
+    const confirmed = window.confirm(
+      `Bạn có chắc muốn xóa ${selectedIds.length} voucher đã chọn không?`,
+    );
+    if (!confirmed) return;
+
+    console.log(
+      "[DEBUG] Chuẩn bị xóa hàng loạt các voucher có ID:",
+      selectedIds,
+    );
+
+    try {
+      await voucherService.deleteVouchers(selectedIds);
+      toast.success(`Đã xóa thành công ${selectedIds.length} voucher.`);
+      setSelectedIds([]);
+      loadData();
+    } catch (error) {
+      // LOGGING: In ra toàn bộ đối tượng lỗi để debug
+      console.error(
+        "[DEBUG] Lỗi khi xóa hàng loạt voucher:",
+        error.response || error,
+      );
+
+      const serverError =
+        error.response?.data?.message || "Một số voucher không thể xóa.";
+      toast.error(serverError, { duration: 8000 });
     }
   };
 
@@ -285,6 +354,16 @@ function VoucherManagementPage() {
           <option value="VIP">Đặc quyền VIP (reset hàng tháng)</option>
           <option value="COIN_REWARD">Đổi voucher bằng xu</option>
         </select>
+        {selectedIds.length > 0 && (
+          <div className="md:col-span-2 mt-4 flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium text-slate-600">
+              Đã chọn {selectedIds.length} voucher
+            </span>
+            <Button size="sm" variant="danger" onClick={runBulkDelete}>
+              <Trash2 size={14} /> Xóa đã chọn
+            </Button>
+          </div>
+        )}
       </div>
       {loading ? (
         <div className="card p-10 text-center text-slate-500">
