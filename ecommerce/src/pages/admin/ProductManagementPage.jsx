@@ -397,19 +397,19 @@ function ProductManagementPage() {
           <div className="flex flex-wrap gap-2">
             {/* FIX: Đổi màu nút Xuất dữ liệu */}
             <Button
-              className="bg-emerald-50 text-emerald-900 hover:bg-emerald-100 border border-emerald-200"
+              className="  bg-[#107c41] text-white hover:bg-[#0e6e39] border border-[#107c41] "
               onClick={handleExportExcel}
             >
-              <DownloadCloud size={16} /> Xuất dữ liệu
+              <DownloadCloud size={16} /> Xuất dữ liệu(Excel)
             </Button>
 
             {/* FIX: Đổi màu nút Tải file mẫu */}
             <Button
-              className="bg-sky-50 text-sky-900 hover:bg-sky-100 border border-sky-200"
+              className="bg-[#107c41] text-white hover:bg-[#0e6e39] border border-[#107c41]"
               onClick={handleDownloadTemplate}
               title="Tải file Excel rỗng với các cột chuẩn"
             >
-              Tải File Mẫu
+              Tải File Mẫu(Excel)
             </Button>
             {/* FIX: Đổi màu nút Nhập từ Excel */}
             <Button

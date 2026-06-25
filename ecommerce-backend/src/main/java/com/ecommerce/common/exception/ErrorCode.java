@@ -41,6 +41,10 @@ public enum ErrorCode {
     INVALID_VARIANT_PRICE(1017, "Giá bán không được phép lớn hơn giá gốc", HttpStatus.BAD_REQUEST),
     PRODUCT_IN_ORDER(1022, "Sản phẩm không thể xóa vì đang có đơn hàng liên kết", HttpStatus.BAD_REQUEST),
     INVALID_EXCEL_DATA_FORMAT(1023, "Dữ liệu trong file Excel không đúng định dạng", HttpStatus.BAD_REQUEST),
+    BRAND_HAS_PRODUCTS(1024, "Thương hiệu không thể xóa vì có sản phẩm liên kết", HttpStatus.BAD_REQUEST),
+    BRAND_PRODUCTS_IN_ORDER(1025, "Thương hiệu không thể xóa vì có sản phẩm liên kết đang có đơn hàng", HttpStatus.BAD_REQUEST),
+    CATEGORY_HAS_PRODUCTS(1026, "Danh mục không thể xóa vì có sản phẩm liên kết", HttpStatus.BAD_REQUEST),
+    CATEGORY_PRODUCTS_IN_ORDER(1027, "Danh mục không thể xóa vì có sản phẩm liên kết đang có đơn hàng", HttpStatus.BAD_REQUEST),
 
     USER_NOT_FOUND(1101, "Không tìm thấy người dùng", HttpStatus.NOT_FOUND),
     LOGIN_FAILED(1102, "Tài khoản hoặc mật khẩu không chính xác", HttpStatus.UNAUTHORIZED),
@@ -85,6 +89,9 @@ public enum ErrorCode {
     VOUCHER_MIN_ORDER_NOT_MET(1403, "Đơn hàng chưa đạt giá trị tối thiểu để sử dụng voucher", HttpStatus.BAD_REQUEST),
     INVALID_VOUCHER_DATA(1404, "Vui lòng nhập đầy đủ các thông tin bắt buộc của voucher", HttpStatus.BAD_REQUEST),
     VOUCHER_IMAGE_REQUIRED(1405, "Vui lòng chọn ảnh cho voucher", HttpStatus.BAD_REQUEST),
+    VOUCHER_IN_USE(1406, "Voucher không thể xóa vì đã có khách hàng sở hữu và vẫn còn hạn sử dụng",
+            HttpStatus.BAD_REQUEST),
+    VOUCHER_CODE_EXISTED(1407, "Mã voucher này đã tồn tại trên hệ thống", HttpStatus.BAD_REQUEST),
 
     BRAND_EXISTED(1008, "Thương hiệu đã tồn tại", HttpStatus.BAD_REQUEST),
     BRAND_NOT_FOUND(1009, "Không tìm thấy thương hiệu", HttpStatus.NOT_FOUND),

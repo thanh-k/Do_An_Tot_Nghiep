@@ -20,5 +20,6 @@ public interface VoucherService {
 
     void decrementQuantity(String code);
 
+    void deleteVouchers(List<Long> ids);
     void incrementQuantity(String code, String userId);
 }

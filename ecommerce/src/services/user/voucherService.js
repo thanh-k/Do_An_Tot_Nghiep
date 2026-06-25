@@ -22,7 +22,7 @@ export const userVoucherService = {
             v.active !== false &&
             v.claimable !== false &&
             v.eligible !== false &&
-            isPublicVoucherCategory(v)
+            isPublicVoucherCategory(v),
         );
       }
 
@@ -36,12 +36,20 @@ export const userVoucherService = {
           new Date(v.expiryDate) > now &&
           isPublicVoucherCategory(v) &&
           (v.category || "DISCOUNT") !== "VIP" &&
-          (v.category || "DISCOUNT") !== "COIN_REWARD"
+          (v.category || "DISCOUNT") !== "COIN_REWARD",
       );
     } catch (error) {
       console.error("Lỗi khi lấy danh sách voucher (User):", error);
       throw error;
     }
+  },
+
+  async deleteVouchers(ids) {
+    // API này không trả về dữ liệu gì khi thành công, chỉ throw lỗi khi thất bại
+    await apiClient.request(`${API_URL}/bulk`, {
+      method: "DELETE",
+      body: JSON.stringify(ids), // Gửi danh sách ID trong body
+    });
   },
 };
 

@@ -44,6 +44,14 @@ public class VoucherController {
         return ApiResponse.<Void>builder().build();
     }
 
+    @DeleteMapping("/bulk")
+    public ApiResponse<String> deleteBulk(@RequestBody List<Long> ids) {
+        voucherService.deleteVouchers(ids);
+        return ApiResponse.<String>builder()
+                .result("Xóa các voucher được chọn thành công!")
+                .build();
+    }
+
     @GetMapping("/check")
     public ApiResponse<Double> checkVoucher(@RequestParam String code, @RequestParam Double orderTotal) {
         return ApiResponse.<Double>builder()

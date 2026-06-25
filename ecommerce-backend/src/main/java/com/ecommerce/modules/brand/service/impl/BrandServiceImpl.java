@@ -4,8 +4,11 @@ import com.ecommerce.common.exception.AppException;
 import com.ecommerce.common.exception.ErrorCode;
 import com.ecommerce.common.util.SlugUtil;
 import com.ecommerce.entity.Brand;
+import com.ecommerce.entity.Product;
 import com.ecommerce.modules.brand.dto.request.BrandRequest;
 import com.ecommerce.modules.brand.dto.response.BrandResponse;
+import com.ecommerce.modules.product.repository.ProductRepository;
+import com.ecommerce.modules.order.repository.OrderDetailRepository;
 import com.ecommerce.modules.brand.mapper.BrandMapper;
 import com.ecommerce.modules.brand.repository.BrandRepository;
 import com.ecommerce.modules.brand.service.BrandService;
@@ -26,6 +29,8 @@ public class BrandServiceImpl implements BrandService {
 
     private final LocalStorageService localStorageService;
     private final BrandRepository brandRepository;
+    private final ProductRepository productRepository; // Inject ProductRepository
+    private final OrderDetailRepository orderDetailRepository; // Inject OrderDetailRepository
     private final BrandMapper brandMapper;
 
     @Override
@@ -73,20 +78,34 @@ public class BrandServiceImpl implements BrandService {
         Brand brand = brandRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.BRAND_NOT_FOUND));
 
-        // 1. Kiểm tra tham chiếu sản phẩm(khi làm sản phẩm xong mới mở khóa)
-        // Giả sử ní đã có ProductRepository
-        // boolean hasProducts = productRepository.existsByBrandId(id);
-        // if (hasProducts) {
-        //     throw new AppException(ErrorCode.BRAND_HAS_PRODUCTS);
-        // }
-        // 1. Xóa ảnh trên Local Storage trước
-        try {
-            localStorageService.deleteFile(brand.getLogo());
-        } catch(Exception e) {
-            System.err.println("Lỗi xóa logo thương hiệu: " + e.getMessage());
+        // 1. Kiểm tra sản phẩm liên kết
+        List<Product> relatedProducts = productRepository.findByBrandId(id);
+        if (!relatedProducts.isEmpty()) {
+            // Kiểm tra xem có sản phẩm nào có biến thể nằm trong đơn hàng
+            for (Product product : relatedProducts) {
+                if (product.getVariants() != null) {
+                    boolean hasOrders = product.getVariants().stream()
+                            .anyMatch(variant -> orderDetailRepository.existsByProductVariant_Id(variant.getId()));
+                    if (hasOrders) {
+                        throw new AppException(ErrorCode.BRAND_PRODUCTS_IN_ORDER,
+                                "Thương hiệu '" + brand.getName() + "' không thể xóa vì có sản phẩm liên kết '"
+                                        + product.getName() + "' đang nằm trong đơn hàng.");
+                    }
+                }
+            }
+            // Nếu sản phẩm chưa có đơn hàng, vẫn cấm xóa để giữ toàn vẹn khóa ngoại
+            throw new AppException(ErrorCode.BRAND_HAS_PRODUCTS,
+                    "Thương hiệu '" + brand.getName() + "' không thể xóa vì đang có "
+                            + relatedProducts.size() + " sản phẩm liên kết. Vui lòng chuyển hoặc xóa sản phẩm trước.");
         }
 
-        // 2. Xóa trong DB
+        // 2. Xóa ảnh logo
+        try {
+            localStorageService.deleteFile(brand.getLogo());
+        } catch (Exception e) {
+            System.err.println("Lỗi xóa logo thương hiệu: " + e.getMessage());
+        }
+        // 3. Xóa thương hiệu
         brandRepository.delete(brand);
     }
 

@@ -49,6 +49,16 @@ export const voucherService = {
     });
     return true;
   },
+
+  // 4. Xóa hàng loạt Voucher
+  async deleteVouchers(ids) {
+    // API này không trả về dữ liệu gì khi thành công, chỉ throw lỗi khi thất bại
+    await apiClient.request(`${API_URL}/bulk`, {
+      method: "DELETE",
+      body: JSON.stringify(ids), // Gửi danh sách ID trong body
+    });
+    return true; // Trả về true nếu không có lỗi
+  },
 };
 
 export default voucherService;
