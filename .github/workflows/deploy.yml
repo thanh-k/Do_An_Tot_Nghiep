@@ -80,7 +80,7 @@ jobs:
               
               cd ecommerce-backend
               # Tối ưu Zero-Downtime: Build image trước khi tắt container cũ
-              docker compose build backend
+              docker compose build --build-arg CACHEBUST=$(date +%s) backend
               docker compose up -d --no-deps backend
               # Chờ backend khởi động (tối đa 60 giây) thay vì sleep mù quáng
               echo "=== Waiting for backend to start... ==="
