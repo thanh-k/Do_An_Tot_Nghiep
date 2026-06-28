@@ -104,5 +104,7 @@ jobs:
             sudo chmod -R 755 /var/www/ecommerce
             sudo find /var/www/ecommerce -type f -exec chmod 644 {} \;
             sudo systemctl reload nginx
+            # Dọn build cache cũ (không xóa image đang dùng)
+            docker builder prune -f --filter "until=24h" || true
             echo "=== Deploy xong! $(date) ==="
           ENDSSH
