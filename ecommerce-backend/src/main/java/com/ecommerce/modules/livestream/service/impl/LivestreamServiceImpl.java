@@ -15,6 +15,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
@@ -24,6 +25,9 @@ import java.util.Collections;
 @Service
 @Transactional
 public class LivestreamServiceImpl implements LivestreamService {
+    private static final ZoneId LIVESTREAM_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+    private static final long START_SCHEDULE_GRACE_SECONDS = 60L;
+
     private final LivestreamRepository livestreamRepository;
     private final LivestreamProductRepository livestreamProductRepository;
     private final LivestreamDealRepository livestreamDealRepository;
@@ -115,7 +119,7 @@ public class LivestreamServiceImpl implements LivestreamService {
     @Override
     public List<LiveChatMessageResponse> getChatMessages(Long livestreamId) {
         try {
-            expireExpiredPinnedComments(livestreamId, LocalDateTime.now());
+            expireExpiredPinnedComments(livestreamId, nowForLivestream());
             return chatMessageRepository.findTop80ByLivestreamIdOrderByCreatedAtDesc(livestreamId).stream()
                     .sorted(Comparator.comparing(LivestreamChatMessage::getCreatedAt))
                     .map(this::toChatMessageResponse)
@@ -132,7 +136,7 @@ public class LivestreamServiceImpl implements LivestreamService {
             throw new IllegalArgumentException("Không tìm thấy bình luận cần ghim");
         }
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = nowForLivestream();
         expireExpiredPinnedComments(livestreamId, now);
 
         LivestreamChatMessage message = chatMessageRepository.findByIdAndLivestreamId(messageId, livestreamId)
@@ -166,7 +170,7 @@ public class LivestreamServiceImpl implements LivestreamService {
         LivestreamChatMessage message = chatMessageRepository.findByIdAndLivestreamId(messageId, livestreamId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bình luận cần gỡ ghim"));
         message.setPinned(false);
-        message.setPinExpiresAt(LocalDateTime.now());
+        message.setPinExpiresAt(nowForLivestream());
         return toChatMessageResponse(chatMessageRepository.save(message));
     }
 
@@ -177,7 +181,7 @@ public class LivestreamServiceImpl implements LivestreamService {
         if (status == LivestreamStatus.LIVE) {
             validateCanStartLivestream(livestream);
             if (livestream.getStartedAt() == null) {
-                livestream.setStartedAt(LocalDateTime.now());
+                livestream.setStartedAt(nowForLivestream());
             }
             // Mỗi lần bắt đầu live thì người xem hiện tại bắt đầu lại từ 0.
             // totalViews vẫn giữ để làm thống kê tổng lượt xem.
@@ -187,7 +191,7 @@ public class LivestreamServiceImpl implements LivestreamService {
             chatMessageRepository.deleteByLivestreamId(id);
         }
         if (status == LivestreamStatus.ENDED) {
-            LocalDateTime endedAt = LocalDateTime.now();
+            LocalDateTime endedAt = nowForLivestream();
             livestream.setEndedAt(endedAt);
             livestream.setViewerCount(0L);
 
@@ -301,7 +305,7 @@ public class LivestreamServiceImpl implements LivestreamService {
             throw new IllegalArgumentException("Giá sau khi giảm phải nhỏ hơn giá hiện tại của sản phẩm");
         }
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = nowForLivestream();
         expireFinishedDeals(livestreamId, now);
 
         // Trong một phiên live chỉ cho phép 1 deal đang chạy.
@@ -383,7 +387,7 @@ public class LivestreamServiceImpl implements LivestreamService {
     }
 
     private LivestreamResponse toResponse(Livestream livestream) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = nowForLivestream();
         expireFinishedDeals(livestream.getId(), now);
         List<LiveProductResponse> products = livestream.getProducts() == null
                 ? Collections.emptyList()
@@ -501,7 +505,7 @@ public class LivestreamServiceImpl implements LivestreamService {
             deal.setActive(false);
             deal.setStatus(status == null || status.isBlank() ? "EXPIRED" : status);
             // Cắt thời gian kết thúc về hiện tại để các màn hình realtime/countdown biết deal đã dừng ngay.
-            deal.setEndsAt(LocalDateTime.now());
+            deal.setEndsAt(nowForLivestream());
         });
         livestreamDealRepository.saveAll(activeDeals);
     }
@@ -582,20 +586,29 @@ public class LivestreamServiceImpl implements LivestreamService {
     }
 
 
+
+    private LocalDateTime nowForLivestream() {
+        return LocalDateTime.now(LIVESTREAM_ZONE);
+    }
+
     private void validateCanStartLivestream(Livestream livestream) {
         if (livestream == null) {
             throw new IllegalArgumentException("Không tìm thấy livestream");
         }
 
         LocalDateTime scheduledAt = livestream.getScheduledAt();
-        if (scheduledAt != null && LocalDateTime.now().isBefore(scheduledAt)) {
+        LocalDateTime now = nowForLivestream();
+
+        // Cho phép bắt đầu trong khoảng sai số nhỏ để tránh lệch vài giây giữa trình duyệt, BE và DB.
+        // Thời gian được so sánh theo múi giờ Việt Nam để deploy Docker/VPS không bị lệch UTC.
+        if (scheduledAt != null && now.plusSeconds(START_SCHEDULE_GRACE_SECONDS).isBefore(scheduledAt)) {
             throw new IllegalArgumentException("Chưa đến lịch phát dự kiến. Livestream sẽ bắt đầu lúc "
                     + scheduledAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
         }
     }
 
     private void validateScheduledAtNotInPast(LocalDateTime scheduledAt) {
-        if (scheduledAt != null && scheduledAt.isBefore(LocalDateTime.now().minusSeconds(5))) {
+        if (scheduledAt != null && scheduledAt.isBefore(nowForLivestream().minusMinutes(1))) {
             throw new IllegalArgumentException("Lịch phát dự kiến không được nhỏ hơn thời gian hiện tại");
         }
     }
