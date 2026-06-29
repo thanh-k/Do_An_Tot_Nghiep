@@ -96,8 +96,17 @@ function ImageUploader({
 
             {/* Nút chụp ảnh trực tiếp ở giữa (iOS Shutter Button Style) */}
             <button
-              onClick={capture}
-              className="group relative flex items-center justify-center"
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                capture();
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                capture();
+              }}
+              className="group relative flex items-center justify-center cursor-pointer"
             >
               <div className="absolute inset-0 h-[76px] w-[76px] -translate-x-[6px] -translate-y-[6px] rounded-full border-[3px] border-white/80 transition-transform duration-300 group-hover:scale-[1.05] group-active:scale-[0.95]"></div>
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-[0_0_30px_rgba(255,255,255,0.6)] transition-transform duration-300 group-active:scale-90">
@@ -131,6 +140,7 @@ function ImageUploader({
             </label>
           </div>
         </div>
+
       ) : (
         /* NẾU KHÔNG MỞ CAMERA (Giao diện Upload bình thường) */
         <div className="flex min-h-[180px] flex-col items-center justify-center gap-3 bg-gradient-to-br from-slate-50 to-white p-5 text-center">
@@ -181,7 +191,6 @@ function ImageUploader({
           </div>
         </div>
       )}
-
     </div>
   );
 }
