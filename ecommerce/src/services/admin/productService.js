@@ -166,9 +166,25 @@ export const productService = {
       const res = await apiClient.request(API_URL);
       const products = Array.isArray(res) ? res : [];
 
-      const featured = products
-        .filter((p) => p?.isFeatured === true || Number(p?.featured) === 1)
-        .slice(0, 8);
+      let featured = [];
+      try {
+        console.log("[getHomeCollections] Đang gọi API lấy sản phẩm bán chạy tại:", `${API_URL}/best-sellers`);
+        const bestSellersRes = await apiClient.request(`${API_URL}/best-sellers`);
+        featured = bestSellersRes?.result || bestSellersRes || [];
+        console.log("[getHomeCollections] Lấy sản phẩm bán chạy thành công. Số lượng:", featured.length, "sản phẩm:", featured);
+      } catch (e) {
+        console.error("[getHomeCollections] THẤT BẠI khi lấy sản phẩm bán chạy! Lỗi chi tiết:", e);
+        if (e.response) {
+          console.error("[getHomeCollections] Chi tiết phản hồi lỗi từ server - HTTP Status:", e.response.status, "Body:", e.response.data);
+        }
+        console.warn("[getHomeCollections] Đang sử dụng fallback danh sách nổi bật/mới nhất...");
+      }
+
+      if (!Array.isArray(featured) || featured.length === 0) {
+        featured = products
+          .filter((p) => p?.isFeatured === true || Number(p?.featured) === 1)
+          .slice(0, 8);
+      }
 
       const newProducts = products.filter((p) => p?.isNew === true);
       const otherProducts = products.filter((p) => p?.isNew !== true);

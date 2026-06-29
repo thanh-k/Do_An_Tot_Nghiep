@@ -21,6 +21,8 @@ public interface ProductService {
 
     List<ProductResponse> getProductsByIds(List<Long> ids);
 
+    List<ProductResponse> getBestSellers();
+
     Page<ProductResponse> getProductsWithFilter(
             String keyword,
             Long categoryId,

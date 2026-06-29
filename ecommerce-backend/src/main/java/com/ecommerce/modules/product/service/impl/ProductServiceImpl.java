@@ -697,7 +697,7 @@ public class ProductServiceImpl implements ProductService {
                                                                                                         v.getId()))
                                                                         .build())
                                                         .collect(Collectors.toList()))
-                                        .images(images.stream()
+                                                         .images(images.stream()
                                                         .map(ProductImage::getImageUrl)
                                                         .collect(Collectors.toList()))
                                         .build();
@@ -707,5 +707,54 @@ public class ProductServiceImpl implements ProductService {
                         e.printStackTrace();
                         throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
                 }
+        }
+
+        private static final Set<String> REVENUE_STATUSES = Set.of("PAID", "SHIPPING", "COMPLETED", "DELIVERED", "SUCCESS");
+
+        private boolean isRevenueOrder(Order order) {
+                if (order == null || order.getStatus() == null) return false;
+                String status = order.getStatus().trim().toUpperCase();
+                return REVENUE_STATUSES.contains(status);
+        }
+
+        @Override
+        @Transactional(readOnly = true)
+        public List<ProductResponse> getBestSellers() {
+                List<OrderDetail> details = orderDetailRepository.findAll();
+                
+                // Gom nhóm và đếm số lượng bán theo Product ID từ các đơn hàng hợp lệ
+                Map<Long, Long> productSalesMap = details.stream()
+                                .filter(detail -> detail.getOrder() != null && isRevenueOrder(detail.getOrder()))
+                                .filter(detail -> detail.getProductVariant() != null && detail.getProductVariant().getProduct() != null)
+                                .collect(Collectors.groupingBy(
+                                                detail -> detail.getProductVariant().getProduct().getId(),
+                                                Collectors.summingLong(detail -> detail.getQuantity() == null ? 0L : detail.getQuantity().longValue())
+                                ));
+
+                // Sắp xếp các Product ID theo số lượng bán giảm dần
+                List<Long> topProductIds = productSalesMap.entrySet().stream()
+                                .sorted(Map.Entry.<Long, Long>comparingByValue().reversed())
+                                .limit(8)
+                                .map(Map.Entry::getKey)
+                                .collect(Collectors.toList());
+
+                // Nếu không có sản phẩm bán chạy, lấy 8 sản phẩm bất kỳ hoặc mới nhất làm dự phòng
+                if (topProductIds.isEmpty()) {
+                        return productRepository.findAll(PageRequest.of(0, 8, Sort.by(Sort.Direction.DESC, "id")))
+                                        .getContent().stream()
+                                        .map(this::getProductResponse)
+                                        .collect(Collectors.toList());
+                }
+
+                // Lấy các thực thể sản phẩm tương ứng và map sang Response
+                List<Product> products = productRepository.findAllById(topProductIds);
+                Map<Long, Product> productMap = products.stream()
+                                .collect(Collectors.toMap(Product::getId, Function.identity()));
+
+                // Đảm bảo thứ tự sắp xếp được giữ nguyên như topProductIds
+                return topProductIds.stream()
+                                .filter(productMap::containsKey)
+                                .map(id -> getProductResponse(productMap.get(id)))
+                                .collect(Collectors.toList());
         }
 }

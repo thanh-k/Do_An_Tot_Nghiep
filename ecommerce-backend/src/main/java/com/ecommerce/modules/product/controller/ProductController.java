@@ -64,6 +64,13 @@ public class ProductController {
                                 .build();
         }
 
+        @GetMapping("/best-sellers")
+        public ApiResponse<List<ProductResponse>> getBestSellers() {
+                return ApiResponse.<List<ProductResponse>>builder()
+                                .result(productService.getBestSellers())
+                                .build();
+        }
+
         // 2. Lấy chi tiết 1 sản phẩm
         @GetMapping("/{id}")
         public ApiResponse<ProductResponse> getById(@PathVariable Long id) {
