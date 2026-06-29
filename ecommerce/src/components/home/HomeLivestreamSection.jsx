@@ -6,7 +6,7 @@ import { buildLivestreamWsUrl, formatVnd, getDealForProduct } from "@/utils/live
 
 function PromoFallback() {
   return (
-    <section className="mx-auto w-full max-w-[1260px] px-4 pb-3 sm:px-6 lg:px-8">
+    <section className="hidden md:block mx-auto w-full max-w-[1260px] px-4 pb-3 sm:px-6 lg:px-8">
       <Link to="/products?sort=sale" className="relative block overflow-hidden rounded-[18px] border border-rose-100 bg-white shadow-sm">
         <div className="absolute inset-0 bg-gradient-to-r from-rose-50 via-white to-orange-50" />
         <div className="relative flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">

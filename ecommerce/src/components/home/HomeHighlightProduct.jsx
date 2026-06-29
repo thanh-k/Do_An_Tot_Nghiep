@@ -30,9 +30,9 @@ function HomeHighlightProduct({ product }) {
 
         <Link
           to={`/products/${product.slug || product.id}`}
-          className="grid gap-5 rounded-2xl border border-slate-100 bg-slate-50 p-4 md:grid-cols-[260px_minmax(0,1fr)] md:items-center"
+          className="grid grid-cols-[100px_1fr] gap-4 md:gap-5 rounded-2xl border border-slate-100 bg-slate-50 p-3 md:p-4 md:grid-cols-[260px_minmax(0,1fr)] md:items-center"
         >
-          <div className="flex h-[180px] items-center justify-center overflow-hidden rounded-2xl bg-white p-4 md:h-[200px]">
+          <div className="flex h-[100px] w-[100px] md:h-[200px] md:w-auto items-center justify-center overflow-hidden rounded-2xl bg-white p-2 md:p-4 shrink-0 mx-auto md:mx-0">
             <img
               src={product.image || product.thumbnail}
               alt={product.name}
@@ -41,34 +41,34 @@ function HomeHighlightProduct({ product }) {
             />
           </div>
 
-          <div className="min-w-0">
-            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
+          <div className="min-w-0 flex flex-col justify-center">
+            <p className="text-[9px] md:text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
               Deal nổi bật hôm nay
             </p>
 
-            <h3 className="mt-2 line-clamp-2 text-2xl font-black leading-tight text-slate-900">
+            <h3 className="mt-1 line-clamp-1 md:line-clamp-2 text-sm md:text-2xl font-black leading-tight text-slate-900">
               {product.name}
             </h3>
 
-            <div className="mt-3 flex flex-wrap items-center gap-3">
+            <div className="mt-1 flex flex-wrap items-baseline gap-2">
+              <p className="text-base md:text-3xl font-black text-slate-950">
+                {formatCurrency(salePrice)}
+              </p>
+
               {originalPrice > salePrice && (
-                <p className="text-base font-semibold italic text-slate-400 line-through">
+                <p className="text-xs md:text-base font-semibold italic text-slate-400 line-through">
                   {formatCurrency(originalPrice)}
                 </p>
               )}
 
               {discountPercent > 0 && (
-                <span className="rounded-full bg-rose-600 px-3 py-1 text-xs font-black text-white">
+                <span className="rounded-full bg-rose-600 px-2 py-0.5 md:px-3 md:py-1 text-[9px] md:text-xs font-black text-white">
                   -{discountPercent}%
                 </span>
               )}
             </div>
 
-            <p className="mt-2 text-3xl font-black text-slate-950">
-              {formatCurrency(salePrice)}
-            </p>
-
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] md:text-sm">
               <span>
                 <span className="text-amber-400">
                   {"★".repeat(fullStars)}
@@ -78,9 +78,14 @@ function HomeHighlightProduct({ product }) {
                 </span>
               </span>
 
-              <span className="text-slate-500">
+              <span className="text-slate-500 font-medium">
                 {rating.toFixed(1)}
-                {reviewCount > 0 && ` (${reviewCount} đánh giá)`}
+                <span className="hidden md:inline">
+                  {reviewCount > 0 && ` (${reviewCount} đánh giá)`}
+                </span>
+                <span className="inline md:hidden">
+                  {reviewCount > 0 && ` (${reviewCount})`}
+                </span>
               </span>
             </div>
           </div>

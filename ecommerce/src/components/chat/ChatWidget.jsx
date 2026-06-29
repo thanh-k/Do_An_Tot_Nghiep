@@ -4,6 +4,7 @@
 // Logic xử lý AI, context, thêm giỏ hàng đã được tách sang hooks/utils/components để dễ bảo trì.
 
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import ChatHeader from "./components/ChatHeader";
 import ChatInput from "./components/ChatInput";
 import ChatLauncherButton from "./components/ChatLauncherButton";
@@ -11,6 +12,8 @@ import ChatMessage from "./components/ChatMessage";
 import useChatAi from "./hooks/useChatAi";
 
 function ChatWidget() {
+  const location = useLocation();
+  const isHomePage = location.pathname === "/";
   const [isOpen, setIsOpen] = useState(false);
   const {
     input,
@@ -34,10 +37,13 @@ function ChatWidget() {
       <ChatLauncherButton
         isOpen={isOpen}
         onToggle={() => setIsOpen((prev) => !prev)}
+        isHomePage={isHomePage}
       />
 
       {isOpen && (
-        <div className="fixed inset-x-2 bottom-20 top-[90px] z-50 flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:inset-auto sm:right-6 sm:bottom-6 sm:w-[390px] sm:max-w-[calc(100vw-32px)] sm:h-[calc(100vh-110px)] sm:max-h-[640px]">
+        <div className={`fixed bottom-[64px] inset-x-0 top-auto z-[85] h-[50vh] flex flex-col overflow-hidden bg-white rounded-t-2xl border-t border-slate-200 shadow-2xl sm:inset-auto sm:right-6 sm:bottom-24 lg:bottom-6 sm:h-[calc(100vh-110px)] sm:max-h-[640px] sm:w-[390px] sm:max-w-[calc(100vw-32px)] sm:rounded-2xl sm:border sm:shadow-2xl ${
+          isHomePage ? "flex" : "hidden lg:flex"
+        }`}>
           <ChatHeader onClose={() => setIsOpen(false)} />
 
           <div className="flex-1 space-y-3 overflow-y-auto bg-slate-50 p-3 sm:p-4">

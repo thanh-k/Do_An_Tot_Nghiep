@@ -35,7 +35,8 @@ function HomeHeroSection({ categories = [] }) {
             </div>
           </Link>
 
-          <div className="grid min-w-0 grid-cols-1 gap-4 overflow-hidden md:grid-cols-[1.2fr_1fr]">
+          {/* Giao diện Desktop (md trở lên): Giữ nguyên logic hiển thị 2 cột cũ */}
+          <div className="hidden md:grid min-w-0 grid-cols-[1.2fr_1fr] gap-4 overflow-hidden">
             <Link to="/vouchers" className="relative min-h-0 overflow-hidden rounded-[20px] shadow-sm">
               <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-blue-500" />
               <div className="relative z-10 flex h-full flex-col justify-center px-6 py-5 text-white">
@@ -50,6 +51,45 @@ function HomeHeroSection({ categories = [] }) {
                 <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/80">Ưu đãi nhanh</p>
                 <h3 className="mt-2 text-lg font-black uppercase">Nhận mã hoạt động tốt</h3>
                 <p className="mt-1.5 text-sm text-white/80">Số lượng có hạn mỗi ngày</p>
+              </div>
+            </Link>
+          </div>
+
+          {/* Giao diện Mobile (dưới md): Hiển thị 1 dòng 3 cột với đầy đủ nội dung */}
+          <div className="grid md:hidden min-w-0 grid-cols-3 gap-2 overflow-hidden">
+            {/* Cột 1: Freeship */}
+            <Link to="/vouchers" className="relative flex flex-col justify-between p-3 rounded-[16px] overflow-hidden shadow-sm h-full">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 to-blue-500" />
+              <div className="relative z-10 flex flex-col h-full justify-between text-white">
+                <div>
+                  <span className="text-[8px] font-black uppercase tracking-wider block opacity-75">Nova exclusive</span>
+                  <h4 className="text-[11px] font-black uppercase mt-1 leading-tight">Freeship toàn quốc</h4>
+                </div>
+                <span className="text-[8px] opacity-90 block mt-1 leading-tight font-medium">Mọi hình thức thanh toán</span>
+              </div>
+            </Link>
+            
+            {/* Cột 2: Nhận mã hoạt động tốt */}
+            <Link to="/vouchers" className="relative flex flex-col justify-between p-3 rounded-[16px] overflow-hidden shadow-sm h-full">
+              <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-indigo-950" />
+              <div className="relative z-10 flex flex-col h-full justify-between text-white">
+                <div>
+                  <span className="text-[8px] font-black uppercase tracking-wider block opacity-75">Ưu đãi nhanh</span>
+                  <h4 className="text-[11px] font-black uppercase mt-1 leading-tight">Nhận mã hoạt động</h4>
+                </div>
+                <span className="text-[8px] opacity-90 block mt-1 leading-tight font-medium">Số lượng có hạn mỗi ngày</span>
+              </div>
+            </Link>
+            
+            {/* Cột 3: Săn deal công nghệ hôm nay */}
+            <Link to="/products?sort=sale" className="relative flex flex-col justify-between p-3 rounded-[16px] overflow-hidden shadow-sm h-full border border-rose-100 bg-white">
+              <div className="absolute inset-0 bg-gradient-to-br from-rose-50 via-white to-orange-50" />
+              <div className="relative z-10 flex flex-col h-full justify-between text-rose-700">
+                <div>
+                  <span className="text-[8px] font-black uppercase tracking-wider block text-rose-500 opacity-80">Săn Deal</span>
+                  <h4 className="text-[11px] font-black uppercase mt-1 leading-tight text-slate-900">Săn deal công nghệ</h4>
+                </div>
+                <span className="text-[8px] text-slate-500 block mt-1 leading-tight font-medium">Ưu đãi thành viên cực sốc</span>
               </div>
             </Link>
           </div>

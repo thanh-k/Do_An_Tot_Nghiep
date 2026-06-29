@@ -170,14 +170,19 @@ export const productService = {
         .filter((p) => p?.isFeatured === true || Number(p?.featured) === 1)
         .slice(0, 8);
 
-      const latest = [...products]
-        .sort((a, b) => {
-          const dateA = new Date(a?.createdAt || a?.updatedAt || 0).getTime();
-          const dateB = new Date(b?.createdAt || b?.updatedAt || 0).getTime();
-          if (dateA !== dateB) return dateB - dateA;
-          return Number(b?.id || 0) - Number(a?.id || 0);
-        })
-        .slice(0, 8);
+      const newProducts = products.filter((p) => p?.isNew === true);
+      const otherProducts = products.filter((p) => p?.isNew !== true);
+
+      const sortByDate = (list) => [...list].sort((a, b) => {
+        const dateA = new Date(a?.createdAt || a?.updatedAt || 0).getTime();
+        const dateB = new Date(b?.createdAt || b?.updatedAt || 0).getTime();
+        if (dateA !== dateB) return dateB - dateA;
+        return Number(b?.id || 0) - Number(a?.id || 0);
+      });
+
+      const sortedNew = sortByDate(newProducts);
+      const sortedOthers = sortByDate(otherProducts);
+      const latest = [...sortedNew, ...sortedOthers].slice(0, 8);
 
       const deals = products
         .filter(

@@ -171,8 +171,8 @@ function HomePage() {
     return <LoadingSpinner label="Đang tải trang chủ InsightShop..." />;
   }
 
-  const bestSellerProducts = latestProducts.length > 0 ? latestProducts : featuredProducts;
-  const newestProducts = featuredProducts.length > 0 ? featuredProducts : latestProducts;
+  const bestSellerProducts = featuredProducts.length > 0 ? featuredProducts : latestProducts;
+  const newestProducts = latestProducts.length > 0 ? latestProducts : featuredProducts;
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#f4f4f4]">

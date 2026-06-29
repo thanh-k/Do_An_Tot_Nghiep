@@ -225,33 +225,33 @@ export default function ProductReviews({ productId }) {
 
   return (
     <section className="mt-20">
-      <div className="mb-12 rounded-[3rem] border border-slate-100 bg-white p-8 shadow-xl md:p-12">
-        <div className="grid items-center gap-12 lg:grid-cols-12">
-          <div className="border-b border-slate-100 pb-8 text-center lg:col-span-4 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-12">
-            <h4 className="mb-4 text-sm font-black uppercase tracking-[0.3em] text-slate-400">
+      <div className="mb-8 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+        <div className="grid items-center gap-6 md:grid-cols-[180px_1fr]">
+          <div className="border-b border-slate-100 pb-5 text-center md:border-b-0 md:border-r md:pb-0 md:pr-6">
+            <h4 className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
               Đánh giá trung bình
             </h4>
             <div className="flex flex-col items-center">
-              <span className="text-8xl font-black leading-none text-slate-900 italic">{stats.avg}</span>
-              <div className="my-6 flex gap-1 text-yellow-400">
+              <span className="text-5xl font-black leading-none text-slate-900 italic">{stats.avg}</span>
+              <div className="my-2 flex gap-0.5 text-yellow-400">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={24} fill={i < Math.round(Number(stats.avg)) ? "currentColor" : "none"} className={i >= Math.round(Number(stats.avg)) ? "text-slate-200" : ""} />
+                  <Star key={i} size={16} fill={i < Math.round(Number(stats.avg)) ? "currentColor" : "none"} className={i >= Math.round(Number(stats.avg)) ? "text-slate-200" : ""} />
                 ))}
               </div>
-              <p className="text-sm font-bold italic text-slate-500">({stats.total} nhận xét từ khách hàng)</p>
+              <p className="text-xs font-bold italic text-slate-500">({stats.total} đánh giá)</p>
             </div>
           </div>
 
-          <div className="flex flex-col gap-4 lg:col-span-8">
+          <div className="flex flex-col gap-2">
             {[5, 4, 3, 2, 1].map((star) => {
               const percentage = stats.total > 0 ? Math.round((stats.counts[star] / stats.total) * 100) : 0;
               return (
-                <div key={star} className="flex items-center gap-4">
-                  <span className="w-12 text-xs font-black uppercase tracking-tighter text-slate-400">{star} Sao</span>
-                  <div className="h-3 flex-1 overflow-hidden rounded-full bg-slate-50">
+                <div key={star} className="flex items-center gap-3">
+                  <span className="w-10 text-[10px] font-black uppercase tracking-tighter text-slate-400">{star} Sao</span>
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-50">
                     <motion.div initial={{ width: 0 }} whileInView={{ width: `${percentage}%` }} transition={{ duration: 1 }} className={`h-full rounded-full bg-gradient-to-r ${star >= 4 ? "from-yellow-400 to-orange-500" : "from-slate-200 to-slate-300"}`} />
                   </div>
-                  <span className="w-10 text-xs font-bold text-slate-600">{percentage}%</span>
+                  <span className="w-8 text-[10px] font-bold text-slate-600">{percentage}%</span>
                 </div>
               );
             })}

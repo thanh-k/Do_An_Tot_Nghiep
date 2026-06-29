@@ -74,9 +74,9 @@ function ProductGallery({
 
   return (
     <div className="space-y-4 min-w-0 w-full">
-      <div className="overflow-hidden rounded-3xl bg-slate-100">
+      <div className="overflow-hidden rounded-2xl bg-white border border-slate-100 shadow-sm">
         {activeItem.type === "video" ? (
-          <div className="relative h-[440px] w-full bg-slate-950 sm:h-[520px]">
+          <div className="relative h-[280px] w-full bg-slate-950 sm:h-[520px]">
             <video
               key={activeItem.src}
               src={activeItem.src}
@@ -87,8 +87,8 @@ function ProductGallery({
               className="h-full w-full object-contain"
               onPlay={() => onVideoView?.(activeItem.video)}
             />
-            <div className="pointer-events-none absolute left-4 top-4 rounded-full bg-rose-600 px-3 py-1 text-xs font-black text-white shadow-lg">
-              <PlayCircle className="mr-1 inline h-4 w-4" />
+            <div className="pointer-events-none absolute left-4 top-4 rounded-full bg-rose-600 px-3 py-1 text-[10px] font-black text-white shadow-lg">
+              <PlayCircle className="mr-1 inline h-3.5 w-3.5" />
               VIDEO MÔ TẢ
             </div>
           </div>
@@ -96,22 +96,22 @@ function ProductGallery({
           <img
             src={activeItem.src}
             alt="Product"
-            className="h-[440px] w-full object-contain sm:h-[520px] p-4"
+            className="h-[280px] w-full object-contain sm:h-[520px] p-2 sm:p-4"
           />
         )}
       </div>
 
-      <div className="flex gap-3 overflow-x-auto pb-2 snap-x no-scrollbar w-full">
+      <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 snap-x no-scrollbar w-full">
         {mediaItems.map((item) => (
           <button
             key={item.id}
             type="button"
             onClick={() => selectMedia(item)}
             className={cn(
-              "relative shrink-0 h-24 w-24 overflow-hidden rounded-2xl border-2 bg-slate-100 snap-center transition-all",
+              "relative shrink-0 h-16 w-16 sm:h-20 sm:w-20 overflow-hidden rounded-xl border-2 bg-white snap-center transition-all",
               activeItem.id === item.id
                 ? "border-brand-600 shadow-md"
-                : "border-transparent opacity-70 hover:opacity-100",
+                : "border-transparent opacity-75 hover:opacity-100",
             )}
             title={item.label}
           >

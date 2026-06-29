@@ -382,14 +382,19 @@ export const userProductService = {
         .filter((p) => p.isFeatured === true || Number(p.featured) === 1)
         .slice(0, 8);
 
-      const newest = [...allProducts]
-        .sort((a, b) => {
-          const dateA = new Date(a.createdAt || a.updatedAt || 0).getTime();
-          const dateB = new Date(b.createdAt || b.updatedAt || 0).getTime();
-          if (dateA !== dateB) return dateB - dateA;
-          return Number(b.id || 0) - Number(a.id || 0);
-        })
-        .slice(0, 8);
+      const newProducts = allProducts.filter((p) => p.isNew === true);
+      const otherProducts = allProducts.filter((p) => p.isNew !== true);
+
+      const sortByDate = (list) => [...list].sort((a, b) => {
+        const dateA = new Date(a.createdAt || a.updatedAt || 0).getTime();
+        const dateB = new Date(b.createdAt || b.updatedAt || 0).getTime();
+        if (dateA !== dateB) return dateB - dateA;
+        return Number(b.id || 0) - Number(a.id || 0);
+      });
+
+      const sortedNew = sortByDate(newProducts);
+      const sortedOthers = sortByDate(otherProducts);
+      const newest = [...sortedNew, ...sortedOthers].slice(0, 8);
 
       const sale = allProducts
         .filter((p) => getCompareAtPrice(p) > getProductPrice(p))
