@@ -10,8 +10,14 @@ import {
 } from "lucide-react";
 import Webcam from "react-webcam";
 
-function ImageUploader({ file, previewUrl, onChange, onClear }) {
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
+function ImageUploader({
+  file,
+  previewUrl,
+  onChange,
+  onClear,
+  isCameraOpen,
+  setIsCameraOpen,
+}) {
   const webcamRef = useRef(null);
 
   // Hàm xử lý khi bấm nút chụp ảnh
@@ -127,25 +133,21 @@ function ImageUploader({ file, previewUrl, onChange, onClear }) {
         </div>
       ) : (
         /* NẾU KHÔNG MỞ CAMERA (Giao diện Upload bình thường) */
-        <div className="flex min-h-[300px] flex-col items-center justify-center gap-5 bg-gradient-to-br from-slate-50 to-white p-8 text-center">
-          <div className="grid h-16 w-16 place-items-center rounded-2xl bg-brand-50 text-brand-600">
-            {previewUrl ? <ImagePlus size={28} /> : <UploadCloud size={28} />}
+        <div className="flex min-h-[180px] flex-col items-center justify-center gap-3 bg-gradient-to-br from-slate-50 to-white p-5 text-center">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand-50 text-brand-600">
+            {previewUrl ? <ImagePlus size={20} /> : <UploadCloud size={20} />}
           </div>
 
-          <div className="space-y-2">
-            <h3 className="text-xl font-semibold text-slate-900">
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold text-slate-900">
               {file ? "Đổi ảnh tìm kiếm" : "Upload hoặc Chụp ảnh sản phẩm"}
             </h3>
-            <p className="max-w-xl text-sm leading-6 text-slate-500">
-              Đây là giao diện mock AI visual search. Hãy tải ảnh lên hoặc bật
-              webcam để chụp trực tiếp.
-            </p>
           </div>
 
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-4">
+          <div className="mt-1 flex flex-wrap items-center justify-center gap-3">
             {/* Nút 1: Chọn file (Chỉ hiển thị trên Desktop) */}
-            <label className="hidden lg:flex cursor-pointer items-center gap-2 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 shadow-sm">
-              <UploadCloud size={18} />
+            <label className="hidden lg:flex cursor-pointer items-center gap-1.5 rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-700 shadow-sm">
+              <UploadCloud size={14} />
               <span>Chọn ảnh từ máy</span>
               <input
                 type="file"
@@ -158,21 +160,21 @@ function ImageUploader({ file, previewUrl, onChange, onClear }) {
             {/* Nút 2: Bật Camera UI (Ẩn trên PC, hiện trên Mobile & Tablet) - Premium AI Style */}
             <button
               onClick={() => setIsCameraOpen(true)}
-              className="group flex lg:hidden cursor-pointer items-center gap-3 rounded-[2.5rem] bg-white px-6 py-3 shadow-[0_8px_30px_-5px_rgba(0,0,0,0.15)] border border-slate-100 transition-all active:scale-95"
+              className="group flex lg:hidden cursor-pointer items-center gap-2 rounded-[2.5rem] bg-white px-4 py-2 shadow-[0_8px_30px_-5px_rgba(0,0,0,0.15)] border border-slate-100 transition-all active:scale-95"
             >
-              <div className="relative flex h-[38px] w-[38px] items-center justify-center rounded-full bg-slate-50">
+              <div className="relative flex h-[28px] w-[28px] items-center justify-center rounded-full bg-slate-50">
                 <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-blue-500 via-purple-500 to-rose-500 opacity-20 blur-[2px] group-hover:opacity-40 transition-opacity"></div>
                 <Camera
-                  size={18}
+                  size={14}
                   strokeWidth={2.5}
                   className="relative z-10 text-slate-800"
                 />
                 <Sparkles
-                  size={10}
+                  size={8}
                   className="absolute -top-0.5 -right-0.5 text-rose-500 animate-pulse z-20"
                 />
               </div>
-              <span className="text-[14.5px] font-black text-slate-800 tracking-tight">
+              <span className="text-xs font-black text-slate-800 tracking-tight">
                 Tìm Bằng Camera AI
               </span>
             </button>
@@ -180,33 +182,6 @@ function ImageUploader({ file, previewUrl, onChange, onClear }) {
         </div>
       )}
 
-      {/* PHẦN HIỂN THỊ KẾT QUẢ (Preview) */}
-      {previewUrl && !isCameraOpen ? (
-        <div className="border-t border-slate-200 p-6 bg-slate-50/50">
-          <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
-            <img
-              src={previewUrl}
-              alt="Preview"
-              className="h-56 w-full rounded-2xl object-cover shadow-sm border border-slate-200"
-            />
-            <div className="space-y-3">
-              <h4 className="text-lg font-semibold text-slate-900">
-                Ảnh đã chọn: {file?.name || "Ảnh chụp từ Camera"}
-              </h4>
-              <p className="text-sm leading-6 text-slate-500">
-                Hệ thống sẽ tiến hành trích xuất đặc trưng hình ảnh và tìm kiếm
-                các sản phẩm tương đồng trong cơ sở dữ liệu.
-              </p>
-              <button
-                className="mt-2 text-sm font-semibold text-rose-600 transition hover:text-rose-700"
-                onClick={onClear}
-              >
-                Xoá ảnh hiện tại
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
