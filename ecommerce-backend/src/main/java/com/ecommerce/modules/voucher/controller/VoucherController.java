@@ -7,6 +7,7 @@ import com.ecommerce.modules.voucher.service.VoucherService;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -45,17 +46,23 @@ public class VoucherController {
     }
 
     @DeleteMapping("/bulk")
-    public ApiResponse<String> deleteBulk(@RequestBody List<Long> ids) {
-        voucherService.deleteVouchers(ids);
-        return ApiResponse.<String>builder()
-                .result("Xóa các voucher được chọn thành công!")
-                .build();
+    public ApiResponse<Map<String, Object>> deleteBulk(@RequestBody List<Long> ids) {
+        Map<String, Object> result = voucherService.deleteVouchers(ids);
+        return ApiResponse.<Map<String, Object>>builder().result(result).build();
     }
 
     @GetMapping("/check")
     public ApiResponse<Double> checkVoucher(@RequestParam String code, @RequestParam Double orderTotal) {
         return ApiResponse.<Double>builder()
                 .result(voucherService.calculateDiscount(code, orderTotal))
+                .build();
+    }
+
+    @PostMapping("/claim/{code}")
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<VoucherResponse> claimVoucher(@PathVariable String code) {
+        return ApiResponse.<VoucherResponse>builder()
+                .result(voucherService.claimVoucher(code))
                 .build();
     }
 }

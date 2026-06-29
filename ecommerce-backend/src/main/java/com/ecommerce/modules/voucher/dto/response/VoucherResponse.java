@@ -32,7 +32,10 @@ public class VoucherResponse {
     private Integer monthlyQuantity;
 
     // FE display state
-    private Boolean eligible;     // có đủ điều kiện để nhận / dùng
-    private Boolean claimable;    // có thể nhận ngay
-    private String lockedReason;  // lý do khóa cho user thường
+    private Boolean eligible; // có đủ điều kiện để nhận / dùng
+    private Boolean claimable; // có thể nhận ngay
+    private String lockedReason; // lý do khóa cho user thường
+
+    @Builder.Default
+    private Boolean claimed = false; // true nếu user hiện tại đã lưu voucher này vào ví dưới DB
 }

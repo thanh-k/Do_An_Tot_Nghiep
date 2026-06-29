@@ -282,17 +282,39 @@ function VoucherManagementPage() {
     );
 
     try {
-      await voucherService.deleteVouchers(selectedIds);
-      toast.success(`Đã xóa thành công ${selectedIds.length} voucher.`);
+      const result = await voucherService.deleteVouchers(selectedIds);
+      // DEBUG: In ra kết quả thực tế nhận được từ service
+      console.log(
+        "[VoucherManagementPage] Kết quả trả về từ voucherService.deleteVouchers:",
+        result,
+      );
+      const { deletedCount, deletedCodes, undeletableCodes } = result || {
+        deletedCount: 0,
+        deletedCodes: [],
+        undeletableCodes: [],
+      };
+
+      if (deletedCodes && deletedCodes.length > 0) {
+        toast.success(
+          `Đã xoá thành công ${deletedCount} voucher: ${deletedCodes.join(", ")}.`,
+        );
+      }
+
+      if (undeletableCodes && undeletableCodes.length > 0) {
+        toast.error(
+          `Không thể xóa ${undeletableCodes.length} voucher: [${undeletableCodes.join(", ")}] vì vẫn còn khách hàng sở hữu hoặc đã được sử dụng trong đơn hàng. Vui lòng chuyển trạng thái sang 'Tắt hoạt động' thay vì xóa.`,
+          { duration: 8000 },
+        );
+      }
+
       setSelectedIds([]);
       loadData();
     } catch (error) {
-      // LOGGING: In ra toàn bộ đối tượng lỗi để debug
+      // DEBUG: In ra toàn bộ đối tượng lỗi để kiểm tra cấu trúc
       console.error(
-        "[DEBUG] Lỗi khi xóa hàng loạt voucher:",
-        error.response || error,
+        "[VoucherManagementPage] Lỗi trong khối catch:",
+        JSON.stringify(error, null, 2),
       );
-
       const serverError =
         error.response?.data?.message || "Một số voucher không thể xóa.";
       toast.error(serverError, { duration: 8000 });

@@ -8,13 +8,14 @@ import toast from "react-hot-toast";
 // Hàm hỗ trợ format ngày giờ để đổ vào thẻ <input type="datetime-local">
 const formatDateTimeForInput = (isoString) => {
   if (!isoString) return "";
+  // Nếu chuỗi đã ở định dạng YYYY-MM-DDTHH:mm, chỉ cần cắt lấy 16 ký tự
+  if (isoString.length >= 16 && isoString.includes("T")) {
+    return isoString.slice(0, 16);
+  }
+  // Nếu là định dạng từ new Date() hoặc có múi giờ, chuyển về local time
   const date = new Date(isoString);
-  // Tránh lỗi timezone bằng cách lấy local string
   const offset = date.getTimezoneOffset() * 60000;
-  const localISOTime = new Date(date.getTime() - offset)
-    .toISOString()
-    .slice(0, 16);
-  return localISOTime;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
 };
 
 const getInitialState = (voucher) => ({
@@ -25,8 +26,14 @@ const getInitialState = (voucher) => ({
   discountValue: voucher?.discountValue || "",
   minOrderValue: voucher?.minOrderValue || 0,
   quantity: voucher?.quantity || "",
-  vipOnly: voucher?.vipOnly !== undefined ? voucher.vipOnly : voucher?.category === "VIP",
-  monthlyReset: voucher?.monthlyReset !== undefined ? voucher.monthlyReset : voucher?.category === "VIP",
+  vipOnly:
+    voucher?.vipOnly !== undefined
+      ? voucher.vipOnly
+      : voucher?.category === "VIP",
+  monthlyReset:
+    voucher?.monthlyReset !== undefined
+      ? voucher.monthlyReset
+      : voucher?.category === "VIP",
   monthlyQuantity: voucher?.monthlyQuantity || voucher?.quantity || "",
   expiryDate: formatDateTimeForInput(voucher?.expiryDate) || "",
   active: voucher?.active !== undefined ? voucher.active : true,
@@ -67,7 +74,8 @@ function VoucherFormModal({ isOpen, onClose, initialVoucher, onSubmit }) {
       if (!value || Number(value) < 1) errMsg = "Số lượng phải từ 1 trở lên";
     }
     if (name === "coinCost" && currentForm.category === "COIN_REWARD") {
-      if (!value || Number(value) <= 0) errMsg = "Giá xu đổi voucher phải lớn hơn 0";
+      if (!value || Number(value) <= 0)
+        errMsg = "Giá xu đổi voucher phải lớn hơn 0";
     }
     if (name === "expiryDate") {
       if (!value) errMsg = "Vui lòng chọn hạn sử dụng";
@@ -150,9 +158,15 @@ function VoucherFormModal({ isOpen, onClose, initialVoucher, onSubmit }) {
       newErrors.minOrderValue = "Giá trị đơn tối thiểu không hợp lệ";
 
     if (!currentForm.quantity || Number(currentForm.quantity) < 1)
-      newErrors.quantity = currentForm.category === "VIP" ? "Quota voucher VIP mỗi tháng phải từ 1 trở lên" : "Số lượng phải từ 1 trở lên";
+      newErrors.quantity =
+        currentForm.category === "VIP"
+          ? "Quota voucher VIP mỗi tháng phải từ 1 trở lên"
+          : "Số lượng phải từ 1 trở lên";
 
-    if (currentForm.category === "COIN_REWARD" && (!currentForm.coinCost || Number(currentForm.coinCost) <= 0))
+    if (
+      currentForm.category === "COIN_REWARD" &&
+      (!currentForm.coinCost || Number(currentForm.coinCost) <= 0)
+    )
       newErrors.coinCost = "Giá xu đổi voucher phải lớn hơn 0";
 
     if (!currentForm.expiryDate)
@@ -220,12 +234,20 @@ function VoucherFormModal({ isOpen, onClose, initialVoucher, onSubmit }) {
         quantity: Number(form.quantity),
         vipOnly: form.category === "VIP" ? true : form.vipOnly,
         monthlyReset: form.category === "VIP" ? true : form.monthlyReset,
-        monthlyQuantity: form.category === "VIP" ? Number(form.quantity) : Number(form.monthlyQuantity || form.quantity),
-        // Chuyển đổi datetime-local sang chuẩn ISO của Backend
-        expiryDate: new Date(form.expiryDate).toISOString(),
+        monthlyQuantity:
+          form.category === "VIP"
+            ? Number(form.quantity)
+            : Number(form.monthlyQuantity || form.quantity),
+        // Gửi chuỗi local datetime lên backend, không chuyển sang UTC
+        expiryDate: form.expiryDate
+          ? form.expiryDate.length === 16
+            ? `${form.expiryDate}:00`
+            : form.expiryDate
+          : null,
         active: form.active,
         image: imageUrl,
-        coinCost: form.category === "COIN_REWARD" ? Number(form.coinCost) : null,
+        coinCost:
+          form.category === "COIN_REWARD" ? Number(form.coinCost) : null,
       };
 
       await onSubmit(payload);
@@ -277,12 +299,15 @@ function VoucherFormModal({ isOpen, onClose, initialVoucher, onSubmit }) {
             </select>
             {form.category === "VIP" ? (
               <p className="text-xs text-fuchsia-600 font-medium">
-                Voucher loại VIP chỉ cấp cho user đang có gói VIP còn hạn. Trường "Số lượng" sẽ được hiểu là quota sử dụng mỗi tháng và tự reset khi sang tháng mới.
+                Voucher loại VIP chỉ cấp cho user đang có gói VIP còn hạn.
+                Trường "Số lượng" sẽ được hiểu là quota sử dụng mỗi tháng và tự
+                reset khi sang tháng mới.
               </p>
             ) : null}
             {form.category === "COIN_REWARD" ? (
               <p className="text-xs text-emerald-600 font-medium">
-                Voucher này sẽ xuất hiện ở mục Đổi quà trong trang Xu thưởng. User phải dùng xu để đổi mới nhận được mã.
+                Voucher này sẽ xuất hiện ở mục Đổi quà trong trang Xu thưởng.
+                User phải dùng xu để đổi mới nhận được mã.
               </p>
             ) : null}
           </div>

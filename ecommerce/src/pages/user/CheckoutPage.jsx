@@ -68,43 +68,29 @@ function CheckoutPage() {
   const [addressErrors, setAddressErrors] = useState({});
 
   useEffect(() => {
-  userVoucherService
-    .getActiveVouchers()
-    .then((data) => {
-      const codes = savedVoucherCodes || [];
-
-      setMyVouchers(
-        (data || []).filter((v) => {
+    userVoucherService
+      .getActiveVouchers()
+      .then((data) => {
+        console.log("[CheckoutPage] Dữ liệu voucher từ API /vouchers/me:", data);
+        // Backend đã xử lý logic lọc, frontend chỉ cần lọc những mã đã được claim
+        // hoặc các mã đặc biệt như VIP, COIN_REWARD
+        const usableVouchers = (data || []).filter((v) => {
           const category = (v.category || "DISCOUNT").toUpperCase();
+          const isClaimed = v.claimed === true;
+          const isSpecial = category === "VIP" || category === "COIN_REWARD";
 
-          const isActive = v.active !== false;
-          const isClaimable = v.claimable !== false;
-          const isEligible = v.eligible !== false;
-          const hasQuantity = Number(v.remainingQuantity ?? v.quantity ?? 1) > 0;
-
-          // Mã đặc biệt: user có VIP hoặc đã đổi bằng xu thì tự hiện
-          const isSpecialOwnedVoucher =
-            category === "VIP" || category === "COIN_REWARD";
-
-          // Mã thường: chỉ hiện nếu user đã bấm lưu mã
-          const isSavedNormalVoucher =
-            ["DISCOUNT", "SHIPPING", "CASHBACK"].includes(category) &&
-            codes.includes(v.code);
-
-          return (
-            isActive &&
-            isClaimable &&
-            isEligible &&
-            hasQuantity &&
-            (isSpecialOwnedVoucher || isSavedNormalVoucher)
-          );
-        })
-      );
-    })
-    .catch((error) => {
-      console.error("Không lấy được voucher trong checkout:", error);
-    });
-}, [savedVoucherCodes]);
+          // Điều kiện để hiển thị trong trang thanh toán:
+          // 1. Voucher phải hợp lệ (active, eligible, còn lượt dùng) - Backend đã lo
+          // 2. Voucher phải là loại đặc biệt (VIP, Đổi xu) hoặc đã được người dùng claim
+          return isSpecial || isClaimed;
+        });
+        console.log("[CheckoutPage] Các voucher có thể sử dụng sau khi lọc:", usableVouchers);
+        setMyVouchers(usableVouchers);
+      })
+      .catch((error) => {
+        console.error("Không lấy được voucher trong checkout:", error);
+      });
+  }, [savedVoucherCodes]); // Re-fetch when wallet changes
 
   // Lấy ID các sản phẩm được chọn từ Giỏ hàng truyền sang
   const selectedIds = location.state?.selectedIds || [];

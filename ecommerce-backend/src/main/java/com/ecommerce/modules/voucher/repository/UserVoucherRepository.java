@@ -3,6 +3,7 @@ package com.ecommerce.modules.voucher.repository;
 import com.ecommerce.entity.UserVoucher;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
+import java.time.LocalDateTime;
 
 import java.util.List;
 import java.util.Optional;
@@ -29,8 +30,6 @@ public interface UserVoucherRepository extends JpaRepository<UserVoucher, Long> 
     boolean existsByVoucherIdAndValidUntilAfterAndRemainingQuantityGreaterThan(Long voucherId,
             java.time.LocalDateTime now, Integer remainingQuantity);
 
-    void deleteAllByVoucherId(Long voucherId);
-
     @Modifying
     @Query("UPDATE UserVoucher uv SET uv.remainingQuantity = uv.remainingQuantity - 1 WHERE uv.user.id = :userId AND uv.voucher.id = :voucherId AND uv.remainingQuantity > 0")
     int decrementQuantityIfAvailable(@Param("userId") Long userId, @Param("voucherId") Long voucherId);
@@ -45,6 +44,15 @@ public interface UserVoucherRepository extends JpaRepository<UserVoucher, Long> 
             @Param("quantity") Integer quantity);
 
     @Modifying
+    @Query("UPDATE UserVoucher uv SET uv.active = :active, uv.remainingQuantity = :quantity, uv.validUntil = :validUntil WHERE uv.voucher.id = :voucherId")
+    void updateDetailsByVoucherId(@Param("voucherId") Long voucherId, @Param("active") Boolean active,
+            @Param("quantity") Integer quantity, @Param("validUntil") LocalDateTime validUntil);
+
+    @Modifying
     @Query("DELETE FROM UserVoucher uv WHERE uv.voucher.id = :voucherId")
-    void deleteByVoucherId(@Param("voucherId") Long voucherId);
+    void deleteAllByVoucherId(@Param("voucherId") Long voucherId);
+
+    @Modifying
+    @Query("DELETE FROM UserVoucher uv WHERE uv.voucher.id IN :voucherIds")
+    void deleteAllByVoucherIdIn(@Param("voucherIds") List<Long> voucherIds);
 }

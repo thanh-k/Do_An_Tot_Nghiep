@@ -1,6 +1,7 @@
 package com.ecommerce.modules.voucher.service;
 
 import java.util.List;
+import java.util.Map;
 
 import com.ecommerce.modules.voucher.dto.request.VoucherRequest;
 import com.ecommerce.modules.voucher.dto.response.VoucherResponse;
@@ -20,6 +21,9 @@ public interface VoucherService {
 
     void decrementQuantity(String code);
 
-    void deleteVouchers(List<Long> ids);
+    Map<String, Object> deleteVouchers(List<Long> ids);
+
     void incrementQuantity(String code, String userId);
+
+    VoucherResponse claimVoucher(String code);
 }

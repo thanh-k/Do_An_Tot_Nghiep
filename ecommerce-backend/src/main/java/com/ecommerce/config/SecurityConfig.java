@@ -57,27 +57,24 @@ public class SecurityConfig {
                                 "/api/v1/payments/vnpay/ipn",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
-                                "/swagger-ui.html"
-                        ).permitAll()
+                                "/swagger-ui.html")
+                        .permitAll()
 
                         // admin area: chỉ cần đã đăng nhập,
                         // quyền chi tiết sẽ xử lý bằng @PreAuthorize ở từng endpoint
                         .requestMatchers("/api/v1/admin/**").authenticated()
 
                         .requestMatchers("/api/v1/users/**", "/api/v1/auth/change-password").authenticated()
-                        .anyRequest().permitAll()
-                )
+                        .anyRequest().permitAll())
                 .oauth2Login(oauth -> oauth
                         .successHandler(oAuth2AuthenticationSuccessHandler)
-                        .failureHandler(oAuth2AuthenticationFailureHandler)
-                )
+                        .failureHandler(oAuth2AuthenticationFailureHandler))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .formLogin(form -> form.disable());
 
         return http.build();
     }
-
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {

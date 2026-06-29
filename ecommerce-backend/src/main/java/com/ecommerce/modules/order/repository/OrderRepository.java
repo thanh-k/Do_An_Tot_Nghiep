@@ -25,4 +25,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @Query("SELECT o FROM Order o WHERE UPPER(o.status) = 'PENDING' AND UPPER(o.paymentMethod) <> 'COD' AND (o.paymentStatus IS NULL OR UPPER(o.paymentStatus) <> 'PAID') AND o.createdAt < :cutoff")
     List<Order> findExpiredPendingOrders(@Param("cutoff") java.time.LocalDateTime cutoff);
+
+    boolean existsByVoucherCode(String voucherCode);
 }

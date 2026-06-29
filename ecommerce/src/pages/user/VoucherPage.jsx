@@ -80,7 +80,7 @@ function VoucherPage() {
     }
   };
 
-  const handleVoucherAction = (voucher) => {
+  const handleVoucherAction = async (voucher) => {
     const lockedVip = voucher.vipOnly && voucher.eligible === false;
 
     if (lockedVip) {
@@ -93,8 +93,13 @@ function VoucherPage() {
       return;
     }
 
-    saveVoucher(voucher.code);
-    toast.success(`Đã lưu mã: ${voucher.code} vào Ví Voucher!`);
+    try {
+      await saveVoucher(voucher.code);
+      toast.success(`Đã lưu mã: ${voucher.code} vào Ví Voucher!`);
+    } catch (error) {
+      // Hook useVoucherWallet đã tự xử lý hiển thị toast lỗi,
+      // nên ở đây chỉ cần bắt lỗi để ngăn luồng chạy tiếp.
+    }
   };
 
   return (

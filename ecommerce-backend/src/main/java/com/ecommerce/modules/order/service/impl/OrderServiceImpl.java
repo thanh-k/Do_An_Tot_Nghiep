@@ -63,12 +63,12 @@ public class OrderServiceImpl implements OrderService {
 
         for (CartItemRequest item : request.getItems()) {
             ProductVariant variant = variantRepository.findById(item.getVariantId())
-                    .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
+                    .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND, "Không tìm thấy biến thể sản phẩm với ID: " + item.getVariantId()));
 
             // Trừ số lượng tồn kho an toàn bằng Atomic Update
             int updated = variantRepository.decrementStockIfAvailable(variant.getId(), item.getQuantity());
             if (updated == 0) {
-                throw new RuntimeException("Sản phẩm '" + variant.getSku() + "' không đủ số lượng trong kho hoặc đã có người khác mua!");
+                throw new AppException(ErrorCode.INVALID_PRODUCT_DATA, "Sản phẩm '" + variant.getSku() + "' không đủ số lượng trong kho hoặc đã có người khác mua!");
             }
 
             double priceAtPurchase = resolvePriceAtPurchase(item, variant, reservedLiveDealPrices);
@@ -84,22 +84,25 @@ public class OrderServiceImpl implements OrderService {
             total += priceAtPurchase * item.getQuantity();
         }
 
-        double shippingFee = total >= 500000 ? 0D : 30000D;
+        double shippingFee = total >= 500000.0 ? 0D : 30000D;
         double discountAmount = 0D;
 
         // Xử lý Voucher nếu có
         if (request.getVoucherCode() != null && !request.getVoucherCode().trim().isEmpty()) {
             discountAmount = voucherService.calculateDiscount(request.getVoucherCode(), total);
             order.setVoucherCode(request.getVoucherCode());
-            voucherService.decrementQuantity(request.getVoucherCode());
         }
 
         order.setShippingFee(shippingFee);
         order.setDiscountAmount(discountAmount);
         order.setTotalAmount(Math.max(0, total - discountAmount) + shippingFee);
-
         order.setOrderDetails(details);
-        orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+
+        // Trừ tạm thời số lượng voucher tổng và lượt dùng của user sau khi đơn hàng đã được lưu thành công
+        if (savedOrder.getVoucherCode() != null && !savedOrder.getVoucherCode().isBlank()) {
+            voucherService.decrementQuantity(savedOrder.getVoucherCode());
+        }
 
         // Trả về DTO (Ní tự viết hàm convertToResponse nhé)
         return orderMapper.toResponse(order);
@@ -119,7 +122,7 @@ public class OrderServiceImpl implements OrderService {
             }
 
             if (item.getLiveDealId() == null || item.getLivestreamId() == null) {
-                throw new RuntimeException("Dữ liệu deal livestream không hợp lệ");
+                throw new AppException(ErrorCode.INVALID_PRODUCT_DATA, "Dữ liệu deal livestream không hợp lệ");
             }
 
             String key = liveDealKey(item.getLivestreamId(), item.getLiveDealId());
@@ -136,11 +139,11 @@ public class OrderServiceImpl implements OrderService {
 
             LivestreamDeal deal = livestreamDealRepository
                     .findUsableDeal(liveDealId, livestreamId, now)
-                    .orElseThrow(() -> new RuntimeException("Deal live đã kết thúc hoặc hết số lượng"));
+                    .orElseThrow(() -> new AppException(ErrorCode.VOUCHER_INVALID, "Deal live đã kết thúc hoặc hết số lượng"));
 
             Long dealProductId = deal.getProduct() == null ? null : deal.getProduct().getId();
             if (dealProductId == null) {
-                throw new RuntimeException("Deal livestream không hợp lệ");
+                throw new AppException(ErrorCode.INVALID_PRODUCT_DATA, "Deal livestream không hợp lệ");
             }
 
             for (CartItemRequest item : items) {
@@ -153,7 +156,7 @@ public class OrderServiceImpl implements OrderService {
                 Long variantProductId = variant.getProduct() == null ? null : variant.getProduct().getId();
 
                 if (!dealProductId.equals(variantProductId)) {
-                    throw new RuntimeException("Deal livestream không khớp với sản phẩm thanh toán");
+                    throw new AppException(ErrorCode.INVALID_PRODUCT_DATA, "Deal livestream không khớp với sản phẩm thanh toán");
                 }
             }
 
@@ -168,7 +171,7 @@ public class OrderServiceImpl implements OrderService {
                     livestreamDealRepository.save(deal);
                 }
 
-                throw new RuntimeException("Deal live chỉ còn " + remainingQuantity
+                throw new AppException(ErrorCode.INVALID_PRODUCT_DATA, "Deal live chỉ còn " + remainingQuantity
                         + " suất. Vui lòng giảm số lượng để toàn bộ sản phẩm được áp dụng giá live.");
             }
 
@@ -192,12 +195,12 @@ public class OrderServiceImpl implements OrderService {
         }
 
         if (item.getLiveDealId() == null || item.getLivestreamId() == null) {
-            throw new RuntimeException("Dữ liệu deal livestream không hợp lệ");
+            throw new AppException(ErrorCode.INVALID_PRODUCT_DATA, "Dữ liệu deal livestream không hợp lệ");
         }
 
         Double liveDealPrice = reservedLiveDealPrices.get(liveDealKey(item.getLivestreamId(), item.getLiveDealId()));
         if (liveDealPrice == null) {
-            throw new RuntimeException("Deal live đã kết thúc hoặc hết số lượng");
+            throw new AppException(ErrorCode.VOUCHER_INVALID, "Deal live đã kết thúc hoặc hết số lượng");
         }
 
         return liveDealPrice;
@@ -205,7 +208,7 @@ public class OrderServiceImpl implements OrderService {
 
     private int safeQuantity(Integer quantity) {
         if (quantity == null || quantity <= 0) {
-            throw new RuntimeException("Số lượng sản phẩm không hợp lệ");
+            throw new AppException(ErrorCode.INVALID_PRODUCT_DATA, "Số lượng sản phẩm không hợp lệ");
         }
         return quantity;
     }
@@ -237,8 +240,7 @@ public class OrderServiceImpl implements OrderService {
     @Transactional(readOnly = true)
     public OrderResponse getOrderById(Long id) {
         Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng")); // Tạm dùng RuntimeException, nên
-                                                                                     // tạo ErrorCode.ORDER_NOT_FOUND
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND, "Không tìm thấy đơn hàng với ID: " + id));
         return orderMapper.toResponse(order);
     }
 
@@ -254,7 +256,7 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponse updateOrderStatus(Long id, String status) {
         Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND, "Không tìm thấy đơn hàng với ID: " + id));
 
         String oldStatus = order.getStatus();
         String normalizedStatus = normalizeOrderStatus(status);
@@ -268,11 +270,14 @@ public class OrderServiceImpl implements OrderService {
 
         Order saved = orderRepository.save(order);
 
-        // Ní nhớ gọi coinTaskService.rewardOrderCompleted khi đơn hàng hoàn thành nhé!
-        if (!isCompletedStatus(oldStatus) && isCompletedStatus(normalizedStatus) && hasCashbackVoucher(saved)) {
-            coinTaskService.rewardOrderCompleted(saved.getUserId(), saved.getId());
+        // Khi đơn hàng chuyển sang trạng thái HOÀN TẤT
+        if (!isCompletedStatus(oldStatus) && isCompletedStatus(normalizedStatus)) {
+            // Cộng xu nếu có voucher cashback
+            if (hasCashbackVoucher(saved)) {
+                coinTaskService.rewardOrderCompleted(saved.getUserId(), saved.getId());
+            }
         }
-
+        
         // Refund stock and voucher if cancelled via API
         if (!"CANCELLED".equalsIgnoreCase(oldStatus) && "CANCELLED".equalsIgnoreCase(normalizedStatus)) {
             if (saved.getOrderDetails() != null) {
@@ -355,7 +360,7 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public void deleteOrder(Long id) {
         Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND, "Không tìm thấy đơn hàng với ID: " + id));
         orderRepository.delete(order);
     }
 
