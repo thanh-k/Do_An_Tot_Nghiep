@@ -12,7 +12,6 @@ import HomeCategoriesBrandsSection from "@/components/home/HomeCategoriesBrandsS
 import HomeProductSection from "@/components/home/HomeProductSection";
 import HomeDealSection from "@/components/home/HomeDealSection";
 import HomeNewsSection from "@/components/home/HomeNewsSection";
-import HomeBottomBanners from "@/components/home/HomeBottomBanners";
 import { normalizeProductsWithReview } from "@/components/home/homeUtils";
 
 const EMPTY_COLLECTIONS = {
@@ -186,7 +185,6 @@ function HomePage() {
         <HomeProductSection title="Sản Phẩm Bán Chạy" products={bestSellerProducts} />
         <HomeProductSection title="Sản Phẩm Mới Nhất" products={newestProducts} />
         <HomeNewsSection news={news} latestNews={latestNews} />
-        <HomeBottomBanners />
       </div>
     </div>
   );

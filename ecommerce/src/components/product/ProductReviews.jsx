@@ -259,63 +259,63 @@ export default function ProductReviews({ productId }) {
         </div>
       </div>
 
-      <div className="mb-10 flex flex-wrap items-center justify-between gap-6">
-        <div className="flex items-center gap-3 overflow-x-auto pb-2 no-scrollbar">
-          <div className="mr-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-            <Filter size={14} /> Lọc theo:
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1.5 no-scrollbar">
+          <div className="mr-2 flex items-center gap-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <Filter size={12} className="sm:size-3.5" /> Lọc:
           </div>
           {FILTERS.map((f) => (
-            <button key={f} onClick={() => setActiveFilter(f)} className={`rounded-2xl px-6 py-3 text-xs font-black uppercase tracking-widest transition-all ${activeFilter === f ? "scale-105 bg-rose-600 text-white shadow-lg shadow-rose-200" : "border border-slate-100 bg-white text-slate-500 hover:border-rose-300"}`}>
+            <button key={f} onClick={() => setActiveFilter(f)} className={`rounded-xl px-4 py-2 text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${activeFilter === f ? "scale-105 bg-rose-600 text-white shadow-lg shadow-rose-200" : "border border-slate-100 bg-white text-slate-500 hover:border-rose-300"}`}>
               {f}
             </button>
           ))}
         </div>
-        <button onClick={handleOpenWriteReview} className="flex items-center gap-3 rounded-2xl bg-slate-950 px-8 py-4 text-xs font-black uppercase tracking-widest text-white shadow-xl shadow-slate-200 transition-all hover:bg-rose-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60" disabled={isAuthenticated && !reviewData?.canReview}>
-          {reviewData?.hasReviewed ? "Đã đánh giá" : "Viết đánh giá"} <MessageSquare size={16} />
+        <button onClick={handleOpenWriteReview} className="flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white shadow-xl shadow-slate-200 transition-all hover:bg-rose-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60" disabled={isAuthenticated && !reviewData?.canReview}>
+          {reviewData?.hasReviewed ? "Đã đánh giá" : "Viết đánh giá"} <MessageSquare size={13} className="sm:size-4" />
         </button>
       </div>
 
       {!isAuthenticated ? (
-        <div className="mb-8 rounded-[2rem] border border-blue-100 bg-blue-50 px-6 py-4 text-sm font-medium text-blue-700">Đăng nhập và mua sản phẩm để gửi đánh giá thực tế.</div>
+        <div className="mb-6 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-2.5 text-xs sm:text-sm font-medium text-blue-700">Đăng nhập và mua sản phẩm để gửi đánh giá thực tế.</div>
       ) : reviewData?.hasPurchased ? reviewData?.hasReviewed ? (
-        <div className="mb-8 rounded-[2rem] border border-emerald-100 bg-emerald-50 px-6 py-4 text-sm font-medium text-emerald-700">Bạn đã đánh giá sản phẩm này rồi. Cảm ơn bạn đã chia sẻ trải nghiệm.</div>
+        <div className="mb-6 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-2.5 text-xs sm:text-sm font-medium text-emerald-700">Bạn đã đánh giá sản phẩm này rồi. Cảm ơn bạn đã chia sẻ trải nghiệm.</div>
       ) : (
-        <div className="mb-8 rounded-[2rem] border border-emerald-100 bg-emerald-50 px-6 py-4 text-sm font-medium text-emerald-700">Bạn đã mua sản phẩm này. Hãy chia sẻ trải nghiệm thực tế của mình nhé.</div>
+        <div className="mb-6 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-2.5 text-xs sm:text-sm font-medium text-emerald-700">Bạn đã mua sản phẩm này. Hãy chia sẻ trải nghiệm thực tế của mình nhé.</div>
       ) : (
-        <div className="mb-8 rounded-[2rem] border border-amber-100 bg-amber-50 px-6 py-4 text-sm font-medium text-amber-700">Chỉ khách hàng đã mua và nhận sản phẩm mới có thể đánh giá.</div>
+        <div className="mb-6 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-2.5 text-xs sm:text-sm font-medium text-amber-700">Chỉ khách hàng đã mua và nhận sản phẩm mới có thể đánh giá.</div>
       )}
 
-      <motion.div layout className="min-h-[400px] space-y-8">
+      <motion.div layout className="min-h-[300px] space-y-6 sm:space-y-8">
         <AnimatePresence mode="popLayout">
           {filteredReviews.length > 0 ? filteredReviews.map((rev) => (
-            <motion.div key={rev.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="group relative overflow-hidden rounded-[2.5rem] border border-slate-50 bg-white p-8 shadow-sm">
-              <div className="flex flex-col gap-8 md:flex-row">
+            <motion.div key={rev.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="group relative overflow-hidden rounded-2xl sm:rounded-[2.5rem] border border-slate-50 bg-white p-4 sm:p-8 shadow-sm">
+              <div className="flex flex-col gap-4 sm:gap-8 md:flex-row">
                 <div className="shrink-0 md:w-48">
-                  <div className="flex items-center gap-4 md:flex-col md:items-start">
+                  <div className="flex items-center gap-3 sm:gap-4 md:flex-col md:items-start">
                     <div className="relative">
-                      <img src={rev.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(rev.user || "User")}&background=ffe4e6&color=e11d48`} className="h-14 w-14 rounded-2xl border-2 border-rose-100 object-cover" alt="user" />
-                      <div className="absolute -bottom-1 -right-1 rounded-lg bg-rose-600 p-1 text-white"><Sparkles size={10} fill="currentColor" /></div>
+                      <img src={rev.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(rev.user || "User")}&background=ffe4e6&color=e11d48`} className="h-10 w-10 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl border-2 border-rose-100 object-cover" alt="user" />
+                      <div className="absolute -bottom-1 -right-1 rounded bg-rose-600 p-0.5 sm:p-1 text-white"><Sparkles size={8} className="sm:size-[10px] fill-current" /></div>
                     </div>
                     <div>
-                      <h5 className="text-sm font-black text-slate-900">{rev.user}</h5>
-                      <p className="mt-1 text-[10px] font-bold uppercase tracking-tighter text-slate-400">{formatDisplayDate(rev.createdAt, rev.date)}</p>
+                      <h5 className="text-xs sm:text-sm font-black text-slate-900">{rev.user}</h5>
+                      <p className="mt-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-tighter text-slate-400">{formatDisplayDate(rev.createdAt, rev.date)}</p>
                     </div>
                   </div>
-                  {rev.verified && <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase text-emerald-600 ring-1 ring-emerald-100"><CheckCircle2 size={12} /> Đã mua hàng</div>}
+                  {rev.verified && <div className="mt-2.5 sm:mt-4 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[10px] font-black uppercase text-emerald-600 ring-1 ring-emerald-100"><CheckCircle2 size={10} className="sm:size-3" /> Đã mua</div>}
                 </div>
 
-                <div className="flex-1 space-y-4">
+                <div className="flex-1 space-y-3 sm:space-y-4">
                   <div className="flex gap-0.5 text-yellow-400">
                     {[...Array(5)].map((_, i) => (
-                      <Star key={i} size={14} fill={i < rev.rating ? "currentColor" : "none"} className={i >= rev.rating ? "text-slate-200" : ""} />
+                      <Star key={i} size={12} fill={i < rev.rating ? "currentColor" : "none"} className={i >= rev.rating ? "text-slate-200" : ""} />
                     ))}
                   </div>
-                  <p className="font-medium italic leading-relaxed text-slate-600">"{rev.comment}"</p>
+                  <p className="font-medium italic leading-relaxed text-xs sm:text-sm text-slate-600">"{rev.comment}"</p>
 
                   {(rev.images || []).length > 0 && (
-                    <div className="flex flex-wrap gap-3 pt-2">
+                    <div className="flex flex-wrap gap-2 sm:gap-3 pt-1">
                       {rev.images.map((img, idx) => (
-                        <div key={idx} onClick={() => setSelectedImg(img)} className="h-24 w-24 cursor-zoom-in overflow-hidden rounded-2xl border border-slate-100 shadow-md transition-transform hover:scale-105">
+                        <div key={idx} onClick={() => setSelectedImg(img)} className="h-16 w-16 sm:h-24 sm:w-24 cursor-zoom-in overflow-hidden rounded-xl sm:rounded-2xl border border-slate-100 shadow-md transition-transform hover:scale-105">
                           <img src={img} className="h-full w-full object-cover" alt="review" />
                         </div>
                       ))}
@@ -323,21 +323,21 @@ export default function ProductReviews({ productId }) {
                   )}
 
                   {rev.shopReply ? (
-                    <div className="rounded-[2rem] border border-blue-100 bg-blue-50 p-5">
+                    <div className="rounded-xl sm:rounded-[2rem] border border-blue-100 bg-blue-50 p-3 sm:p-5">
                       <div className="flex items-center justify-between gap-3">
-                        <p className="text-xs font-black uppercase tracking-widest text-blue-600">Phản hồi từ shop</p>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400">
+                        <p className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-blue-600">Phản hồi từ shop</p>
+                        <p className="text-[8px] sm:text-[10px] font-bold uppercase tracking-widest text-blue-400">
                           {rev.shopReplyBy || "NovaShop"}
                           {rev.shopReplyAt ? ` • ${formatDisplayDate(rev.shopReplyAt)}` : ""}
                         </p>
                       </div>
-                      <p className="mt-3 text-sm font-medium leading-relaxed text-slate-700">{rev.shopReply}</p>
+                      <p className="mt-2 text-xs sm:text-sm font-medium leading-relaxed text-slate-700">{rev.shopReply}</p>
                     </div>
                   ) : null}
 
-                  <div className="mt-4 flex items-center gap-6 border-t border-slate-50 pt-6">
-                    <button className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-400 transition-colors hover:text-rose-600"><ThumbsUp size={14} /> Hữu ích ({rev.likes || 0})</button>
-                    <button className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-400 transition-colors hover:text-rose-600"><MessageSquare size={14} /> Phản hồi</button>
+                  <div className="mt-3 pt-3 flex items-center gap-4 sm:gap-6 border-t border-slate-50">
+                    <button className="flex items-center gap-1.5 text-[9px] sm:text-[10px] font-black uppercase text-slate-400 transition-colors hover:text-rose-600"><ThumbsUp size={12} className="sm:size-3.5" /> Hữu ích ({rev.likes || 0})</button>
+                    <button className="flex items-center gap-1.5 text-[9px] sm:text-[10px] font-black uppercase text-slate-400 transition-colors hover:text-rose-600"><MessageSquare size={12} className="sm:size-3.5" /> Phản hồi</button>
                   </div>
                 </div>
               </div>

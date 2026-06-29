@@ -147,7 +147,7 @@ function VoucherPage() {
               description="Hiện tại không có mã ưu đãi nào cho danh mục này. Vui lòng quay lại sau!"
             />
           ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
               {filteredVouchers.map((voucher) => {
                 const catConfig = getCategoryConfig(voucher.category);
                 const Icon = catConfig.icon;
@@ -156,14 +156,14 @@ function VoucherPage() {
                 return (
                   <div
                     key={voucher.id || voucher.code}
-                    className={`flex rounded-2xl overflow-hidden border shadow-sm hover:shadow-md transition-shadow ${
+                    className={`flex rounded-xl sm:rounded-2xl overflow-hidden border shadow-sm hover:shadow-md transition-shadow ${
                       lockedVip
                         ? "bg-fuchsia-50 border-fuchsia-200"
                         : "bg-white border-slate-200"
                     }`}
                   >
                     <div
-                      className={`w-28 flex flex-col items-center justify-center p-4 border-r border-dashed ${
+                      className={`w-20 sm:w-28 flex flex-col items-center justify-center p-2 sm:p-4 border-r border-dashed ${
                         lockedVip ? "border-fuchsia-300" : "border-slate-300"
                       } ${catConfig.bg}`}
                     >
@@ -171,33 +171,33 @@ function VoucherPage() {
                         <img
                           src={voucher.image}
                           alt="Voucher"
-                          className="w-16 h-16 object-cover rounded-full bg-white p-1 shadow-sm"
+                          className="w-10 h-10 sm:w-16 sm:h-16 object-cover rounded-full bg-white p-0.5 sm:p-1 shadow-sm"
                         />
                       ) : (
                         <div
-                          className={`w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-sm ${catConfig.color}`}
+                          className={`w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-white flex items-center justify-center shadow-sm ${catConfig.color}`}
                         >
-                          <Icon size={24} />
+                          <Icon size={18} className="sm:size-6" />
                         </div>
                       )}
 
                       <span
-                        className={`mt-2 text-[10px] font-bold uppercase text-center ${catConfig.color}`}
+                        className={`mt-1.5 sm:mt-2 text-[8px] sm:text-[10px] font-bold uppercase text-center leading-tight ${catConfig.color}`}
                       >
                         {catConfig.label}
                       </span>
 
                       {lockedVip ? (
-                        <span className="mt-2 rounded-full bg-white px-2 py-1 text-[10px] font-bold text-fuchsia-700 border border-fuchsia-200">
+                        <span className="mt-1 sm:mt-2 rounded-full bg-white px-1.5 py-0.5 sm:px-2 sm:py-1 text-[8px] sm:text-[10px] font-bold text-fuchsia-700 border border-fuchsia-200">
                           Chỉ VIP
                         </span>
                       ) : null}
                     </div>
 
-                    <div className="flex-1 p-4 relative flex flex-col justify-between">
+                    <div className="flex-1 p-2.5 sm:p-4 relative flex flex-col justify-between">
                       <div>
                         <div className="flex justify-between items-start gap-2">
-                          <h3 className="font-bold text-slate-900 text-lg leading-tight">
+                          <h3 className="font-bold text-slate-900 text-sm sm:text-lg leading-tight">
                             Giảm{" "}
                             {voucher.discountType === "PERCENT"
                               ? `${voucher.discountValue}%`
@@ -205,7 +205,7 @@ function VoucherPage() {
                           </h3>
 
                           <span
-                            className={`text-xs font-bold px-2 py-1 rounded ${
+                            className={`text-[9px] sm:text-xs font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded ${
                               lockedVip
                                 ? "bg-fuchsia-100 text-fuchsia-700"
                                 : "bg-brand-50 text-brand-700"
@@ -215,34 +215,34 @@ function VoucherPage() {
                           </span>
                         </div>
 
-                        <p className="text-sm text-slate-500 mt-1">
+                        <p className="text-xs sm:text-sm text-slate-500 mt-0.5 sm:mt-1">
                           Đơn tối thiểu {formatCurrency(voucher.minOrderValue || 0)}
                         </p>
 
                         {voucher.monthlyReset ? (
-                          <p className="text-[11px] text-fuchsia-600 font-semibold mt-2">
+                          <p className="text-[9px] sm:text-[11px] text-fuchsia-600 font-semibold mt-1 sm:mt-2">
                             Quota tháng: {voucher.monthlyQuantity || voucher.quantity || 0}
                           </p>
                         ) : null}                      
                       </div>
 
-                      <div className="mt-4 pt-4 border-t border-slate-100 flex items-end justify-between">
+                      <div className="mt-2 pt-2 sm:mt-4 sm:pt-4 border-t border-slate-100 flex items-end justify-between">
                         <div>
-                          <p className="text-xs font-semibold text-slate-900 mb-1">
+                          <p className="text-[10px] sm:text-xs font-semibold text-slate-900 mb-0.5 sm:mb-1">
                             Mã:{" "}
                             <span className="text-brand-600">
                               {voucher.code}
                             </span>
                           </p>
 
-                          <p className="text-[11px] text-slate-500 flex items-center gap-1">
-                            <Clock size={12} />
+                          <p className="text-[9px] sm:text-[11px] text-slate-500 flex items-center gap-1">
+                            <Clock size={10} className="sm:size-3" />
                             HSD: {voucher.expiryDate ? formatDate(voucher.expiryDate) : "Không xác định"}
                           </p>
 
                           <button
                             onClick={() => setSelectedVoucher(voucher)}
-                            className="text-[11px] text-blue-600 font-semibold hover:underline mt-1 block text-left"
+                            className="text-[9px] sm:text-[11px] text-blue-600 font-semibold hover:underline mt-0.5 block text-left"
                           >
                             Điều kiện sử dụng
                           </button>
@@ -251,7 +251,7 @@ function VoucherPage() {
                         <button
                           onClick={() => handleVoucherAction(voucher)}
                           disabled={!lockedVip && isSaved(voucher.code)}
-                          className={`flex items-center gap-1.5 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                          className={`flex items-center gap-1 text-white text-[10px] sm:text-xs font-semibold px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-md sm:rounded-lg transition-colors ${
                             lockedVip
                               ? "bg-fuchsia-600 hover:bg-fuchsia-700"
                               : isSaved(voucher.code)
@@ -265,7 +265,7 @@ function VoucherPage() {
                             "Đã lưu"
                           ) : (
                             <>
-                              <Copy size={14} />
+                              <Copy size={12} className="sm:size-3.5" />
                               Lưu mã
                             </>
                           )}

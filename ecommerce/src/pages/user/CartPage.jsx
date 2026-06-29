@@ -311,11 +311,10 @@ function CartPage() {
             <div className="mt-6 grid gap-3">
               <button
                 onClick={handleCheckout}
-                className={`inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-white transition ${
-                  selectedIds.length > 0
+                className={`inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-white transition ${selectedIds.length > 0
                     ? "bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-200"
                     : "bg-slate-300 cursor-not-allowed"
-                }`}
+                  }`}
               >
                 Tiến hành thanh toán
                 <ArrowRight size={16} />

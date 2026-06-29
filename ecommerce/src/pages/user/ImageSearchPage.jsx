@@ -87,7 +87,7 @@ function ImageSearchPage() {
                   Xoá ảnh
                 </button>
                 <button
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 transition"
+                  className="inline-flex lg:hidden items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 transition"
                   onClick={() => {
                     setIsCameraOpen(true);
                   }}

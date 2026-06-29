@@ -41,7 +41,7 @@ function ChatWidget() {
       />
 
       {isOpen && (
-        <div className={`fixed bottom-[64px] inset-x-0 top-auto z-[85] h-[50vh] flex flex-col overflow-hidden bg-white rounded-t-2xl border-t border-slate-200 shadow-2xl sm:inset-auto sm:right-6 sm:bottom-24 lg:bottom-6 sm:h-[calc(100vh-110px)] sm:max-h-[640px] sm:w-[390px] sm:max-w-[calc(100vw-32px)] sm:rounded-2xl sm:border sm:shadow-2xl ${
+        <div className={`fixed bottom-[64px] inset-x-0 top-auto z-[85] h-[50dvh] flex flex-col overflow-hidden bg-white rounded-t-2xl border-t border-slate-200 shadow-2xl sm:inset-auto sm:right-6 sm:bottom-24 lg:bottom-6 sm:h-[600px] sm:w-[380px] sm:rounded-2xl sm:border sm:border-slate-200 sm:shadow-2xl ${
           isHomePage ? "flex" : "hidden lg:flex"
         }`}>
           <ChatHeader onClose={() => setIsOpen(false)} />
