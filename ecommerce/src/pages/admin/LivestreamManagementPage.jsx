@@ -22,13 +22,23 @@ const toDateTimeLocalValue = (date = new Date()) => {
   return local.toISOString().slice(0, 16);
 };
 
+const parseDateTimeLocal = (value) => {
+  if (!value) return null;
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (match) {
+    const [, year, month, day, hour, minute, second = "0"] = match;
+    const date = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
 const isScheduledInPast = (value) => {
   if (!value) return false;
-  const scheduled = new Date(value);
-  if (Number.isNaN(scheduled.getTime())) return false;
-  const now = new Date();
-  now.setSeconds(0, 0);
-  return scheduled.getTime() < now.getTime();
+  const scheduled = parseDateTimeLocal(value);
+  if (!scheduled) return false;
+  return scheduled.getTime() < Date.now() - 60000;
 };
 
 

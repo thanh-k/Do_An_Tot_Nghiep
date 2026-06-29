@@ -12,10 +12,29 @@ import LiveVideoPanel from "./LiveVideoPanel";
 import PinnedProductPanel from "./PinnedProductPanel";
 import { dealEndTime, formatCountdownMs, productStock, variantStockDetails } from "./livestreamAdminUtils";
 
+const parseScheduleDate = (value) => {
+  if (!value) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+
+  const normalized = String(value).trim();
+  if (!normalized) return null;
+
+  // Backend trả LocalDateTime không có timezone. Parse thủ công để trình duyệt hiểu là giờ local Việt Nam,
+  // tránh lỗi Safari/Chrome hoặc deploy server lệch UTC làm nút "Bắt đầu live" vẫn bị khóa.
+  const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (match) {
+    const [, year, month, day, hour, minute, second = "0"] = match;
+    const localDate = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
+    return Number.isNaN(localDate.getTime()) ? null : localDate;
+  }
+
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
 const formatScheduleTime = (value) => {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
+  const date = parseScheduleDate(value);
+  if (!date) return "";
   return date.toLocaleString("vi-VN", {
     day: "2-digit",
     month: "2-digit",
@@ -26,10 +45,10 @@ const formatScheduleTime = (value) => {
 };
 
 const isBeforeSchedule = (value, now = Date.now()) => {
-  if (!value) return false;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return false;
-  return date.getTime() > now;
+  const date = parseScheduleDate(value);
+  if (!date) return false;
+  // Cho phép sai số 60 giây để nút bắt đầu live không bị khóa khi vừa tới giờ hẹn.
+  return date.getTime() - now > 60000;
 };
 
 

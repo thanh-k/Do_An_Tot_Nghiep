@@ -38,7 +38,7 @@ public class CategoryController {
                 .build();
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{id:\\d+}")
     public ApiResponse<CategoryResponse> getById(@PathVariable Long id) {
         return ApiResponse.<CategoryResponse>builder()
                 .result(categoryService.getById(id))
@@ -60,7 +60,7 @@ public class CategoryController {
                 .build();
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{id:\\d+}")
     public ApiResponse<String> delete(@PathVariable Long id) {
         categoryService.delete(id);
         return ApiResponse.<String>builder()

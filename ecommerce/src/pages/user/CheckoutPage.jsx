@@ -874,7 +874,7 @@ function CheckoutPage() {
           if (vnpaySession?.orderId) {
             try {
               await orderService.updateOrderStatus(vnpaySession.orderId, "CANCELLED");
-              toast.info("Đã hủy đơn hàng (chưa thanh toán).");
+              toast("Đã hủy đơn hàng (chưa thanh toán).", { icon: 'ℹ️' });
             } catch (err) {
               console.error("Lỗi khi hủy đơn hàng:", err);
             }

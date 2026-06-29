@@ -31,7 +31,7 @@ public class BrandController {
                 .build();
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{id:\\d+}")
     public ApiResponse<BrandResponse> getById(@PathVariable Long id) {
         return ApiResponse.<BrandResponse>builder()
                 .result(brandService.getById(id))
@@ -72,7 +72,7 @@ public class BrandController {
     }
 
     @PreAuthorize("hasAuthority('BRAND_DELETE')")
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{id:\\d+}")
     public ApiResponse<String> delete(@PathVariable Long id) {
         brandService.delete(id);
         return ApiResponse.<String>builder()
