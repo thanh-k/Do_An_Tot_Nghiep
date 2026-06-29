@@ -144,8 +144,11 @@ function ProductCard({ product }) {
             {product.shortDescription}
           </p>
 
+          <div className="sm:hidden">
+            <Rating value={product.rating} reviewCount={product.reviewCount} size={10} compact />
+          </div>
           <div className="hidden sm:block">
-            <Rating value={product.rating} reviewCount={product.reviewCount} />
+            <Rating value={product.rating} reviewCount={product.reviewCount} size={14} />
           </div>
 
           <div className="flex flex-col gap-0.5">
@@ -161,22 +164,22 @@ function ProductCard({ product }) {
             )}
           </div>
 
-          <div className="flex gap-1.5 pt-0.5">
+          <div className="flex gap-1.5 pt-0.5 w-full">
             <button
               type="button"
               onClick={handleAddToCart}
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-brand-300 hover:text-brand-600 sm:h-10 sm:w-10 sm:rounded-xl"
+              className="flex-1 inline-flex h-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-brand-300 hover:text-brand-600 sm:h-10 sm:rounded-xl"
               title="Thêm vào giỏ hàng"
             >
               <ShoppingCart size={13} className="sm:size-4" />
             </button>
-            <Button
-              fullWidth
-              className="h-7 rounded-lg text-[9px] font-black tracking-tight sm:h-10 sm:text-sm"
+            <button
+              type="button"
               onClick={handleBuyNow}
+              className="flex-1 inline-flex h-7 items-center justify-center rounded-lg bg-blue-600 text-white transition hover:bg-blue-700 sm:h-10 sm:rounded-xl shadow-sm text-[9px] sm:text-sm font-black tracking-tight"
             >
               Mua ngay
-            </Button>
+            </button>
           </div>
         </div>
       </article>
