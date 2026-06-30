@@ -528,7 +528,8 @@ public class VoucherServiceImpl implements VoucherService {
 
         userVoucher.setActive(true);
         userVoucher.setValidUntil(voucher.getExpiryDate());
-        userVoucher.setRemainingQuantity(userVoucher.getRemainingQuantity() + 1);
+        int currentQuantity = userVoucher.getRemainingQuantity() != null ? userVoucher.getRemainingQuantity() : 0;
+        userVoucher.setRemainingQuantity(currentQuantity + 1);
         userVoucherRepository.save(userVoucher);
         log.info("Đã lưu/cập nhật UserVoucher ID {} cho user ID {}", userVoucher.getId(), user.getId());
         log.info("Đã giảm số lượng tổng của voucher '{}' đi 1.", code);
