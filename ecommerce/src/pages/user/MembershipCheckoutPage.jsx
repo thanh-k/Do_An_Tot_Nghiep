@@ -132,11 +132,25 @@ function MembershipCheckoutPage() {
         note: isRenewal ? "Gia hạn gói thành viên qua SePay" : "Thanh toán gói thành viên qua SePay",
       });
 
+      let expAt = new Date(Date.now() + QR_LIFETIME_MS).toISOString();
+      if (result?.expiredAt) {
+        expAt = Array.isArray(result.expiredAt)
+          ? new Date(
+              result.expiredAt[0],
+              result.expiredAt[1] - 1,
+              result.expiredAt[2],
+              result.expiredAt[3],
+              result.expiredAt[4],
+              result.expiredAt[5] || 0
+            ).toISOString()
+          : result.expiredAt;
+      }
+
       setPaymentSession({
         subscriptionId: result?.subscriptionId,
         amount: result?.amount || selectedPlan.price,
         paymentCode: result?.paymentCode || `VIP${result?.subscriptionId || ""}`,
-        expiredAt: result?.expiredAt || new Date(Date.now() + QR_LIFETIME_MS).toISOString(),
+        expiredAt: expAt,
       });
       setPaid(false);
       setCancelled(false);

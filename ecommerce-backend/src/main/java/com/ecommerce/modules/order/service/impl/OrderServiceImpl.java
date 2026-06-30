@@ -85,17 +85,38 @@ public class OrderServiceImpl implements OrderService {
         }
 
         double shippingFee = total >= 500000.0 ? 0D : 30000D;
-        double discountAmount = 0D;
+        double itemDiscount = 0D;
+        double shippingDiscount = 0D;
+        double rawDiscountForDB = 0D;
 
         // Xử lý Voucher nếu có
         if (request.getVoucherCode() != null && !request.getVoucherCode().trim().isEmpty()) {
-            discountAmount = voucherService.calculateDiscount(request.getVoucherCode(), total);
-            order.setVoucherCode(request.getVoucherCode());
+            String code = request.getVoucherCode().trim();
+            Voucher voucher = voucherRepository.findByCode(code).orElse(null);
+            
+            if (voucher != null) {
+                double rawDiscount = voucherService.calculateDiscount(code, total);
+                rawDiscountForDB = rawDiscount;
+                
+                if ("SHIPPING".equalsIgnoreCase(voucher.getCategory())) {
+                    shippingDiscount = Math.min(shippingFee, rawDiscount);
+                } else if ("CASHBACK".equalsIgnoreCase(voucher.getCategory())) {
+                    // Cashback không giảm trừ vào tổng tiền hóa đơn
+                    rawDiscountForDB = 0D; 
+                } else {
+                    itemDiscount = rawDiscount;
+                }
+                order.setVoucherCode(code);
+            }
         }
 
+        double finalShippingFee = shippingFee - shippingDiscount;
+        
         order.setShippingFee(shippingFee);
-        order.setDiscountAmount(discountAmount);
-        order.setTotalAmount(Math.max(0, total - discountAmount) + shippingFee);
+        // Lưu discountAmount dựa trên tổng discount thực tế được trừ vào bill (hoặc rawDiscount tuỳ logic hiển thị UI)
+        // Nếu UI hiển thị - giá trị giảm giá thì ta cứ lưu nguyên giá trị voucher giảm giá (nếu ko phải cashback)
+        order.setDiscountAmount(rawDiscountForDB);
+        order.setTotalAmount(Math.max(0, total - itemDiscount) + finalShippingFee);
         order.setOrderDetails(details);
         Order savedOrder = orderRepository.save(order);
 
@@ -343,7 +364,7 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * Chỉ cộng 15 xu hoàn đơn khi đơn hàng có áp voucher thuộc category CASHBACK.
-     * Ví dụ voucher id 16/category CASHBACK/code 11 trong database của bạn.
+     * Ví dụ voucher id 16/category CASHBACK/code 11 trong database.
      */
     private boolean hasCashbackVoucher(Order order) {
         if (order == null || order.getVoucherCode() == null || order.getVoucherCode().isBlank()) {
