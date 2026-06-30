@@ -429,15 +429,27 @@ public class OrderServiceImpl implements OrderService {
     @Scheduled(fixedRate = 60000)
     @Transactional
     public void cancelExpiredOnlineOrders() {
-        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(20);
+        // Buffer 22 phút thay vì 20 để tránh race condition với webhook SePay/VNPay
+        // (Webhook có thể đến sau vài giây → cần đảm bảo paymentStatus đã được cập nhật)
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(22);
         List<Order> expiredOrders = orderRepository.findExpiredPendingOrders(cutoff);
 
         for (Order order : expiredOrders) {
-            order.setStatus("CANCELLED");
+            // Re-fetch để lấy paymentStatus mới nhất từ DB (tránh stale cache)
+            Order freshOrder = orderRepository.findById(order.getId()).orElse(null);
+            if (freshOrder == null) continue;
+
+            // Không hủy nếu đã được thanh toán (webhook có thể vừa cập nhật)
+            if ("PAID".equalsIgnoreCase(freshOrder.getPaymentStatus())) {
+                log.info("Bỏ qua hủy đơn #{}: đã được thanh toán (webhook đến trễ).", freshOrder.getId());
+                continue;
+            }
+
+            freshOrder.setStatus("CANCELLED");
 
             // Hoàn lại kho
-            if (order.getOrderDetails() != null) {
-                for (OrderDetail detail : order.getOrderDetails()) {
+            if (freshOrder.getOrderDetails() != null) {
+                for (OrderDetail detail : freshOrder.getOrderDetails()) {
                     ProductVariant variant = detail.getProductVariant();
                     if (variant != null && variant.getId() != null) {
                         variantRepository.incrementStock(variant.getId(), detail.getQuantity());
@@ -446,12 +458,12 @@ public class OrderServiceImpl implements OrderService {
             }
 
             // Hoàn lại voucher
-            if (order.getVoucherCode() != null && !order.getVoucherCode().trim().isEmpty()) {
-                voucherService.incrementQuantity(order.getVoucherCode().trim(), order.getUserId());
+            if (freshOrder.getVoucherCode() != null && !freshOrder.getVoucherCode().trim().isEmpty()) {
+                voucherService.incrementQuantity(freshOrder.getVoucherCode().trim(), freshOrder.getUserId());
             }
 
-            orderRepository.save(order);
-            log.info("Đã tự động hủy đơn hàng online hết hạn và hoàn kho: DH{}", order.getId());
+            orderRepository.save(freshOrder);
+            log.info("Đã tự động hủy đơn hàng online hết hạn và hoàn kho: DH{}", freshOrder.getId());
         }
     }
 }
