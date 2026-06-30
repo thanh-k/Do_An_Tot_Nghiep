@@ -22,9 +22,9 @@ export default function ChatPanel({ messages, chatText, setChatText, onSend, onC
   const pinnedMessages = messages.filter((item) => isPinnedMessageUsable(item, now)).slice(0, 3);
 
   return (
-    <div className="flex h-[360px] min-h-0 flex-col rounded-[26px] bg-white p-4 shadow-sm xl:h-[410px]">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="text-base font-black text-slate-950">
+    <div className="flex h-[68dvh] max-h-[520px] min-h-[360px] w-[94vw] max-w-md flex-col rounded-[22px] bg-white p-3 shadow-sm sm:h-[360px] sm:w-full sm:max-w-none sm:p-4 xl:h-[410px]">
+      <div className="mb-2 flex items-center justify-between gap-2 sm:mb-3 sm:gap-3">
+        <h3 className="text-sm font-black text-slate-950 sm:text-base">
           <MessageCircle className="mr-2 inline h-4 w-4 text-rose-600" />
           Bình luận live
         </h3>
@@ -33,7 +33,7 @@ export default function ChatPanel({ messages, chatText, setChatText, onSend, onC
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 shadow-sm transition hover:bg-rose-50 hover:text-rose-600"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 shadow-sm transition hover:bg-rose-50 hover:text-rose-600 sm:h-9 sm:w-9"
             aria-label="Đóng khung chat"
             title="Đóng"
           >
@@ -58,7 +58,7 @@ export default function ChatPanel({ messages, chatText, setChatText, onSend, onC
         </div>
       )}
 
-      <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl bg-slate-50 p-3 text-sm">
+      <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl bg-slate-50 p-2.5 text-[13px] leading-5 sm:p-3 sm:text-sm">
         {messages.length === 0 && (
           <p className="text-slate-500">Chưa có bình luận.</p>
         )}
@@ -80,18 +80,18 @@ export default function ChatPanel({ messages, chatText, setChatText, onSend, onC
         <div ref={chatEndRef} />
       </div>
 
-      <div className="mt-3 flex gap-2">
+      <div className="mt-2 flex gap-2 sm:mt-3">
         <input
           value={chatText}
           onChange={(e) => setChatText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && onSend()}
           placeholder="Nhập bình luận..."
-          className="min-w-0 flex-1 rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-rose-500"
+          className="h-10 min-w-0 flex-1 rounded-2xl border border-slate-200 px-3 text-[13px] outline-none focus:border-rose-500 sm:h-auto sm:py-2 sm:text-sm"
         />
 
         <button
           onClick={onSend}
-          className="rounded-2xl bg-rose-600 px-4 py-2 text-sm font-black text-white hover:bg-rose-700"
+          className="h-10 rounded-2xl bg-rose-600 px-4 text-[13px] font-black text-white hover:bg-rose-700 sm:h-auto sm:py-2 sm:text-sm"
         >
           Gửi
         </button>

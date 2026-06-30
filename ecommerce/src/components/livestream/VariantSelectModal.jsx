@@ -46,19 +46,19 @@ export default function VariantSelectModal({ product, deal, onClose, onConfirm }
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end bg-black/55 px-0 pt-6 sm:items-center sm:justify-center sm:p-4"
+      className="fixed inset-0 z-[120] flex items-end bg-black/55 px-0 pt-2 sm:items-center sm:justify-center sm:p-4"
       onClick={onClose}
     >
       <div
-        className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[28px] bg-white shadow-2xl sm:max-h-[88vh] sm:max-w-3xl sm:rounded-[28px] lg:max-w-4xl"
+        className="flex h-[92dvh] w-full flex-col overflow-hidden rounded-t-[22px] bg-white shadow-2xl sm:h-auto sm:max-h-[88vh] sm:max-w-3xl sm:rounded-[28px] lg:max-w-4xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-6 sm:py-5">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-3.5 py-3 sm:px-6 sm:py-5">
           <div className="min-w-0">
-            <h3 className="text-base font-black text-slate-950 sm:text-lg lg:text-xl">
+            <h3 className="text-[17px] font-black text-slate-950 sm:text-lg lg:text-xl">
               Chọn biến thể và số lượng
             </h3>
-            <p className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm">
+            <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-slate-500 sm:mt-1 sm:text-sm sm:leading-5">
               Chọn biến thể và số lượng muốn mua với giá live. Hệ thống sẽ kiểm tra số lượng deal trước khi thanh toán.
             </p>
           </div>
@@ -73,18 +73,18 @@ export default function VariantSelectModal({ product, deal, onClose, onConfirm }
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
-          <div className="grid gap-3 rounded-2xl bg-slate-50 p-3 sm:grid-cols-[auto_1fr] sm:gap-4 sm:p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-3.5 py-3 pb-4 sm:px-6 sm:py-4">
+          <div className="grid grid-cols-[72px_1fr] gap-3 rounded-2xl bg-slate-50 p-3 sm:grid-cols-[auto_1fr] sm:gap-4 sm:p-4">
             <img
               src={product.thumbnail}
               alt={product.name}
-              className="h-20 w-20 shrink-0 rounded-2xl bg-white object-contain p-1 sm:h-24 sm:w-24"
+              className="h-[72px] w-[72px] shrink-0 rounded-2xl bg-white object-contain p-1 sm:h-24 sm:w-24"
             />
             <div className="min-w-0">
-              <p className="line-clamp-2 text-sm font-black text-slate-950 sm:text-base">
+              <p className="line-clamp-2 text-[13px] font-black text-slate-950 sm:text-base">
                 {product.name}
               </p>
-              <p className="mt-1 text-lg font-black text-rose-600 sm:text-xl">
+              <p className="mt-0.5 text-base font-black text-rose-600 sm:mt-1 sm:text-xl">
                 {formatVnd(finalPrice)}
               </p>
               {comparePrice && Number(comparePrice) > Number(finalPrice) && (
@@ -93,11 +93,11 @@ export default function VariantSelectModal({ product, deal, onClose, onConfirm }
                 </p>
               )}
 
-              <div className="mt-3 grid gap-2 text-[11px] font-bold sm:grid-cols-2 sm:text-xs">
-                <span className="rounded-2xl bg-white px-3 py-2 text-slate-600">
+              <div className="mt-2 grid gap-1.5 text-[10px] font-bold sm:mt-3 sm:grid-cols-2 sm:gap-2 sm:text-xs">
+                <span className="rounded-xl bg-white px-2.5 py-1.5 text-slate-600 sm:rounded-2xl sm:px-3 sm:py-2">
                   Đã chọn: <b className="text-blue-600">{totalSelected}</b> sản phẩm
                 </span>
-                <span className="rounded-2xl bg-white px-3 py-2 text-slate-600">
+                <span className="rounded-xl bg-white px-2.5 py-1.5 text-slate-600 sm:rounded-2xl sm:px-3 sm:py-2">
                   Tổng tiền: <b className="text-slate-950">{formatVnd(totalSelected * Number(finalPrice || 0))}</b>
                 </span>
               </div>
@@ -110,7 +110,7 @@ export default function VariantSelectModal({ product, deal, onClose, onConfirm }
             </div>
           )}
 
-          <div className="mt-4 space-y-2 sm:space-y-3">
+          <div className="mt-3 space-y-2 sm:mt-4 sm:space-y-3">
             {variants.length === 0 ? (
               <div className="rounded-2xl bg-rose-50 p-3 text-sm font-bold text-rose-600">
                 Sản phẩm live chưa có biến thể còn hàng để thanh toán.
@@ -123,28 +123,28 @@ export default function VariantSelectModal({ product, deal, onClose, onConfirm }
                 return (
                   <div
                     key={variant.id}
-                    className={`rounded-2xl border p-3 transition sm:p-4 ${
+                    className={`rounded-2xl border p-2.5 transition sm:p-4 ${
                       quantity > 0
                         ? "border-blue-600 bg-blue-50 ring-1 ring-blue-600"
                         : "border-slate-200 bg-white"
                     }`}
                   >
-                    <div className="grid gap-3 sm:grid-cols-[150px_1fr] sm:items-center lg:grid-cols-[180px_1fr]">
-                      <div className="flex items-center justify-center rounded-2xl bg-slate-50 p-2">
+                    <div className="grid grid-cols-[86px_1fr] gap-2.5 sm:grid-cols-[150px_1fr] sm:items-center sm:gap-3 lg:grid-cols-[180px_1fr]">
+                      <div className="flex items-center justify-center rounded-2xl bg-slate-50 p-1.5 sm:p-2">
                         <img
                           src={getVariantImage(variant, product)}
                           alt={getVariantLabel(variant)}
-                          className="h-24 w-full rounded-xl bg-white object-contain p-2 sm:h-28 lg:h-32"
+                          className="h-[82px] w-full rounded-xl bg-white object-contain p-1.5 sm:h-28 sm:p-2 lg:h-32"
                         />
                       </div>
 
                       <div className="min-w-0">
-                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="flex min-h-[82px] flex-col justify-between gap-2 sm:gap-3 lg:flex-row lg:items-center lg:justify-between">
                           <div className="min-w-0">
-                            <p className="break-words text-sm font-black leading-snug text-slate-900 sm:text-base">
+                            <p className="break-words text-[13px] font-black leading-snug text-slate-900 sm:text-base">
                               {getVariantLabel(variant)}
                             </p>
-                            <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-bold sm:text-xs">
+                            <div className="mt-1.5 flex flex-wrap gap-1.5 text-[10px] font-bold sm:mt-2 sm:gap-2 sm:text-xs">
                               <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">
                                 SKU: {variant.sku || "Không có"}
                               </span>
@@ -152,17 +152,17 @@ export default function VariantSelectModal({ product, deal, onClose, onConfirm }
                                 Còn {stock} sản phẩm
                               </span>
                             </div>
-                            <p className="mt-2 text-sm font-black text-rose-600">
+                            <p className="mt-1.5 text-[13px] font-black text-rose-600 sm:mt-2 sm:text-sm">
                               {formatVnd(finalPrice)}
                             </p>
                           </div>
 
-                          <div className="flex shrink-0 items-center justify-between gap-2 rounded-2xl bg-white p-1.5 shadow-sm sm:justify-end">
+                          <div className="flex shrink-0 items-center justify-between gap-1.5 rounded-2xl bg-white p-1 shadow-sm sm:justify-end sm:gap-2 sm:p-1.5">
                         <button
                           type="button"
                           onClick={() => updateQuantity(variant, quantity - 1)}
                           disabled={quantity <= 0}
-                          className="h-9 w-9 rounded-xl bg-slate-100 text-lg font-black text-slate-700 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+                          className="h-9 w-9 rounded-xl bg-slate-100 text-lg font-black text-slate-700 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40 sm:h-9 sm:w-9"
                         >
                           −
                         </button>
@@ -172,7 +172,7 @@ export default function VariantSelectModal({ product, deal, onClose, onConfirm }
                           max={stock}
                           value={quantity}
                           onChange={(e) => updateQuantity(variant, e.target.value)}
-                          className="h-9 w-16 rounded-xl border border-slate-200 text-center text-sm font-black text-slate-900 outline-none focus:border-blue-500"
+                          className="h-9 w-14 rounded-xl border border-slate-200 text-center text-sm font-black text-slate-900 outline-none focus:border-blue-500 sm:w-16"
                         />
                         <button
                           type="button"
@@ -193,12 +193,12 @@ export default function VariantSelectModal({ product, deal, onClose, onConfirm }
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-slate-100 bg-white px-4 py-3 sm:px-6 sm:py-4">
+        <div className="sticky bottom-0 z-20 shrink-0 border-t border-slate-100 bg-white px-3.5 py-3 shadow-[0_-10px_24px_rgba(15,23,42,0.10)] sm:px-6 sm:py-4">
           <button
             type="button"
             disabled={!canBuy}
             onClick={() => onConfirm(selectedItems)}
-            className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 sm:text-base"
+            className="w-full rounded-2xl bg-blue-600 px-4 py-3.5 text-sm font-black text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 sm:text-base"
           >
             {totalSelected > 0 ? `Mua ${totalSelected} sản phẩm với giá live` : "Chọn số lượng để mua"}
           </button>

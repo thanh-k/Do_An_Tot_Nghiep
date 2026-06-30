@@ -317,29 +317,29 @@ function MembershipCheckoutPage() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 px-3 py-4 backdrop-blur-[2px] sm:px-6">
-                    <div className="relative max-h-[94vh] w-full max-w-5xl overflow-y-auto rounded-[24px] bg-white shadow-2xl sm:rounded-[30px]">
+                  <div className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/55 px-2 pb-2 pt-4 backdrop-blur-[2px] sm:items-center sm:px-6 sm:py-4">
+                    <div className="relative max-h-[92dvh] w-full max-w-5xl overflow-y-auto rounded-t-[22px] bg-white shadow-2xl sm:max-h-[94vh] sm:rounded-[30px]">
                       <button
                         type="button"
                         onClick={handleCancelPayment}
                         disabled={submitting}
-                        className="absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-500 shadow-sm transition hover:bg-slate-100 hover:text-slate-900"
+                        className="absolute right-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-slate-500 shadow-sm transition hover:bg-slate-100 hover:text-slate-900 sm:right-4 sm:top-4 sm:h-10 sm:w-10"
                         aria-label="Đóng thanh toán"
                       >
                         <X size={20} />
                       </button>
 
-                      <div className="h-3 bg-gradient-to-r from-[#005baa] via-[#4f46e5] to-[#ed1c24]" />
+                      <div className="h-2 bg-gradient-to-r from-[#005baa] via-[#4f46e5] to-[#ed1c24] sm:h-3" />
 
-                      <div className="grid gap-4 p-4 sm:p-6 lg:grid-cols-[380px_minmax(0,1fr)] lg:gap-7 lg:p-8">
-                        <div className="rounded-[28px] border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
-                          <div className="mb-4 flex items-center justify-center gap-2 text-sm font-black text-slate-800">
-                            <span className="h-3 w-3 rounded-full bg-[#005baa]" />
-                            <span className="h-3 w-3 rounded-full bg-[#ed1c24]" />
+                      <div className="grid gap-3 p-3 sm:gap-4 sm:p-6 lg:grid-cols-[380px_minmax(0,1fr)] lg:gap-7 lg:p-8">
+                        <div className="rounded-[22px] border border-slate-100 bg-white p-3 shadow-sm sm:rounded-[28px] sm:p-5">
+                          <div className="mb-2 flex items-center justify-center gap-2 text-xs font-black text-slate-800 sm:mb-4 sm:text-sm">
+                            <span className="h-2.5 w-2.5 rounded-full bg-[#005baa] sm:h-3 sm:w-3" />
+                            <span className="h-2.5 w-2.5 rounded-full bg-[#ed1c24] sm:h-3 sm:w-3" />
                             VietQR
                           </div>
 
-                          <div className="mx-auto flex aspect-square w-full max-w-[320px] items-center justify-center rounded-[28px] border-4 border-blue-50 bg-white p-4 shadow-inner sm:max-w-[360px] sm:p-5">
+                          <div className="mx-auto flex aspect-square w-full max-w-[238px] items-center justify-center rounded-[22px] border-[3px] border-blue-50 bg-white p-3 shadow-inner sm:max-w-[360px] sm:rounded-[28px] sm:border-4 sm:p-5">
                             {paid ? (
                               <div className="text-center">
                                 <CheckCircle2 className="mx-auto mb-3 h-16 w-16 text-emerald-500" />
@@ -354,35 +354,35 @@ function MembershipCheckoutPage() {
                             )}
                           </div>
 
-                          <div className={`mt-4 rounded-3xl p-4 text-center ${expired ? "bg-rose-50 text-rose-600" : "bg-blue-50 text-blue-700"}`}>
+                          <div className={`mt-3 rounded-2xl p-3 text-center sm:mt-4 sm:rounded-3xl sm:p-4 ${expired ? "bg-rose-50 text-rose-600" : "bg-blue-50 text-blue-700"}`}>
                             <p className="flex items-center justify-center gap-1.5 text-xs font-black uppercase">
                               <Clock size={15} />
                               {expired ? "Mã QR đã hết hạn" : "Thời gian còn lại"}
                             </p>
-                            <p className="mt-2 font-mono text-3xl font-black tracking-wide">
+                            <p className="mt-1 font-mono text-2xl font-black tracking-wide sm:mt-2 sm:text-3xl">
                               {expired ? "00:00" : formatTime(remainMs)}
                             </p>
                           </div>
                         </div>
 
-                        <div className="space-y-4">
-                          <div className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-sm">
+                        <div className="space-y-3 sm:space-y-4">
+                          <div className="rounded-[20px] border border-slate-100 bg-white p-4 shadow-sm sm:rounded-[24px] sm:p-5">
                             <p className="text-xs font-black uppercase tracking-wide text-slate-400">Số tiền thanh toán</p>
-                            <p className="mt-2 text-3xl font-black text-[#005baa] sm:text-4xl">
+                            <p className="mt-1 text-2xl font-black text-[#005baa] sm:mt-2 sm:text-4xl">
                               {formatCurrency(paymentSession.amount)}
                             </p>
                           </div>
 
-                          <div className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-sm">
+                          <div className="rounded-[20px] border border-slate-100 bg-white p-4 shadow-sm sm:rounded-[24px] sm:p-5">
                             <p className="text-xs font-black uppercase tracking-wide text-slate-400">Nội dung chuyển khoản</p>
-                            <div className="mt-3 flex items-center gap-3">
-                              <p className="min-w-0 flex-1 truncate rounded-2xl bg-slate-50 px-4 py-4 font-mono text-base font-black text-slate-950">
+                            <div className="mt-2 flex items-center gap-2 sm:mt-3 sm:gap-3">
+                              <p className="min-w-0 flex-1 truncate rounded-2xl bg-slate-50 px-3 py-3 font-mono text-sm font-black text-slate-950 sm:px-4 sm:py-4 sm:text-base">
                                 {paymentSession.paymentCode}
                               </p>
                               <button
                                 type="button"
                                 onClick={copyPaymentCode}
-                                className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm transition hover:bg-brand-600"
+                                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm transition hover:bg-brand-600 sm:h-12 sm:w-12"
                                 aria-label="Sao chép nội dung chuyển khoản"
                               >
                                 <Copy size={20} />
@@ -390,30 +390,30 @@ function MembershipCheckoutPage() {
                             </div>
                           </div>
 
-                          <div className="rounded-[24px] bg-slate-50 p-5">
-                            <h3 className="text-base font-black text-slate-950">Hướng dẫn thanh toán</h3>
-                            <div className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
+                          <div className="rounded-[20px] bg-slate-50 p-4 sm:rounded-[24px] sm:p-5">
+                            <h3 className="text-sm font-black text-slate-950 sm:text-base">Hướng dẫn thanh toán</h3>
+                            <div className="mt-3 space-y-2.5 text-xs leading-5 text-slate-600 sm:mt-4 sm:space-y-3 sm:text-sm sm:leading-6">
                               <div className="flex gap-3">
-                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#005baa] text-sm font-black text-white">1</span>
+                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#005baa] text-xs font-black text-white sm:h-8 sm:w-8 sm:text-sm">1</span>
                                 <p>Mở ứng dụng ngân hàng bất kỳ và quét mã QR.</p>
                               </div>
                               <div className="flex gap-3">
-                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#005baa] text-sm font-black text-white">2</span>
+                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#005baa] text-xs font-black text-white sm:h-8 sm:w-8 sm:text-sm">2</span>
                                 <p>Kiểm tra số tiền và nội dung chuyển khoản <b className="text-[#005baa]">{paymentSession.paymentCode}</b>.</p>
                               </div>
                               <div className="flex gap-3">
-                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#005baa] text-sm font-black text-white">3</span>
+                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#005baa] text-xs font-black text-white sm:h-8 sm:w-8 sm:text-sm">3</span>
                                 <p>Xác nhận chuyển khoản. Hệ thống sẽ <b>tự động xác nhận</b> trong vài giây.</p>
                               </div>
                             </div>
                           </div>
 
-                          <div className="rounded-[24px] border border-emerald-200 bg-emerald-50 p-5 text-emerald-800">
+                          <div className="rounded-[20px] border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 sm:rounded-[24px] sm:p-5">
                             <div className="flex items-start gap-3">
                               <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
                               <div>
                                 <p className="font-black">Giao dịch được bảo vệ</p>
-                                <p className="mt-1 text-sm leading-6">
+                                <p className="mt-1 text-xs leading-5 sm:text-sm sm:leading-6">
                                   Không đóng trang trong lúc thanh toán. Mã QR chỉ có hiệu lực trong 15 phút.
                                   Sau khi chuyển khoản, trang sẽ tự chuyển hướng.
                                 </p>
@@ -425,7 +425,7 @@ function MembershipCheckoutPage() {
                             Hệ thống tự kiểm tra mỗi 3 giây. Rời trang khi chưa thành công sẽ không kích hoạt VIP.
                           </p>
 
-                          <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="grid grid-cols-2 gap-2 sm:gap-3">
                             <Button
                               fullWidth
                               variant="outline"
