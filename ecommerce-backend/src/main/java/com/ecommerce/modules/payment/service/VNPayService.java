@@ -49,13 +49,14 @@ public class VNPayService {
         vnpParams.put("vnp_IpAddr", vnpIpAddr);
 
         // Thời gian tạo và hết hạn (15 phút)
-        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("Etc/GMT+7"));
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
-        String vnpCreateDate = formatter.format(calendar.getTime());
+        java.time.ZoneId zoneId = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
+        java.time.ZonedDateTime now = java.time.ZonedDateTime.now(zoneId);
+        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+        
+        String vnpCreateDate = now.format(formatter);
         vnpParams.put("vnp_CreateDate", vnpCreateDate);
 
-        calendar.add(Calendar.MINUTE, 15);
-        String vnpExpireDate = formatter.format(calendar.getTime());
+        String vnpExpireDate = now.plusMinutes(15).format(formatter);
         vnpParams.put("vnp_ExpireDate", vnpExpireDate);
 
         // Build query string và tính hash
