@@ -1,31 +1,22 @@
-import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import Input from "@/components/common/Input";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import PageHeader from "@/components/common/PageHeader";
 import ProductGrid from "@/components/product/ProductGrid";
 import ProductVideoSection from "@/components/productVideo/ProductVideoSection";
-import { useDebounce } from "@/hooks/useDebounce";
 import userProductService from "@/services/user/productService";
 import behaviorService from "@/services/user/behaviorService";
 import productVideoService from "@/services/productVideo/productVideoService";
 
 function SearchResultPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const queryParam = searchParams.get("q") || "";
-  const [keyword, setKeyword] = useState(queryParam);
-  const debouncedKeyword = useDebounce(keyword, 350);
   const [loading, setLoading] = useState(true);
   const [response, setResponse] = useState({ items: [], total: 0 });
   const [videos, setVideos] = useState([]);
 
   useEffect(() => {
-    setKeyword(queryParam);
-  }, [queryParam]);
-
-  useEffect(() => {
-    if (!debouncedKeyword) {
+    if (!queryParam) {
       setResponse({ items: [], total: 0 });
       setVideos([]);
       setLoading(false);
@@ -33,28 +24,22 @@ function SearchResultPage() {
     }
     setLoading(true);
     Promise.all([
-      userProductService.searchProducts(debouncedKeyword, 1, 12),
-      productVideoService.searchVideos(debouncedKeyword, 6).catch(() => []),
+      userProductService.searchProducts(queryParam, 1, 12),
+      productVideoService.searchVideos(queryParam, 6).catch(() => []),
     ])
       .then(([data, videoData]) => {
         setResponse(data);
         setVideos(Array.isArray(videoData) ? videoData : []);
-        if (debouncedKeyword?.trim()) {
+        if (queryParam?.trim()) {
           behaviorService.track({
             eventType: "SEARCH_PRODUCT",
-            keyword: debouncedKeyword.trim(),
+            keyword: queryParam.trim(),
             productIds: (data.items || []).slice(0, 8).map((item) => item.id),
           });
         }
       })
       .finally(() => setLoading(false));
-  }, [debouncedKeyword]);
-
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    setSearchParams(keyword.trim() ? { q: keyword.trim() } : {});
-  };
-
+  }, [queryParam]);
 
   const handleVideoProductClick = (video) => {
     productVideoService.trackProductClick(video.id).catch(() => {});
@@ -70,23 +55,6 @@ function SearchResultPage() {
         title="Kết quả tìm kiếm"
         description="Kết quả được trả về từ hệ thống tìm kiếm thông minh của chúng tôi."
       />
-
-      <form
-        onSubmit={handleSubmit}
-        className="mb-6 rounded-3xl border border-slate-200 bg-white p-4"
-      >
-        <div className="grid gap-4 md:grid-cols-[1fr_auto]">
-          <Input
-            value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
-            placeholder="Ví dụ: iphone, macbook, samsung..."
-            leftIcon={<Search size={18} />}
-          />
-          <button className="rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white">
-            Tìm kiếm
-          </button>
-        </div>
-      </form>
 
       <div className="mb-6 text-sm text-slate-500">
         {queryParam ? (
