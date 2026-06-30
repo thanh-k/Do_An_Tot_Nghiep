@@ -254,7 +254,14 @@ export const userProductService = {
       const matchedProducts = allProducts.filter((p) => {
         const name = removeAccents(p.name || "");
         const slug = removeAccents(p.slug || "");
-        return name.includes(searchKw) || slug.includes(searchKw);
+        const brand = removeAccents(p.brand?.name || p.brandName || "");
+        const category = removeAccents(p.category?.name || p.categoryName || "");
+        return (
+          name.includes(searchKw) ||
+          slug.includes(searchKw) ||
+          brand.includes(searchKw) ||
+          category.includes(searchKw)
+        );
       });
 
       matchedProducts.sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
