@@ -296,7 +296,7 @@ function ProductDetailPage() {
           { label: "Sản phẩm", to: "/products" },
           {
             label: productData.category?.name || "Danh mục",
-            to: `/products?category=${productData.categoryId}`,
+            to: `/products?category=${productData.category?.id}`,
           },
           { label: productData.name },
         ]}
