@@ -465,7 +465,15 @@ public class VoucherServiceImpl implements VoucherService {
             return;
         }
 
-        int updatedUserVoucherRows = userVoucherRepository.decrementQuantityIfAvailable(userId, voucher.getId());
+        Long userIdLong;
+        try {
+            userIdLong = Long.parseLong(userId.trim());
+        } catch (NumberFormatException e) {
+            log.warn("Không thể parse userId '{}' sang Long khi giảm voucher '{}'.", userId, code);
+            return;
+        }
+
+        int updatedUserVoucherRows = userVoucherRepository.decrementQuantityIfAvailable(userIdLong, voucher.getId());
         if (updatedUserVoucherRows > 0) {
             log.info("Đã giảm 1 lượt dùng cho voucher '{}' của user ID {}", code, userId);
         }
