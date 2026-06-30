@@ -17,6 +17,10 @@ const userMembershipService = {
     });
   },
 
+  async getPurchaseStatus(subscriptionId) {
+    return apiClient.request(`/memberships/purchase/${subscriptionId}/status`);
+  },
+
   async cancelPendingPayment(subscriptionId) {
     return apiClient.request(`/memberships/purchase/${subscriptionId}/cancel`, {
       method: "POST",

@@ -13,6 +13,7 @@ public interface MembershipService {
     List<MembershipPlanResponse> getAllPlans();
     MembershipCurrentResponse getCurrentMembership();
     MembershipPurchaseResponse purchaseMembership(MembershipPurchaseRequest request);
+    MembershipPurchaseResponse getPurchaseStatus(Long subscriptionId);
     boolean confirmSePayPayment(Long subscriptionId, double transferAmount);
     void cancelPendingPayment(Long subscriptionId);
     MembershipPlanResponse createPlan(MembershipPlanUpsertRequest request);

@@ -10,6 +10,8 @@ import {
   Star,
   Flame,
   CalendarClock,
+  RefreshCw,
+  X,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
@@ -113,6 +115,7 @@ function MembershipPage() {
   const [selectedPlanId, setSelectedPlanId] = useState(null);
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [loadingMembership, setLoadingMembership] = useState(Boolean(currentUser));
+  const [showRenewModal, setShowRenewModal] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -157,6 +160,28 @@ function MembershipPage() {
   );
 
   const currentPlanKey = planToBenefitKey(currentMembership?.membershipCode);
+  const purchaseHistory = currentMembership?.purchaseHistory || [];
+  const totalPurchasedMonths = currentMembership?.totalPurchasedMonths || purchaseHistory.reduce((total, item) => total + Number(item.durationMonths || 0), 0);
+
+  const renewablePlans = useMemo(() => {
+    const paidPlanIds = Array.from(
+      new Set(
+        purchaseHistory
+          .filter((item) => String(item.paymentStatus || "").toUpperCase() === "PAID")
+          .map((item) => Number(item.planId))
+          .filter(Boolean),
+      ),
+    );
+
+    const matchedPlans = paidPlanIds
+      .map((planId) => plans.find((plan) => Number(plan.id) === Number(planId)))
+      .filter(Boolean);
+
+    if (matchedPlans.length > 0) return matchedPlans;
+    return currentMembership?.currentPlan?.id
+      ? plans.filter((plan) => Number(plan.id) === Number(currentMembership.currentPlan.id))
+      : [];
+  }, [purchaseHistory, plans, currentMembership?.currentPlan?.id]);
 
   const handleSelectPlan = (planId) => {
     setSelectedPlanId(planId);
@@ -170,6 +195,38 @@ function MembershipPage() {
       return;
     }
     navigate(`/membership/checkout?planId=${plan.id}`);
+  };
+
+  const handleRenewMembership = () => {
+    if (!currentUser) {
+      toast.error("Vui lòng đăng nhập để gia hạn gói VIP");
+      navigate("/login", { state: { from: { pathname: "/membership" } } });
+      return;
+    }
+
+    if (!currentMembership?.vip) {
+      toast.error("Bạn chưa có gói VIP để gia hạn");
+      return;
+    }
+
+    if (renewablePlans.length === 1) {
+      const plan = renewablePlans[0];
+      navigate(`/membership/checkout?planId=${plan.id}&renew=1`);
+      return;
+    }
+
+    if (renewablePlans.length > 1) {
+      setShowRenewModal(true);
+      return;
+    }
+
+    toast.error("Chưa tìm thấy gói VIP đã mua để gia hạn");
+  };
+
+  const handleRenewPlan = (plan) => {
+    if (!plan) return;
+    setShowRenewModal(false);
+    navigate(`/membership/checkout?planId=${plan.id}&renew=1`);
   };
 
   return (
@@ -251,16 +308,59 @@ function MembershipPage() {
                   </div>
                 </div>
 
+                {purchaseHistory.length > 0 && (
+                  <div className="mt-3 rounded-2xl border border-white/10 bg-white/10 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-rose-100 sm:text-xs">
+                        Các gói đã mua
+                      </p>
+                      <span className="rounded-full bg-white/15 px-2 py-1 text-[10px] font-bold text-white sm:text-xs">
+                        Tổng {totalPurchasedMonths} tháng
+                      </span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {purchaseHistory.slice(0, 4).map((item) => (
+                        <span
+                          key={item.id}
+                          className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1 text-[10px] font-bold text-slate-900 sm:text-xs"
+                          title={`${item.planName} - ${item.durationMonths} tháng`}
+                        >
+                          <Check size={12} className="text-emerald-500" />
+                          {item.planName}
+                        </span>
+                      ))}
+                      {purchaseHistory.length > 4 && (
+                        <span className="rounded-full bg-white/15 px-2 py-1 text-[10px] font-bold text-white sm:text-xs">
+                          +{purchaseHistory.length - 4} gói
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <p className="mt-3 hidden text-sm leading-6 text-slate-200 sm:block">
                   Khi bấm đăng ký, hệ thống sẽ chuyển sang <b>trang thanh toán riêng cho hội viên</b>. Luồng này chỉ áp dụng cho membership, không dùng chung với checkout sản phẩm.
                 </p>
 
-                <Link
-                  to="/profile"
-                  className="mt-3 inline-flex items-center rounded-xl border border-white/15 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/10 sm:mt-5 sm:px-4 sm:text-sm"
-                >
-                  Xem hồ sơ tài khoản
-                </Link>
+                <div className="mt-3 flex flex-wrap gap-2 sm:mt-5">
+                  <Link
+                    to="/profile"
+                    className="inline-flex items-center rounded-xl border border-white/15 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/10 sm:px-4 sm:text-sm"
+                  >
+                    Xem hồ sơ tài khoản
+                  </Link>
+
+                  {currentMembership?.vip && (
+                    <button
+                      type="button"
+                      onClick={handleRenewMembership}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-black text-slate-950 transition hover:bg-rose-50 sm:px-4 sm:text-sm"
+                    >
+                      <RefreshCw size={15} />
+                      Gia hạn gói
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -455,6 +555,45 @@ function MembershipPage() {
           </div>
         </div>
       </section>
+
+      {showRenewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-[26px] bg-white p-4 shadow-2xl sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-rose-500">Gia hạn gói VIP</p>
+                <h3 className="mt-1 text-xl font-black text-slate-950">Chọn gói muốn gia hạn</h3>
+                <p className="mt-1 text-sm leading-6 text-slate-500">
+                  Bạn đã mua nhiều gói VIP. Chọn đúng gói muốn gia hạn, hệ thống sẽ cộng thêm thời gian vào hạn VIP hiện tại sau khi thanh toán thành công.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRenewModal(false)}
+                className="rounded-full bg-slate-100 p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"
+                aria-label="Đóng chọn gói gia hạn"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {renewablePlans.map((plan) => (
+                <button
+                  key={plan.id}
+                  type="button"
+                  onClick={() => handleRenewPlan(plan)}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-rose-400 hover:bg-rose-50"
+                >
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-500">{plan.badge || "VIP"}</span>
+                  <p className="mt-1 text-lg font-black text-slate-950">{plan.name}</p>
+                  <p className="mt-1 text-sm font-bold text-rose-600">{formatCurrency(plan.price)} / {plan.durationMonths} tháng</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

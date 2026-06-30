@@ -45,6 +45,15 @@ public class MembershipController {
                 .build();
     }
 
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/purchase/{subscriptionId}/status")
+    public ApiResponse<MembershipPurchaseResponse> getPurchaseStatus(@PathVariable Long subscriptionId) {
+        MembershipPurchaseResponse response = membershipService.getPurchaseStatus(subscriptionId);
+        return ApiResponse.<MembershipPurchaseResponse>builder()
+                .message(response.getMessage())
+                .result(response)
+                .build();
+    }
 
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/purchase/{subscriptionId}/cancel")
