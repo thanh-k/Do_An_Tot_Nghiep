@@ -391,9 +391,32 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
 
+        String normalizedPaymentStatus = normalizePaymentStatus(paymentStatus);
+        
+        // Khôi phục đơn hàng nếu thanh toán trễ (đã bị hủy bởi cron job)
+        if ("PAID".equalsIgnoreCase(normalizedPaymentStatus) && "CANCELLED".equalsIgnoreCase(order.getStatus())) {
+            order.setStatus("PENDING");
+            
+            // Trừ lại kho
+            if (order.getOrderDetails() != null) {
+                for (OrderDetail detail : order.getOrderDetails()) {
+                    ProductVariant variant = detail.getProductVariant();
+                    if (variant != null && variant.getId() != null) {
+                        variantRepository.decrementStockIfAvailable(variant.getId(), detail.getQuantity());
+                    }
+                }
+            }
+            
+            // Trừ lại voucher
+            if (order.getVoucherCode() != null && !order.getVoucherCode().trim().isEmpty()) {
+                voucherService.decrementQuantity(order.getVoucherCode().trim(), order.getUserId());
+            }
+            log.info("Đã khôi phục đơn hàng #{} từ CANCELLED -> PENDING do khách hàng thanh toán trễ.", id);
+        }
+
         // Thanh toán online chỉ cập nhật trạng thái thanh toán.
         // Không đổi trạng thái xử lý đơn hàng để tránh nhầm "đã thanh toán" với "đã giao/hoàn tất".
-        order.setPaymentStatus(normalizePaymentStatus(paymentStatus));
+        order.setPaymentStatus(normalizedPaymentStatus);
 
         return orderMapper.toResponse(orderRepository.save(order));
     }
