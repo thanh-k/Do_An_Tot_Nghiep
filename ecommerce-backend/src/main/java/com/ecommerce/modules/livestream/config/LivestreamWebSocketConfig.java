@@ -16,6 +16,6 @@ public class LivestreamWebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(livestreamSignalingHandler, "/ws/livestream/{id}")
-                .setAllowedOrigins("http://localhost:5173", "https://hitcinsight.id.vn");
+                .setAllowedOriginPatterns("http://localhost:*", "https://hitcinsight.id.vn", "https://*.hitcinsight.id.vn");
     }
 }

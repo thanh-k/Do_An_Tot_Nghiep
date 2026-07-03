@@ -19,11 +19,13 @@ function StaffManagementPage() {
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [keyword, setKeyword] = useState("");
+  const [userKeyword, setUserKeyword] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const [assigningUser, setAssigningUser] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [loading, setLoading] = useState(true);
   const debouncedKeyword = useDebounce(keyword, 300);
+  const debouncedUserKeyword = useDebounce(userKeyword, 250);
   const { currentUser } = useContext(AuthContext);
 
   const load = async () => {
@@ -42,6 +44,18 @@ function StaffManagementPage() {
     if (!s) return staff;
     return staff.filter((item) => [item.fullName, item.email, item.role, ...(item.permissions || [])].filter(Boolean).join(" ").toLowerCase().includes(s));
   }, [staff, debouncedKeyword]);
+
+  const filteredUserCandidates = useMemo(() => {
+    const s = debouncedUserKeyword.trim().toLowerCase();
+    if (!s) return users;
+    return users.filter((user) =>
+      [user.fullName, user.displayName, user.email, user.phoneNumber]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(s)
+    );
+  }, [users, debouncedUserKeyword]);
 
   const visibleIds = filtered.map((user) => user.id);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
@@ -84,7 +98,61 @@ function StaffManagementPage() {
   return <div className="space-y-6"><PageHeader title="Quản lý nhân sự" description="Quản lý các tài khoản có quyền trong hệ thống và nâng quyền từ user thường." actions={canAssign ? <Button variant="secondary" onClick={() => setAssigningUser({ id: null, fullName: "", email: "", role: "USER", roles: [] })}>Nâng quyền từ user</Button> : null} /><div className="card p-4"><Input placeholder="Tìm theo tên, email hoặc quyền..." value={keyword} onChange={(e)=>setKeyword(e.target.value)} /></div>{selectedIds.length > 0 ? <div className="card flex flex-wrap items-center gap-3 p-4"><span className="text-sm font-medium text-slate-600">Đã chọn {selectedIds.length} nhân sự</span>{canLock ? <Button size="sm" variant="secondary" onClick={runBulkLock}>Khóa/Mở khóa đã chọn</Button> : null}{canDelete ? <Button size="sm" variant="danger" onClick={runBulkDelete}>Ngưng hoạt động đã chọn</Button> : null}</div> : null}{loading ? <div className="card p-8 text-center text-sm text-slate-500">Đang tải nhân sự...</div> : <DataTable columns={columns} data={sortNewestFirst(filtered)} pagination={{ enabled: true, pageSize: 8, itemLabel: "nhân sự" }} />}
   <UserDetailModal user={selectedUser} isOpen={Boolean(selectedUser)} onClose={()=>setSelectedUser(null)} onAssignRole={setAssigningUser} type="staff" />
   <AssignRoleModal user={assigningUser && assigningUser.id ? assigningUser : null} roles={roles} isOpen={Boolean(assigningUser && assigningUser.id)} onClose={()=>setAssigningUser(null)} onSubmit={async (roleIds) => { await userService.assignRoles(assigningUser.id, roleIds); toast.success("Đã cập nhật quyền"); setAssigningUser(null); load(); }} />
-  {assigningUser && !assigningUser.id ? <div className="card p-5"><p className="mb-4 text-sm text-slate-500">Chọn user thường để nâng quyền.</p><div className="grid gap-3 md:grid-cols-2">{users.map((user) => <button key={user.id} className="rounded-2xl border border-slate-200 p-4 text-left hover:border-brand-400" onClick={()=>setAssigningUser(user)}><p className="font-semibold text-slate-900">{user.fullName}</p><p className="text-sm text-slate-500">{user.email}</p></button>)}</div><div className="mt-4"><Button variant="secondary" onClick={()=>setAssigningUser(null)}>Đóng</Button></div></div> : null}
+  {assigningUser && !assigningUser.id ? (
+    <div className="card overflow-hidden p-5">
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="text-sm font-semibold text-slate-900">Chọn user thường để nâng quyền</p>
+          <p className="mt-1 text-xs text-slate-500">
+            Tìm theo tên, email hoặc số điện thoại. Danh sách được giới hạn trong khung cuộn để dễ thao tác.
+          </p>
+        </div>
+        <div className="w-full lg:max-w-md">
+          <Input
+            placeholder="Tìm user thường..."
+            value={userKeyword}
+            onChange={(e) => setUserKeyword(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="max-h-[420px] overflow-y-auto rounded-2xl border border-slate-100 bg-slate-50/60 p-3">
+        {filteredUserCandidates.length ? (
+          <div className="grid gap-3 md:grid-cols-2">
+            {filteredUserCandidates.map((user) => (
+              <button
+                key={user.id}
+                className="rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-brand-400 hover:shadow-sm"
+                onClick={() => setAssigningUser(user)}
+              >
+                <p className="font-semibold text-slate-900">{user.displayName || user.fullName || "Chưa có tên"}</p>
+                <p className="mt-1 break-all text-sm text-slate-500">{user.email}</p>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+            Không tìm thấy user phù hợp.
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <span className="text-xs text-slate-500">
+          Hiển thị {filteredUserCandidates.length}/{users.length} user thường
+        </span>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setAssigningUser(null);
+            setUserKeyword("");
+          }}
+        >
+          Đóng
+        </Button>
+      </div>
+    </div>
+  ) : null}
   </div>;
 }
 

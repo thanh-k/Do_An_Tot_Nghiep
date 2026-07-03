@@ -95,7 +95,17 @@ function CheckoutPage() {
   // Lấy ID các sản phẩm được chọn từ Giỏ hàng truyền sang
   const selectedIds = location.state?.selectedIds || [];
   // Lấy dữ liệu sản phẩm trực tiếp nếu đến từ nút "Mua ngay"
-  const directItems = location.state?.directItems;
+  const directItems = useMemo(() => {
+    if (location.state?.directItems?.length) return location.state.directItems;
+
+    try {
+      const stored = sessionStorage.getItem("live_checkout_direct_items");
+      const parsed = stored ? JSON.parse(stored) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  }, [location.state]);
 
   const checkoutItems = useMemo(() => {
     if (directItems && directItems.length > 0) return directItems; // Ưu tiên dùng dữ liệu truyền trực tiếp
@@ -356,8 +366,8 @@ function CheckoutPage() {
       orderCompletedRef.current = true;
 
       // Lưu trạng thái giỏ hàng vào localStorage để VnpayQrModal xử lý xóa khi thanh toán thành công
-      localStorage.setItem("vnpay_pending_direct", directItems ? "true" : "false");
-      if (!directItems) {
+      localStorage.setItem("vnpay_pending_direct", directItems?.length ? "true" : "false");
+      if (!directItems?.length) {
         localStorage.setItem("vnpay_pending_items", JSON.stringify(checkoutItems.map((item) => item.id)));
       }
 
@@ -387,7 +397,11 @@ function CheckoutPage() {
         productIds: checkoutProductIds,
       });
 
-      if (!directItems) {
+      if (directItems?.length) {
+        sessionStorage.removeItem("live_checkout_direct_items");
+      }
+
+      if (!directItems?.length) {
         if (removeMultipleFromCart) {
           removeMultipleFromCart(checkoutItems.map((item) => item.id));
         } else {
@@ -434,8 +448,8 @@ function CheckoutPage() {
       }
 
       // Lưu trạng thái giỏ hàng vào localStorage để xử lý ở VnpayReturnPage nếu thanh toán thành công
-      localStorage.setItem("vnpay_pending_direct", directItems ? "true" : "false");
-      if (!directItems) {
+      localStorage.setItem("vnpay_pending_direct", directItems?.length ? "true" : "false");
+      if (!directItems?.length) {
         localStorage.setItem("vnpay_pending_items", JSON.stringify(checkoutItems.map((item) => item.id)));
       }
 

@@ -40,6 +40,17 @@ export default function LiveRoom({ livestream, onBack, currentUser }) {
   const { cartItems, removeMultipleFromCart } = useCart();
   const navigate = useNavigate();
 
+const parseVariantAttributes = (attributes) => {
+  if (!attributes) return {};
+  if (typeof attributes === "object") return attributes;
+  try {
+    return JSON.parse(attributes);
+  } catch {
+    return {};
+  }
+};
+
+
   useEffect(() => {
     if (livestream?.status && livestream.status !== "LIVE") {
       toast("Livestream đã kết thúc");
@@ -141,14 +152,9 @@ export default function LiveRoom({ livestream, onBack, currentUser }) {
       }
 
       if (event.type === "host-offline") {
-        toast("Livestream đã kết thúc");
-        setVariantModal(null);
-        setShowProducts(false);
-        setShowChat(false);
-        setCurrentLive((prev) =>
-          prev ? { ...prev, status: "ENDED", viewerCount: 0, activeDeals: [] } : prev
-        );
-        setTimeout(() => onBack(), 700);
+        // Host có thể bị gián đoạn WebSocket tạm thời khi đổi mạng hoặc deploy.
+        // Không tự thoát trang để tránh cảm giác user bị reload liên tục; trạng thái live thật sẽ được poll từ API bên dưới.
+        toast("Tín hiệu livestream đang gián đoạn, hệ thống sẽ tự đồng bộ lại.", { duration: 1800 });
       }
     },
     [cartItems, currentLive.id, onBack, removeMultipleFromCart]
@@ -342,7 +348,17 @@ export default function LiveRoom({ livestream, onBack, currentUser }) {
     });
 
     setVariantModal(null);
-    navigate("/checkout", { state: { directItems } });
+    setShowProducts(false);
+
+    try {
+      sessionStorage.setItem("live_checkout_direct_items", JSON.stringify(directItems));
+    } catch (_) {
+      // Trình duyệt có thể chặn storage, vẫn điều hướng bằng state như bình thường.
+    }
+
+    setTimeout(() => {
+      navigate("/checkout", { state: { directItems } });
+    }, 0);
   };
 
   return (
@@ -405,7 +421,7 @@ export default function LiveRoom({ livestream, onBack, currentUser }) {
 
                 {!connected && !error && (
                   <p className="mt-2 text-xs text-amber-200">
-                    Đang kết nối livestream...
+                    Đang kết nối livestream. Nếu khác mạng, hệ thống sẽ tự thử kết nối lại...
                   </p>
                 )}
 

@@ -1,6 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { buildLivestreamWsUrl } from "@/utils/livestream";
 
+const ICE_SERVERS = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+  ...(import.meta.env.VITE_TURN_URL
+    ? [
+        {
+          urls: import.meta.env.VITE_TURN_URL,
+          username: import.meta.env.VITE_TURN_USERNAME || "",
+          credential: import.meta.env.VITE_TURN_CREDENTIAL || "",
+        },
+      ]
+    : []),
+];
+
+
 // Hook này xử lý camera/micro của nhân viên và gửi tín hiệu WebRTC cho người xem qua WebSocket nội bộ.
 export function useLivestreamHost(livestreamId, onLiveEvent) {
   const videoRef = useRef(null);
@@ -20,12 +35,28 @@ export function useLivestreamHost(livestreamId, onLiveEvent) {
 
   const createPeerForViewer = useCallback(async (viewerId) => {
     if (!streamRef.current || peersRef.current.has(viewerId)) return;
-    const peer = new RTCPeerConnection({ iceServers: [] });
+    const peer = new RTCPeerConnection({ iceServers: ICE_SERVERS });
     peersRef.current.set(viewerId, peer);
     streamRef.current.getTracks().forEach((track) => peer.addTrack(track, streamRef.current));
     peer.onicecandidate = (event) => {
       if (event.candidate) {
         send({ type: "ice-candidate", target: viewerId, candidate: event.candidate });
+      }
+    };
+    peer.oniceconnectionstatechange = () => {
+      // Không xử lý trạng thái disconnected vì đây có thể là trạng thái tạm thời.
+      // Chỉ đóng peer khi failed để tránh host gửi offer mới liên tục làm viewer bị reset video.
+      if (peer.iceConnectionState === "failed") {
+        peer.close();
+        peersRef.current.delete(viewerId);
+        setViewerCount(peersRef.current.size);
+      }
+    };
+    peer.onconnectionstatechange = () => {
+      if (peer.connectionState === "failed" || peer.connectionState === "closed") {
+        peer.close();
+        peersRef.current.delete(viewerId);
+        setViewerCount(peersRef.current.size);
       }
     };
     const offer = await peer.createOffer();
@@ -43,6 +74,14 @@ export function useLivestreamHost(livestreamId, onLiveEvent) {
 
       const socket = new WebSocket(buildLivestreamWsUrl(livestreamId, "host"));
       socketRef.current = socket;
+      socket.onerror = () => {
+        setError("Không kết nối được máy chủ livestream. Vui lòng kiểm tra WebSocket hoặc mạng.");
+      };
+      socket.onclose = () => {
+        if (started) {
+          setError("Kết nối livestream bị gián đoạn. Vui lòng bấm dừng và bắt đầu lại.");
+        }
+      };
       socket.onmessage = async (event) => {
         const data = JSON.parse(event.data);
         if (data.type === "viewer-joined") {

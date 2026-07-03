@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, ShoppingCart } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
+import { Link } from "react-router-dom";
 import { formatVnd, getDealForProduct } from "@/utils/livestream";
 
 export default function LiveProductCard({ product, livestream, onAdd, compact = false }) {
@@ -75,6 +76,7 @@ export default function LiveProductCard({ product, livestream, onAdd, compact = 
 
       {hasDeal ? (
         <button
+          type="button"
           onClick={() => onAdd(product, deal)}
           className="mt-3 w-full rounded-xl bg-blue-600 px-4 py-2 text-sm font-black text-white hover:bg-blue-700"
         >
