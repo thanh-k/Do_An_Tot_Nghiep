@@ -20,6 +20,8 @@ public interface VoucherService {
     Double calculateDiscount(String code, Double orderTotal);
 
     void decrementQuantity(String code);
+    
+    void decrementQuantity(String code, String userId);
 
     Map<String, Object> deleteVouchers(List<Long> ids);
 

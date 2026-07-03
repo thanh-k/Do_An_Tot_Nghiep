@@ -455,6 +455,32 @@ public class VoucherServiceImpl implements VoucherService {
 
     @Override
     @Transactional
+    public void decrementQuantity(String code, String userId) {
+        log.info("Bắt đầu giảm số lượng cho voucher: {} của user ID: {}", code, userId);
+        Voucher voucher = voucherRepository.findByCode(code).orElse(null);
+        if (voucher == null) return;
+        
+        if (userId == null || userId.isBlank()) {
+            log.warn("Không thể giảm voucher '{}' vì không có userId.", code);
+            return;
+        }
+
+        Long userIdLong;
+        try {
+            userIdLong = Long.parseLong(userId.trim());
+        } catch (NumberFormatException e) {
+            log.warn("Không thể parse userId '{}' sang Long khi giảm voucher '{}'.", userId, code);
+            return;
+        }
+
+        int updatedUserVoucherRows = userVoucherRepository.decrementQuantityIfAvailable(userIdLong, voucher.getId());
+        if (updatedUserVoucherRows > 0) {
+            log.info("Đã giảm 1 lượt dùng cho voucher '{}' của user ID {}", code, userId);
+        }
+    }
+
+    @Override
+    @Transactional
     public void incrementQuantity(String code, String userId) {
         log.info("Bắt đầu hoàn lại số lượng cho voucher: {} của user ID: {}", code, userId);
         Voucher voucher = voucherRepository.findByCode(code).orElse(null);

@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 public class OrderMapper {
 
     private static final List<String> REVIEWABLE_ORDER_STATUSES =
-            List.of("DELIVERED", "COMPLETED", "PAID");
+            List.of("DELIVERED", "COMPLETED", "COMPLETE", "DONE", "PAID");
 
     private final ProductReviewRepository productReviewRepository;
 

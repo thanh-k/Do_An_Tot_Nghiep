@@ -136,13 +136,9 @@ function ProductCard({ product }) {
             {product.brand?.name || "Khác"}
           </p>
 
-          <h3 className="line-clamp-2 min-h-[1.8rem] text-[11px] font-semibold leading-4 text-slate-900 sm:min-h-[3rem] sm:text-sm lg:text-[15px]">
+          <h3 className="line-clamp-2 lg:line-clamp-3 min-h-[1.8rem] text-[11px] font-semibold leading-4 text-slate-900 sm:min-h-[3rem] lg:min-h-[4.5rem] sm:text-sm lg:text-[15px]">
             {product.name}
           </h3>
-
-          <p className="hidden line-clamp-2 text-xs leading-5 text-slate-500 lg:block">
-            {product.shortDescription}
-          </p>
 
           <div className="sm:hidden">
             <Rating value={product.rating} reviewCount={product.reviewCount} size={10} compact />

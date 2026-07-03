@@ -188,8 +188,9 @@ function CheckoutPage() {
     Math.max(0, checkoutSubtotal - discountAmount) + finalShippingFee;
 
   // Hủy voucher tự động nếu người dùng đổi số lượng khiến đơn hàng không đạt tối thiểu
+  // Chỉ chạy khi checkoutSubtotal > 0 (tránh báo lỗi giả khi component unmount)
   useEffect(() => {
-    if (appliedVoucher && checkoutSubtotal < appliedVoucher.minOrderValue) {
+    if (checkoutSubtotal > 0 && appliedVoucher && checkoutSubtotal < appliedVoucher.minOrderValue) {
       setAppliedVoucher(null);
       toast.error(
         "Mã ưu đãi đã bị gỡ vì đơn hàng không đủ điều kiện tối thiểu!",
@@ -883,9 +884,11 @@ function CheckoutPage() {
 
       <VnpayQrModal
         isOpen={showVnpayQrModal}
-        onClose={async () => {
+        onClose={async (isPaid) => {
           setShowVnpayQrModal(false);
-          if (vnpaySession?.orderId) {
+          // Chỉ hủy đơn khi người dùng tự đóng modal (chưa thanh toán)
+          // Không hủy nếu đóng do đã thanh toán thành công (isPaid = true)
+          if (!isPaid && vnpaySession?.orderId) {
             try {
               await orderService.updateOrderStatus(vnpaySession.orderId, "CANCELLED");
               toast("Đã hủy đơn hàng (chưa thanh toán).", { icon: 'ℹ️' });

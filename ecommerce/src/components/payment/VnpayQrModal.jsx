@@ -116,7 +116,7 @@ function VnpayQrModal({
           localStorage.removeItem("vnpay_pending_items");
 
           setTimeout(() => {
-            onClose();
+            onClose(true); // true = đã thanh toán → parent KHÔNG hủy đơn
             navigate("/orders");
           }, 1500);
         }

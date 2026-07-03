@@ -42,7 +42,7 @@ const getStatusColorClass = (status) => {
 };
 
 const canReviewOrder = (status) => {
-  return ["DELIVERED", "COMPLETED", "PAID"].includes(
+  return ["DELIVERED", "COMPLETED", "COMPLETE", "DONE", "PAID"].includes(
     String(status || "").toUpperCase(),
   );
 };
