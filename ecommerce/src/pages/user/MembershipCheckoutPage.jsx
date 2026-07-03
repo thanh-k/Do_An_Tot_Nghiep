@@ -132,19 +132,8 @@ function MembershipCheckoutPage() {
         note: isRenewal ? "Gia hạn gói thành viên qua SePay" : "Thanh toán gói thành viên qua SePay",
       });
 
-      let expAt = new Date(Date.now() + QR_LIFETIME_MS).toISOString();
-      if (result?.expiredAt) {
-        expAt = Array.isArray(result.expiredAt)
-          ? new Date(
-              result.expiredAt[0],
-              result.expiredAt[1] - 1,
-              result.expiredAt[2],
-              result.expiredAt[3],
-              result.expiredAt[4],
-              result.expiredAt[5] || 0
-            ).toISOString()
-          : result.expiredAt;
-      }
+      // Tính expiredAt trực tiếp trên frontend để tránh lỗi timezone (mảng thời gian từ backend có thể bị lệch)
+      const expAt = new Date(Date.now() + QR_LIFETIME_MS).toISOString();
 
       setPaymentSession({
         subscriptionId: result?.subscriptionId,
