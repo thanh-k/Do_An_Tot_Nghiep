@@ -379,6 +379,7 @@ const parseVariantAttributes = (attributes) => {
                 autoPlay
                 playsInline
                 controls
+                muted
                 className="aspect-video w-full bg-black object-cover"
               />
 

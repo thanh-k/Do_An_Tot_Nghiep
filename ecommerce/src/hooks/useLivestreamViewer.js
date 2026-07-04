@@ -189,6 +189,10 @@ export function useLivestreamViewer(livestreamId, onLiveEvent) {
           const [stream] = trackEvent.streams;
           if (videoRef.current && stream && videoRef.current.srcObject !== stream) {
             videoRef.current.srcObject = stream;
+            // Ép trình duyệt Android chạy video
+            setTimeout(() => {
+              videoRef.current?.play().catch(err => console.warn("Autoplay blocked:", err));
+            }, 100);
           }
           hasRemoteStreamRef.current = true;
           reconnectingRef.current = false;
