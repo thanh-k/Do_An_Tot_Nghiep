@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -36,6 +37,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
+    private static final ZoneId LIVESTREAM_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     private final OrderMapper orderMapper;
     private final OrderRepository orderRepository;
     private final ProductVariantRepository variantRepository;
@@ -151,7 +153,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         Map<String, Double> reservedPrices = new HashMap<>();
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = nowForLivestream();
 
         for (Map.Entry<String, Integer> entry : quantityByDealKey.entrySet()) {
             Long livestreamId = parseLivestreamId(entry.getKey());
@@ -206,6 +208,10 @@ public class OrderServiceImpl implements OrderService {
         }
 
         return reservedPrices;
+    }
+
+    private LocalDateTime nowForLivestream() {
+        return LocalDateTime.now(LIVESTREAM_ZONE);
     }
 
     private double resolvePriceAtPurchase(CartItemRequest item,
