@@ -1,19 +1,33 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { buildLivestreamWsUrl } from "@/utils/livestream";
 
+const parseTurnUrls = (value) => (value || "")
+  .split(",")
+  .map((url) => url.trim())
+  .filter(Boolean);
+
+const TURN_URLS = parseTurnUrls(import.meta.env.VITE_TURN_URL);
+
 const ICE_SERVERS = [
-  { urls: "stun:stun.l.google.com:19302" },
-  { urls: "stun:stun1.l.google.com:19302" },
-  ...(import.meta.env.VITE_TURN_URL
+  { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
+  ...(TURN_URLS.length
     ? [
         {
-          urls: import.meta.env.VITE_TURN_URL,
+          urls: TURN_URLS,
           username: import.meta.env.VITE_TURN_USERNAME || "",
-          credential: import.meta.env.VITE_TURN_CREDENTIAL || "",
+          credential: import.meta.env.VITE_TURN_PASSWORD || import.meta.env.VITE_TURN_CREDENTIAL || "",
         },
       ]
     : []),
 ];
+
+const PEER_CONFIG = {
+  iceServers: ICE_SERVERS,
+  iceTransportPolicy: "all",
+  bundlePolicy: "max-bundle",
+  rtcpMuxPolicy: "require",
+  iceCandidatePoolSize: 4,
+};
 
 
 // Hook này xử lý camera/micro của nhân viên và gửi tín hiệu WebRTC cho người xem qua WebSocket nội bộ.
@@ -22,6 +36,7 @@ export function useLivestreamHost(livestreamId, onLiveEvent) {
   const socketRef = useRef(null);
   const streamRef = useRef(null);
   const peersRef = useRef(new Map());
+  const pendingRemoteCandidatesRef = useRef(new Map());
   const [started, setStarted] = useState(false);
   const [viewerCount, setViewerCount] = useState(0);
   const [error, setError] = useState("");
@@ -35,7 +50,7 @@ export function useLivestreamHost(livestreamId, onLiveEvent) {
 
   const createPeerForViewer = useCallback(async (viewerId) => {
     if (!streamRef.current || peersRef.current.has(viewerId)) return;
-    const peer = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    const peer = new RTCPeerConnection(PEER_CONFIG);
     peersRef.current.set(viewerId, peer);
     streamRef.current.getTracks().forEach((track) => peer.addTrack(track, streamRef.current));
     peer.onicecandidate = (event) => {
@@ -59,7 +74,7 @@ export function useLivestreamHost(livestreamId, onLiveEvent) {
         setViewerCount(peersRef.current.size);
       }
     };
-    const offer = await peer.createOffer();
+    const offer = await peer.createOffer({ offerToReceiveAudio: false, offerToReceiveVideo: false });
     await peer.setLocalDescription(offer);
     send({ type: "offer", target: viewerId, offer });
     setViewerCount(peersRef.current.size);
@@ -88,17 +103,35 @@ export function useLivestreamHost(livestreamId, onLiveEvent) {
           await createPeerForViewer(data.viewerId);
         }
         if (data.type === "answer") {
-          const peer = peersRef.current.get(data.from || data.viewerId);
-          if (peer && data.answer) await peer.setRemoteDescription(data.answer);
+          const viewerId = data.from || data.viewerId;
+          const peer = peersRef.current.get(viewerId);
+          if (peer && data.answer) {
+            await peer.setRemoteDescription(data.answer);
+            const pending = pendingRemoteCandidatesRef.current.get(viewerId) || [];
+            pendingRemoteCandidatesRef.current.delete(viewerId);
+            for (const candidate of pending) {
+              await peer.addIceCandidate(new RTCIceCandidate(candidate));
+            }
+          }
         }
         if (data.type === "ice-candidate") {
-          const peer = peersRef.current.get(data.from || data.viewerId);
-          if (peer && data.candidate) await peer.addIceCandidate(data.candidate);
+          const viewerId = data.from || data.viewerId;
+          const peer = peersRef.current.get(viewerId);
+          if (peer && data.candidate) {
+            if (peer.remoteDescription) {
+              await peer.addIceCandidate(new RTCIceCandidate(data.candidate));
+            } else {
+              const pending = pendingRemoteCandidatesRef.current.get(viewerId) || [];
+              pending.push(data.candidate);
+              pendingRemoteCandidatesRef.current.set(viewerId, pending);
+            }
+          }
         }
         if (data.type === "viewer-left") {
           const peer = peersRef.current.get(data.viewerId);
           peer?.close();
           peersRef.current.delete(data.viewerId);
+          pendingRemoteCandidatesRef.current.delete(data.viewerId);
           setViewerCount(peersRef.current.size);
         }
         if (data.type === "viewer-count") {
@@ -117,6 +150,7 @@ export function useLivestreamHost(livestreamId, onLiveEvent) {
   const stop = useCallback(() => {
     peersRef.current.forEach((peer) => peer.close());
     peersRef.current.clear();
+    pendingRemoteCandidatesRef.current.clear();
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     socketRef.current?.close();

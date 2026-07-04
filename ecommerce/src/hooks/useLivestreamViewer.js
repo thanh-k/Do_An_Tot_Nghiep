@@ -1,19 +1,33 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { buildLivestreamWsUrl } from "@/utils/livestream";
 
+const parseTurnUrls = (value) => (value || "")
+  .split(",")
+  .map((url) => url.trim())
+  .filter(Boolean);
+
+const TURN_URLS = parseTurnUrls(import.meta.env.VITE_TURN_URL);
+
 const ICE_SERVERS = [
-  { urls: "stun:stun.l.google.com:19302" },
-  { urls: "stun:stun1.l.google.com:19302" },
-  ...(import.meta.env.VITE_TURN_URL
+  { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
+  ...(TURN_URLS.length
     ? [
         {
-          urls: import.meta.env.VITE_TURN_URL,
+          urls: TURN_URLS,
           username: import.meta.env.VITE_TURN_USERNAME || "",
-          credential: import.meta.env.VITE_TURN_CREDENTIAL || "",
+          credential: import.meta.env.VITE_TURN_PASSWORD || import.meta.env.VITE_TURN_CREDENTIAL || "",
         },
       ]
     : []),
 ];
+
+const PEER_CONFIG = {
+  iceServers: ICE_SERVERS,
+  iceTransportPolicy: "all",
+  bundlePolicy: "max-bundle",
+  rtcpMuxPolicy: "require",
+  iceCandidatePoolSize: 4,
+};
 
 const CONNECT_TIMEOUT_MS = 12000;
 const RECONNECT_DELAY_MS = 3000;
@@ -37,6 +51,7 @@ export function useLivestreamViewer(livestreamId, onLiveEvent) {
   const reconnectingRef = useRef(false);
   const hasRemoteStreamRef = useRef(false);
   const offerProcessingRef = useRef(false);
+  const pendingRemoteCandidatesRef = useRef([]);
   const onLiveEventRef = useRef(onLiveEvent);
 
   const [connected, setConnected] = useState(false);
@@ -65,7 +80,9 @@ export function useLivestreamViewer(livestreamId, onLiveEvent) {
       // ignore cleanup errors
     }
     peerRef.current = null;
+    pendingRemoteCandidatesRef.current = [];
     offerProcessingRef.current = false;
+    pendingRemoteCandidatesRef.current = [];
   }, []);
 
   const send = useCallback((payload) => {
@@ -165,7 +182,7 @@ export function useLivestreamViewer(livestreamId, onLiveEvent) {
         offerProcessingRef.current = true;
         closePeer();
 
-        const peer = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+        const peer = new RTCPeerConnection(PEER_CONFIG);
         peerRef.current = peer;
 
         peer.ontrack = (trackEvent) => {
@@ -186,14 +203,13 @@ export function useLivestreamViewer(livestreamId, onLiveEvent) {
         };
 
         peer.onicecandidate = (iceEvent) => {
-          if (iceEvent.candidate) {
-            send({
-              type: "ice-candidate",
-              target: data.from || data.hostId,
-              from: viewerIdRef.current,
-              candidate: iceEvent.candidate,
-            });
-          }
+          if (!iceEvent.candidate) return;
+          send({
+            type: "ice-candidate",
+            target: data.from || data.hostId,
+            from: viewerIdRef.current,
+            candidate: iceEvent.candidate,
+          });
         };
 
         peer.oniceconnectionstatechange = () => {
@@ -230,6 +246,15 @@ export function useLivestreamViewer(livestreamId, onLiveEvent) {
 
         try {
           await peer.setRemoteDescription(data.offer);
+
+          if (pendingRemoteCandidatesRef.current.length) {
+            const candidates = [...pendingRemoteCandidatesRef.current];
+            pendingRemoteCandidatesRef.current = [];
+            for (const candidate of candidates) {
+              await peer.addIceCandidate(new RTCIceCandidate(candidate));
+            }
+          }
+
           const answer = await peer.createAnswer();
           await peer.setLocalDescription(answer);
           send({ type: "answer", target: data.from || data.hostId, from: viewerIdRef.current, answer });
@@ -273,7 +298,12 @@ export function useLivestreamViewer(livestreamId, onLiveEvent) {
           }
 
           if (data.type === "ice-candidate" && data.candidate) {
-            await peerRef.current?.addIceCandidate(data.candidate);
+            const peer = peerRef.current;
+            if (peer?.remoteDescription) {
+              await peer.addIceCandidate(new RTCIceCandidate(data.candidate));
+            } else {
+              pendingRemoteCandidatesRef.current.push(data.candidate);
+            }
           }
 
           if (data.type === "host-offline") {
