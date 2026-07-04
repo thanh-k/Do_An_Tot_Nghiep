@@ -29,6 +29,9 @@ jobs:
           VITE_BANK_BIN: 970416
           VITE_ACCOUNT_NO: ${{ secrets.VITE_ACCOUNT_NO }}
           VITE_ACCOUNT_NAME: ${{ secrets.VITE_ACCOUNT_NAME }}
+          VITE_TURN_URL: ${{ secrets.VITE_TURN_URL }}
+          VITE_TURN_USERNAME: ${{ secrets.VITE_TURN_USERNAME }}
+          VITE_TURN_CREDENTIAL: ${{ secrets.VITE_TURN_CREDENTIAL }}
         run: npm run build
 
       - name: Install cloudflared
@@ -66,7 +69,7 @@ jobs:
             set -e  # THÊM DÒNG NÀY: exit ngay khi có lỗi
             cd ~/Do_An_Tot_Nghiep
             OLD_COMMIT=$(git rev-parse HEAD)
-            git pull origin dev
+            git pull -4 origin dev
             NEW_COMMIT=$(git rev-parse HEAD)
             echo "=== Commit: $OLD_COMMIT → $NEW_COMMIT ==="
             sudo mkdir -p /var/www/ecommerce
