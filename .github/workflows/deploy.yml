@@ -29,6 +29,9 @@ jobs:
           VITE_BANK_BIN: 970416
           VITE_ACCOUNT_NO: ${{ secrets.VITE_ACCOUNT_NO }}
           VITE_ACCOUNT_NAME: ${{ secrets.VITE_ACCOUNT_NAME }}
+          VITE_TURN_URL: ${{ secrets.VITE_TURN_URL }}
+          VITE_TURN_USERNAME: ${{ secrets.VITE_TURN_USERNAME }}
+          VITE_TURN_CREDENTIAL: ${{ secrets.VITE_TURN_CREDENTIAL }}
         run: npm run build
 
       - name: Install cloudflared
