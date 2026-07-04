@@ -6,14 +6,14 @@ const parseTurnUrls = (value) => (value || "")
   .map((url) => url.trim())
   .filter(Boolean);
 
-const TURN_URLS = parseTurnUrls(import.meta.env.VITE_TURN_URL);
+const TURN_URL = parseTurnUrls(import.meta.env.VITE_TURN_URL);
 
 const ICE_SERVERS = [
   { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
-  ...(TURN_URLS.length
+  ...(TURN_URL.length
     ? [
         {
-          urls: TURN_URLS,
+          urls: TURN_URL,
           username: import.meta.env.VITE_TURN_USERNAME || "",
           credential: import.meta.env.VITE_TURN_PASSWORD || import.meta.env.VITE_TURN_CREDENTIAL || "",
         },
